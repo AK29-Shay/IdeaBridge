@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Send, FileCode2, Sparkles, GraduationCap, Link2, Upload, MessageSquarePlus, RefreshCw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type FormMode = "Request" | "Post";
 type PostVariant = "Full Project Details" | "Project Idea" | "Fully AI-Driven Project" | "Campus Requirement";
@@ -171,7 +172,7 @@ export default function DynamicPostForm() {
                     <label className="text-sm font-medium text-foreground mb-1 block">Live Preview</label>
                     <div className="flex-1 bg-muted/50 border border-border rounded-lg p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none text-sm break-words">
                       {description ? (
-                        <ReactMarkdown>{description}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
                       ) : (
                         <span className="text-muted-foreground italic">Markdown preview will appear here...</span>
                       )}

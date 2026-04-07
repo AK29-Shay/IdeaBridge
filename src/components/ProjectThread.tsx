@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThumbsUp, MessageCircle, Pin, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { CommentNode } from "../data/mockThread";
 import { cn } from "../lib/utils";
 
@@ -13,8 +14,11 @@ interface ProjectThreadProps {
 
 export default function ProjectThread({ comments }: ProjectThreadProps) {
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col pt-6">
-      <h3 className="text-xl font-bold tracking-tight mb-8 px-2">Discussion Thread</h3>
+    <div className="w-full flex flex-col pt-2">
+      <h3 className="text-xl font-bold tracking-tight mb-8 px-2 flex items-center gap-2">
+        <MessageCircle size={20} className="text-primary" />
+        Discussion Thread
+      </h3>
       <div className="flex flex-col">
         {comments.map((comment, i) => (
           <CommentItem key={comment.id} comment={comment} isLast={i === comments.length - 1} depth={0} />
@@ -33,6 +37,8 @@ interface CommentItemProps {
 function CommentItem({ comment, isLast, depth }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [upvotes, setUpvotes] = useState(comment.upvotes);
+  const [upvoted, setUpvoted] = useState(false);
 
   const roleColors: Record<string, string> = {
     "Student": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
@@ -40,56 +46,73 @@ function CommentItem({ comment, isLast, depth }: CommentItemProps) {
     "Post Owner": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800"
   };
 
+  const hasReplies = comment.replies && comment.replies.length > 0;
+  const showLine = !isLast || hasReplies;
+
   return (
-    <div className="relative flex flex-col group">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="relative flex flex-col group"
+    >
       <div className="flex items-start gap-3">
-        {/* Left Visual Column */}
-        <div className="flex flex-col items-center">
-          <img src={comment.avatarUrl} alt={comment.author} className="w-10 h-10 rounded-full border border-border object-cover z-10 bg-background" />
-          
-          {/* Thread Connecting Line */}
-          {(!isLast || (comment.replies && comment.replies.length > 0)) && (
-            <div className="w-[2px] bg-border my-1 flex-1 min-h-[40px] group-hover:bg-primary/30 transition-colors" />
+        {/* Left Vertical Thread Column */}
+        <div className="flex flex-col items-center flex-shrink-0" style={{ width: 40 }}>
+          <img
+            src={comment.avatarUrl}
+            alt={comment.author}
+            className="w-10 h-10 rounded-full border-2 border-border object-cover z-10 bg-muted"
+          />
+          {showLine && (
+            <div className="w-[2px] bg-border flex-1 min-h-[24px] mt-1 group-hover:bg-primary/30 transition-colors" />
           )}
         </div>
 
         {/* Right Content Column */}
-        <div className="flex flex-col flex-1 pb-6 relative pt-1">
-          {/* Header */}
-          <div className="flex justify-between items-start mb-1">
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col flex-1 pb-4 pt-0.5 min-w-0">
+          {/* Meta Header */}
+          <div className="flex justify-between items-start mb-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-sm">{comment.author}</span>
               <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", roleColors[comment.role])}>
                 {comment.role}
               </span>
               <span className="text-muted-foreground text-xs">{comment.timestamp}</span>
             </div>
-            
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {comment.isAcceptedAnswer && (
-                 <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-md text-xs font-semibold">
-                   <Pin size={12} className="fill-current" />
-                   Accepted
-                 </div>
+                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md text-xs font-bold">
+                  <Pin size={11} className="fill-current" />
+                  Accepted
+                </div>
               )}
-              <button className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreHorizontal size={16} />
+              <button className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-muted">
+                <MoreHorizontal size={15} />
               </button>
             </div>
           </div>
 
-          {/* Body */}
-          <div className="text-sm prose prose-sm dark:prose-invert max-w-none mb-3 break-words bg-muted/20 p-3 rounded-lg border border-transparent hover:border-border transition-colors">
-            <ReactMarkdown>{comment.content}</ReactMarkdown>
+          {/* Comment Body */}
+          <div className={cn(
+            "text-sm prose prose-sm dark:prose-invert max-w-none mb-3 break-words rounded-xl p-3.5 transition-colors",
+            comment.isAcceptedAnswer
+              ? "bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50"
+              : "bg-muted/30 border border-transparent hover:border-border"
+          )}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{comment.content}</ReactMarkdown>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-6 text-muted-foreground">
-            <button className="flex items-center gap-1.5 text-xs font-semibold hover:text-primary transition-colors">
-              <ThumbsUp size={14} />
-              {comment.upvotes > 0 && comment.upvotes}
+          {/* Action Row */}
+          <div className="flex items-center gap-5 text-muted-foreground">
+            <button
+              className={cn("flex items-center gap-1.5 text-xs font-semibold transition-colors", upvoted ? "text-primary" : "hover:text-primary")}
+              onClick={() => { setUpvotes(v => upvoted ? v - 1 : v + 1); setUpvoted(v => !v); }}
+            >
+              <ThumbsUp size={14} className={upvoted ? "fill-primary stroke-primary" : ""} />
+              {upvotes}
             </button>
-            <button 
+            <button
               className="flex items-center gap-1.5 text-xs font-semibold hover:text-primary transition-colors"
               onClick={() => setShowReplyForm(!showReplyForm)}
             >
@@ -97,23 +120,27 @@ function CommentItem({ comment, isLast, depth }: CommentItemProps) {
               Reply
             </button>
           </div>
-          
-          {/* Experimental Inline Reply Form */}
+
+          {/* Inline Reply Form */}
           <AnimatePresence>
             {showReplyForm && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden mt-3"
+                className="overflow-hidden"
               >
-                <div className="flex gap-2">
-                  <input 
-                    type="text" value={replyText} onChange={e => setReplyText(e.target.value)}
+                <div className="flex gap-2 mt-3">
+                  <input
+                    type="text"
+                    value={replyText}
+                    onChange={e => setReplyText(e.target.value)}
                     placeholder={`Reply to ${comment.author}...`}
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
-                  <button className="bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors">Post</button>
+                  <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors flex-shrink-0">
+                    Post
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -121,19 +148,19 @@ function CommentItem({ comment, isLast, depth }: CommentItemProps) {
         </div>
       </div>
 
-      {/* Recursive Children Renderer */}
-      {comment.replies && comment.replies.length > 0 && (
-         <div className="flex flex-col ml-12">
-            {comment.replies.map((child, idx) => (
-              <CommentItem 
-                key={child.id} 
-                comment={child} 
-                isLast={idx === comment.replies!.length - 1} 
-                depth={depth + 1}
-              />
-            ))}
-         </div>
+      {/* Recursive Children */}
+      {hasReplies && (
+        <div className="flex flex-col ml-12">
+          {comment.replies!.map((child, idx) => (
+            <CommentItem
+              key={child.id}
+              comment={child}
+              isLast={idx === comment.replies!.length - 1}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
       )}
-    </div>
+    </motion.div>
   );
 }
