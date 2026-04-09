@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "title": "Student Portal Web App",
+    "description": "A responsive web app for students to view schedules and submit assignments.",
+    "category": "Web",
+    "difficulty": "Medium",
+    "department": "IT",
+    "status": "New",
+    "tags": ["portal", "web", "students"]
+  },
+  {
+    "id": 2,
+    "title": "Mobile Attendance Tracker",
+    "description": "An Android app to track student attendance using QR codes.",
+    "category": "Mobile",
+    "difficulty": "Easy",
+    "department": "SE",
+    "status": "Approved",
+    "tags": ["attendance", "mobile", "qr"]
+  },
+  {
+    "id": 3,
+    "title": "AI Essay Grader",
+    "description": "ML model that provides feedback and grading suggestions for essays.",
+    "category": "AI",
+    "difficulty": "Hard",
+    "department": "DS",
+    "status": "New",
+    "tags": ["nlp", "grading", "ml"]
+  },
+  {
+    "id": 4,
+    "title": "IoT Smart Locker",
+    "description": "Locker system with remote unlocking via mobile and SMS alerts.",
+    "category": "IoT",
+    "difficulty": "Medium",
+    "department": "IT",
+    "status": "Completed",
+    "tags": ["hardware", "embedded", "lock"]
+  },
+  {
+    "id": 5,
+    "title": "Data Visualization Dashboard",
+    "description": "Interactive dashboard for university metrics and visual reports.",
+    "category": "Data Science",
+    "difficulty": "Medium",
+    "department": "DS",
+    "status": "Approved",
+    "tags": ["dashboard", "visualization", "charts"]
+  },
+  {
+    "id": 6,
+    "title": "E-commerce Site",
+    "description": "Full-stack online store with payment integration and inventory.",
+    "category": "Web",
+    "difficulty": "Hard",
+    "department": "SE",
+    "status": "New",
+    "tags": ["ecommerce", "payments", "inventory"]
+  }
+]

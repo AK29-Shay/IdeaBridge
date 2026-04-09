@@ -1,0 +1,516 @@
+// Valid courses for each faculty
+const FACULTY_COURSES = {
+  'IT': [
+    'Programming Fundamentals', 'Database Systems', 'Web Development', 'Software Engineering', 
+    'Computer Networks', 'Operating Systems', 'Cyber Security Basics', 'Object Oriented Programming',
+    'Java Programming', 'Python Programming', 'Data Structures & Algorithms', 'Mobile Application Development',
+    'Human Computer Interaction', 'Information Security', 'IT Project Management', 'Enterprise Architecture'
+  ],
+  'SE': [
+    'Software Design', 'Agile Development', 'System Architecture', 'Quality Assurance', 
+    'DevOps', 'Cloud Computing', 'Mobile App Development', 'Requirements Engineering',
+    'Software Testing', 'Design Patterns', 'Microservices Architecture', 'Full Stack Development',
+    'API Development', 'Continuous Integration', 'Software Metrics', 'Formal Methods'
+  ],
+  'Data Science': [
+    'Data Analytics', 'Machine Learning', 'Deep Learning', 'Big Data', 
+    'Statistical Analysis', 'Data Visualization', 'Python for Data Science', 'Natural Language Processing',
+    'Computer Vision', 'Reinforcement Learning', 'Time Series Analysis', 'Data Mining',
+    'Business Intelligence', 'Predictive Analytics', 'Neural Networks', 'Data Engineering'
+  ],
+  'Cyber': [
+    'Network Security', 'Ethical Hacking', 'Digital Forensics', 'Cryptography', 
+    'Security Auditing', 'Malware Analysis', 'Incident Response', 'Penetration Testing',
+    'Web Application Security', 'Cloud Security', 'IoT Security', 'Blockchain Security',
+    'Risk Management', 'Compliance & Governance', 'Threat Intelligence', 'Security Operations'
+  ],
+  'Network': [
+    'Network Administration', 'Cisco CCNA', 'Cloud Infrastructure', 'Wireless Networks', 
+    'Network Protocols', 'SDN', 'Network Troubleshooting', 'Network Design',
+    'VoIP Technologies', 'Network Virtualization', '5G Networks', 'Fiber Optics',
+    'Data Center Management', 'Load Balancing', 'Network Automation', 'IPv6 Implementation'
+  ]
+};
+
+// In-memory data store for demonstration (no MongoDB required)
+const sampleProjects = [
+  // IT Faculty Projects
+  {
+    _id: '1',
+    title: 'AI-Powered Student Attendance System',
+    description: 'A facial recognition-based attendance system for universities using machine learning algorithms to automatically mark attendance.',
+    faculty: 'IT',
+    course: 'Programming Fundamentals',
+    category: 'AI',
+    difficulty: 'Hard',
+    tags: ['AI', 'Machine Learning', 'Facial Recognition', 'Python', 'OpenCV'],
+    status: 'Approved',
+    author: 'Dr. Smith',
+    createdAt: new Date('2024-01-15'),
+    updatedAt: new Date('2024-01-15')
+  },
+  {
+    _id: '2',
+    title: 'University Library Management System',
+    description: 'A web-based system to manage library resources, book borrowing, returns, and student records.',
+    faculty: 'IT',
+    course: 'Database Systems',
+    category: 'Web',
+    difficulty: 'Medium',
+    tags: ['Web', 'Database', 'Node.js', 'React', 'MongoDB'],
+    status: 'New',
+    author: 'Prof. Johnson',
+    createdAt: new Date('2024-02-10'),
+    updatedAt: new Date('2024-02-10')
+  },
+  {
+    _id: '3',
+    title: 'Campus Navigation Mobile App',
+    description: 'An Android/iOS app that helps new students navigate the university campus with indoor maps and directions.',
+    faculty: 'IT',
+    course: 'Web Development',
+    category: 'Mobile',
+    difficulty: 'Medium',
+    tags: ['Mobile', 'Android', 'iOS', 'GPS', 'Maps'],
+    status: 'New',
+    author: 'Ms. Davis',
+    createdAt: new Date('2024-03-05'),
+    updatedAt: new Date('2024-03-05')
+  },
+  {
+    _id: '4',
+    title: 'Smart Home IoT System',
+    description: 'An IoT-based home automation system controlling lights, temperature, and security using sensors and microcontrollers.',
+    faculty: 'IT',
+    course: 'Computer Networks',
+    category: 'IoT',
+    difficulty: 'Hard',
+    tags: ['IoT', 'Arduino', 'Sensors', 'Automation', 'Embedded'],
+    status: 'Approved',
+    author: 'Dr. Wilson',
+    createdAt: new Date('2024-01-20'),
+    updatedAt: new Date('2024-01-20')
+  },
+  {
+    _id: '5',
+    title: 'Personal Portfolio Website',
+    description: 'A simple portfolio website template for students to showcase their projects and skills.',
+    faculty: 'IT',
+    course: 'Web Development',
+    category: 'Web',
+    difficulty: 'Easy',
+    tags: ['Web', 'HTML', 'CSS', 'JavaScript', 'Portfolio'],
+    status: 'Completed',
+    author: 'Mr. Brown',
+    createdAt: new Date('2024-02-28'),
+    updatedAt: new Date('2024-02-28')
+  },
+
+  // SE Faculty Projects
+  {
+    _id: '6',
+    title: 'E-Commerce Platform',
+    description: 'A full-stack e-commerce website with product catalog, shopping cart, payment integration, and order management.',
+    faculty: 'SE',
+    course: 'Software Design',
+    category: 'Web',
+    difficulty: 'Hard',
+    tags: ['E-commerce', 'Full Stack', 'Payment', 'React', 'Node.js'],
+    status: 'Approved',
+    author: 'Prof. Anderson',
+    createdAt: new Date('2024-01-10'),
+    updatedAt: new Date('2024-01-10')
+  },
+  {
+    _id: '7',
+    title: 'Task Management Application',
+    description: 'A project management tool for teams to collaborate, assign tasks, and track progress.',
+    faculty: 'SE',
+    course: 'Agile Development',
+    category: 'Web',
+    difficulty: 'Medium',
+    tags: ['Project Management', 'Collaboration', 'Agile', 'React', 'Firebase'],
+    status: 'New',
+    author: 'Dr. Martinez',
+    createdAt: new Date('2024-03-01'),
+    updatedAt: new Date('2024-03-01')
+  },
+  {
+    _id: '8',
+    title: 'Online Quiz System',
+    description: 'A web application for creating and taking quizzes with automatic grading and result analytics.',
+    faculty: 'SE',
+    course: 'System Architecture',
+    category: 'Web',
+    difficulty: 'Easy',
+    tags: ['Quiz', 'Education', 'Assessment', 'JavaScript', 'Database'],
+    status: 'Completed',
+    author: 'Ms. Taylor',
+    createdAt: new Date('2024-02-15'),
+    updatedAt: new Date('2024-02-15')
+  },
+  {
+    _id: '9',
+    title: 'Food Delivery App',
+    description: 'A mobile application connecting restaurants with customers for food ordering and delivery tracking.',
+    faculty: 'SE',
+    course: 'Mobile App Development',
+    category: 'Mobile',
+    difficulty: 'Hard',
+    tags: ['Mobile', 'Food Delivery', 'GPS', 'Payment', 'Flutter'],
+    status: 'New',
+    author: 'Mr. Thomas',
+    createdAt: new Date('2024-03-10'),
+    updatedAt: new Date('2024-03-10')
+  },
+
+  // Data Science Faculty Projects
+  {
+    _id: '10',
+    title: 'Student Performance Prediction',
+    description: 'A machine learning model to predict student academic performance based on various factors.',
+    faculty: 'Data Science',
+    course: 'Machine Learning',
+    category: 'AI',
+    difficulty: 'Hard',
+    tags: ['Machine Learning', 'Prediction', 'Python', 'Pandas', 'Scikit-learn'],
+    status: 'Approved',
+    author: 'Dr. Garcia',
+    createdAt: new Date('2024-01-25'),
+    updatedAt: new Date('2024-01-25')
+  },
+  {
+    _id: '11',
+    title: 'Sales Data Visualization Dashboard',
+    description: 'An interactive dashboard for visualizing and analyzing sales data with charts and reports.',
+    faculty: 'Data Science',
+    course: 'Data Visualization',
+    category: 'Data Science',
+    difficulty: 'Medium',
+    tags: ['Data Visualization', 'Dashboard', 'D3.js', 'Analytics', 'Charts'],
+    status: 'New',
+    author: 'Prof. Lee',
+    createdAt: new Date('2024-02-20'),
+    updatedAt: new Date('2024-02-20')
+  },
+  {
+    _id: '12',
+    title: 'Sentiment Analysis Tool',
+    description: 'A tool that analyzes social media comments to determine public sentiment about products or topics.',
+    faculty: 'Data Science',
+    course: 'Deep Learning',
+    category: 'AI',
+    difficulty: 'Medium',
+    tags: ['NLP', 'Sentiment Analysis', 'Python', 'Text Mining', 'Twitter API'],
+    status: 'Approved',
+    author: 'Dr. White',
+    createdAt: new Date('2024-01-30'),
+    updatedAt: new Date('2024-01-30')
+  },
+  {
+    _id: '13',
+    title: 'Customer Segmentation Analysis',
+    description: 'Using clustering algorithms to segment customers based on purchasing behavior for targeted marketing.',
+    faculty: 'Data Science',
+    course: 'Statistical Analysis',
+    category: 'Data Science',
+    difficulty: 'Medium',
+    tags: ['Clustering', 'K-means', 'Marketing', 'Python', 'Analytics'],
+    status: 'New',
+    author: 'Ms. Clark',
+    createdAt: new Date('2024-03-15'),
+    updatedAt: new Date('2024-03-15')
+  },
+
+  // Cyber Security Faculty Projects
+  {
+    _id: '14',
+    title: 'Network Intrusion Detection System',
+    description: 'A system that monitors network traffic and detects suspicious activities or potential attacks.',
+    faculty: 'Cyber',
+    course: 'Network Security',
+    category: 'Cyber Security',
+    difficulty: 'Hard',
+    tags: ['Security', 'Network', 'IDS', 'Python', 'Machine Learning'],
+    status: 'Approved',
+    author: 'Dr. Harris',
+    createdAt: new Date('2024-01-12'),
+    updatedAt: new Date('2024-01-12')
+  },
+  {
+    _id: '15',
+    title: 'Password Strength Analyzer',
+    description: 'A tool that evaluates password strength and provides recommendations for better security.',
+    faculty: 'Cyber',
+    course: 'Cryptography',
+    category: 'Cyber Security',
+    difficulty: 'Easy',
+    tags: ['Security', 'Password', 'Encryption', 'JavaScript', 'Web'],
+    status: 'Completed',
+    author: 'Prof. Lewis',
+    createdAt: new Date('2024-02-05'),
+    updatedAt: new Date('2024-02-05')
+  },
+  {
+    _id: '16',
+    title: 'Phishing Website Detector',
+    description: 'A browser extension that identifies and warns users about phishing websites.',
+    faculty: 'Cyber',
+    course: 'Ethical Hacking',
+    category: 'Cyber Security',
+    difficulty: 'Medium',
+    tags: ['Security', 'Phishing', 'Browser Extension', 'ML', 'Web'],
+    status: 'New',
+    author: 'Mr. Walker',
+    createdAt: new Date('2024-03-08'),
+    updatedAt: new Date('2024-03-08')
+  },
+  {
+    _id: '17',
+    title: 'Secure File Sharing System',
+    description: 'An encrypted file sharing platform with access control and audit logging.',
+    faculty: 'Cyber',
+    course: 'Security Auditing',
+    category: 'Cyber Security',
+    difficulty: 'Hard',
+    tags: ['Security', 'Encryption', 'File Sharing', 'Node.js', 'Cryptography'],
+    status: 'Approved',
+    author: 'Dr. Hall',
+    createdAt: new Date('2024-01-18'),
+    updatedAt: new Date('2024-01-18')
+  },
+
+  // Network Faculty Projects
+  {
+    _id: '18',
+    title: 'Campus Network Monitoring Tool',
+    description: 'A tool to monitor network performance, bandwidth usage, and device connectivity across campus.',
+    faculty: 'Network',
+    course: 'Network Administration',
+    category: 'Networking',
+    difficulty: 'Medium',
+    tags: ['Network', 'Monitoring', 'SNMP', 'Python', 'Dashboard'],
+    status: 'New',
+    author: 'Prof. Allen',
+    createdAt: new Date('2024-03-12'),
+    updatedAt: new Date('2024-03-12')
+  },
+  {
+    _id: '19',
+    title: 'SDN-Based Traffic Management',
+    description: 'Software-Defined Networking solution for optimizing network traffic flow in enterprise environments.',
+    faculty: 'Network',
+    course: 'SDN',
+    category: 'Networking',
+    difficulty: 'Hard',
+    tags: ['SDN', 'Networking', 'Traffic Management', 'Mininet', 'OpenFlow'],
+    status: 'Approved',
+    author: 'Dr. Young',
+    createdAt: new Date('2024-01-22'),
+    updatedAt: new Date('2024-01-22')
+  },
+  {
+    _id: '20',
+    title: 'Wi-Fi Heatmap Generator',
+    description: 'A tool that creates visual heatmaps of Wi-Fi signal strength across buildings.',
+    faculty: 'Network',
+    course: 'Wireless Networks',
+    category: 'Networking',
+    difficulty: 'Medium',
+    tags: ['Wi-Fi', 'Heatmap', 'Signal Strength', 'Python', 'Visualization'],
+    status: 'New',
+    author: 'Ms. King',
+    createdAt: new Date('2024-02-25'),
+    updatedAt: new Date('2024-02-25')
+  },
+  {
+    _id: '21',
+    title: 'VPN Configuration Manager',
+    description: 'A web interface for managing VPN configurations and user access for remote workers.',
+    faculty: 'Network',
+    course: 'Cloud Infrastructure',
+    category: 'Networking',
+    difficulty: 'Easy',
+    tags: ['VPN', 'Network Security', 'Web', 'Configuration', 'Remote Access'],
+    status: 'Completed',
+    author: 'Mr. Wright',
+    createdAt: new Date('2024-02-08'),
+    updatedAt: new Date('2024-02-08')
+  },
+  {
+    _id: '22',
+    title: 'Cloud Storage Solution',
+    description: 'A private cloud storage system for secure file storage and sharing within the organization.',
+    faculty: 'Network',
+    course: 'Cloud Infrastructure',
+    category: 'Cloud',
+    difficulty: 'Hard',
+    tags: ['Cloud', 'Storage', 'AWS', 'Docker', 'Microservices'],
+    status: 'Approved',
+    author: 'Dr. Lopez',
+    createdAt: new Date('2024-01-28'),
+    updatedAt: new Date('2024-01-28')
+  },
+  // Additional IT Projects
+  {
+    _id: '23',
+    title: 'Java Banking Application',
+    description: 'A secure banking application with transaction processing, account management, and fraud detection using Java.',
+    faculty: 'IT',
+    course: 'Java Programming',
+    category: 'Web',
+    difficulty: 'Hard',
+    tags: ['Java', 'Banking', 'Security', 'Spring Boot', 'MySQL'],
+    status: 'New',
+    author: 'Prof. Anderson',
+    createdAt: new Date('2024-03-20'),
+    updatedAt: new Date('2024-03-20')
+  },
+  {
+    _id: '24',
+    title: 'Python Data Scraper',
+    description: 'An automated web scraping tool that extracts and analyzes data from e-commerce websites.',
+    faculty: 'IT',
+    course: 'Python Programming',
+    category: 'Data Science',
+    difficulty: 'Medium',
+    tags: ['Python', 'Web Scraping', 'BeautifulSoup', 'Pandas', 'Automation'],
+    status: 'Approved',
+    author: 'Dr. Martinez',
+    createdAt: new Date('2024-03-18'),
+    updatedAt: new Date('2024-03-18')
+  },
+  {
+    _id: '25',
+    title: 'Algorithm Visualizer',
+    description: 'An interactive web application that visualizes sorting and graph algorithms for educational purposes.',
+    faculty: 'IT',
+    course: 'Data Structures & Algorithms',
+    category: 'Web',
+    difficulty: 'Medium',
+    tags: ['Algorithms', 'Visualization', 'JavaScript', 'D3.js', 'Education'],
+    status: 'New',
+    author: 'Ms. Taylor',
+    createdAt: new Date('2024-03-15'),
+    updatedAt: new Date('2024-03-15')
+  },
+  // Additional SE Projects
+  {
+    _id: '26',
+    title: 'API Gateway Service',
+    description: 'A microservices API gateway with rate limiting, authentication, and request routing capabilities.',
+    faculty: 'SE',
+    course: 'Microservices Architecture',
+    category: 'Web',
+    difficulty: 'Hard',
+    tags: ['API', 'Microservices', 'Gateway', 'Node.js', 'Redis'],
+    status: 'Approved',
+    author: 'Dr. Kumar',
+    createdAt: new Date('2024-03-22'),
+    updatedAt: new Date('2024-03-22')
+  },
+  {
+    _id: '27',
+    title: 'Design Pattern Library',
+    description: 'A comprehensive library demonstrating Gang of Four design patterns with real-world examples.',
+    faculty: 'SE',
+    course: 'Design Patterns',
+    category: 'Other',
+    difficulty: 'Medium',
+    tags: ['Design Patterns', 'OOP', 'Java', 'C#', 'Architecture'],
+    status: 'New',
+    author: 'Prof. Chen',
+    createdAt: new Date('2024-03-10'),
+    updatedAt: new Date('2024-03-10')
+  },
+  // Additional Data Science Projects
+  {
+    _id: '28',
+    title: 'Image Classification System',
+    description: 'A deep learning-based image classification system using CNN for identifying objects in photos.',
+    faculty: 'Data Science',
+    course: 'Computer Vision',
+    category: 'AI',
+    difficulty: 'Hard',
+    tags: ['CNN', 'Computer Vision', 'TensorFlow', 'Keras', 'Image Processing'],
+    status: 'Approved',
+    author: 'Dr. Patel',
+    createdAt: new Date('2024-03-25'),
+    updatedAt: new Date('2024-03-25')
+  },
+  {
+    _id: '29',
+    title: 'Chatbot for Customer Service',
+    description: 'An NLP-powered chatbot that handles customer queries using transformer models.',
+    faculty: 'Data Science',
+    course: 'Natural Language Processing',
+    category: 'AI',
+    difficulty: 'Hard',
+    tags: ['NLP', 'Chatbot', 'Transformers', 'BERT', 'Python'],
+    status: 'New',
+    author: 'Ms. Johnson',
+    createdAt: new Date('2024-03-12'),
+    updatedAt: new Date('2024-03-12')
+  },
+  // Additional Cyber Projects
+  {
+    _id: '30',
+    title: 'Vulnerability Scanner',
+    description: 'An automated tool that scans web applications for common security vulnerabilities like OWASP Top 10.',
+    faculty: 'Cyber',
+    course: 'Web Application Security',
+    category: 'Cyber Security',
+    difficulty: 'Hard',
+    tags: ['Security', 'Scanner', 'OWASP', 'Python', 'Penetration Testing'],
+    status: 'Approved',
+    author: 'Dr. Williams',
+    createdAt: new Date('2024-03-28'),
+    updatedAt: new Date('2024-03-28')
+  },
+  {
+    _id: '31',
+    title: 'Smart Contract Auditor',
+    description: 'A tool to analyze Ethereum smart contracts for security vulnerabilities and best practices.',
+    faculty: 'Cyber',
+    course: 'Blockchain Security',
+    category: 'Cyber Security',
+    difficulty: 'Hard',
+    tags: ['Blockchain', 'Smart Contracts', 'Ethereum', 'Solidity', 'Audit'],
+    status: 'New',
+    author: 'Mr. Davis',
+    createdAt: new Date('2024-03-05'),
+    updatedAt: new Date('2024-03-05')
+  },
+  // Additional Network Projects
+  {
+    _id: '32',
+    title: '5G Network Simulator',
+    description: 'A simulation environment for testing 5G network protocols and performance characteristics.',
+    faculty: 'Network',
+    course: '5G Networks',
+    category: 'Networking',
+    difficulty: 'Hard',
+    tags: ['5G', 'Simulation', 'NS-3', 'Network Protocols', 'Research'],
+    status: 'Approved',
+    author: 'Prof. Wilson',
+    createdAt: new Date('2024-03-30'),
+    updatedAt: new Date('2024-03-30')
+  },
+  {
+    _id: '33',
+    title: 'Network Automation Tool',
+    description: 'A Python-based tool for automating network device configuration and monitoring using Ansible.',
+    faculty: 'Network',
+    course: 'Network Automation',
+    category: 'Networking',
+    difficulty: 'Medium',
+    tags: ['Automation', 'Ansible', 'Python', 'Network', 'DevOps'],
+    status: 'New',
+    author: 'Ms. Brown',
+    createdAt: new Date('2024-03-08'),
+    updatedAt: new Date('2024-03-08')
+  }
+];
+
+module.exports = sampleProjects;
+module.exports.FACULTY_COURSES = FACULTY_COURSES;
