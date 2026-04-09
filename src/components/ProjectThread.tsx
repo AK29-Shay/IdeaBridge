@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThumbsUp, MessageCircle, Pin, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -59,9 +60,11 @@ function CommentItem({ comment, isLast, depth }: CommentItemProps) {
       <div className="flex items-start gap-3">
         {/* Left Vertical Thread Column */}
         <div className="flex flex-col items-center flex-shrink-0" style={{ width: 40 }}>
-          <img
+          <Image
             src={comment.avatarUrl}
             alt={comment.author}
+            width={40}
+            height={40}
             className="w-10 h-10 rounded-full border-2 border-border object-cover z-10 bg-muted"
           />
           {showLine && (
