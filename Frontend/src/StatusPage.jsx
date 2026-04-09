@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import ProjectDetailsModal from './components/ProjectDetailsModal'
 
 const apiBase = 'http://localhost:5002/api'
 
@@ -8,6 +9,10 @@ const SAMPLE_PROJECTS = [
     _id: '1',
     title: 'AI-Powered Chatbot for Student Support',
     description: 'An intelligent chatbot system designed to assist students with academic queries, course registration, and campus information using natural language processing.',
+    fullDescription: 'This comprehensive AI-powered chatbot system leverages advanced natural language processing (NLP) techniques to provide real-time assistance to students. The system is built using state-of-the-art transformer models fine-tuned on academic queries.\n\nKey features include automated course registration assistance, campus navigation help, FAQ answering, and integration with university databases for personalized responses. The chatbot supports multiple languages and learns from interactions to improve accuracy over time.\n\nThe project was developed over 6 months using Python, TensorFlow, and deployed on AWS with a React-based admin dashboard for monitoring and training.',
+    image: 'https://picsum.photos/seed/chatbot/800/600',
+    rating: 4.5,
+    githubLink: 'https://github.com/example/ai-chatbot',
     category: 'AI',
     specialization: 'AI',
     year: 'Year 3',
@@ -15,13 +20,20 @@ const SAMPLE_PROJECTS = [
     status: 'Approved',
     difficulty: 'Hard',
     author: 'John Smith',
+    teamSize: 4,
     tags: ['AI', 'NLP', 'Chatbot', 'Python'],
+    techStack: ['Python', 'TensorFlow', 'React', 'Node.js', 'MongoDB', 'AWS'],
+    releaseDate: '2024-01-15',
     createdAt: '2024-01-15'
   },
   {
     _id: '2',
     title: 'Network Security Monitoring Dashboard',
     description: 'A real-time network monitoring system that detects and alerts potential security threats using machine learning algorithms.',
+    fullDescription: 'An enterprise-grade network security monitoring dashboard that provides real-time visibility into network traffic, potential threats, and security incidents. The system uses advanced machine learning algorithms to detect anomalies and predict potential security breaches before they occur.\n\nThe dashboard features customizable alerts, detailed incident reports, network topology visualization, and integration with popular SIEM tools. It supports monitoring of multiple network segments and provides actionable insights for security teams.\n\nBuilt with React for the frontend, Node.js for the backend, and Elasticsearch for log analysis, this solution handles over 10,000 events per second with minimal latency.',
+    image: 'https://picsum.photos/seed/security/800/600',
+    rating: 4.7,
+    githubLink: 'https://github.com/example/security-dashboard',
     category: 'Cyber Security',
     specialization: 'Network',
     year: 'Year 4',
@@ -29,13 +41,20 @@ const SAMPLE_PROJECTS = [
     status: 'New',
     difficulty: 'Medium',
     author: 'Sarah Johnson',
+    teamSize: 3,
     tags: ['Network', 'Security', 'Monitoring', 'React'],
+    techStack: ['React', 'Node.js', 'Elasticsearch', 'Redis', 'Docker', 'Grafana'],
+    releaseDate: '2024-02-20',
     createdAt: '2024-02-20'
   },
   {
     _id: '3',
     title: 'E-Commerce Platform with Recommendation Engine',
     description: 'A full-stack e-commerce web application featuring a personalized product recommendation system based on user behavior.',
+    fullDescription: 'A modern, scalable e-commerce platform that combines traditional online shopping features with an intelligent recommendation engine. The system analyzes user browsing patterns, purchase history, and preferences to provide personalized product suggestions.\n\nThe platform includes a product catalog with advanced search and filtering, shopping cart with secure checkout, order tracking, user reviews and ratings, and an admin dashboard for inventory management. The recommendation engine uses collaborative filtering and content-based approaches to achieve high accuracy.\n\nDeveloped using the MERN stack with Redux for state management, Stripe for payment processing, and deployed on Vercel with MongoDB Atlas for database hosting.',
+    image: 'https://picsum.photos/seed/ecommerce/800/600',
+    rating: 4.3,
+    githubLink: 'https://github.com/example/ecommerce-platform',
     category: 'Web',
     specialization: 'SE',
     year: 'Year 2',
@@ -43,13 +62,20 @@ const SAMPLE_PROJECTS = [
     status: 'Completed',
     difficulty: 'Medium',
     author: 'Mike Chen',
+    teamSize: 5,
     tags: ['Web', 'E-commerce', 'Recommendation', 'MERN'],
+    techStack: ['MongoDB', 'Express.js', 'React', 'Node.js', 'Redux', 'Stripe'],
+    releaseDate: '2024-03-10',
     createdAt: '2024-03-10'
   },
   {
     _id: '4',
     title: 'IoT Smart Home Automation System',
     description: 'An IoT-based home automation solution that allows users to control lights, temperature, and security devices remotely.',
+    fullDescription: 'A comprehensive smart home automation system that integrates various IoT devices including sensors, actuators, and controllers into a unified platform. Users can control lighting, HVAC systems, security cameras, and door locks through a mobile app or web interface.\n\nThe system supports automation rules, scheduled tasks, voice control integration, and energy consumption monitoring. It uses MQTT protocol for device communication and provides real-time notifications for security events.\n\nBuilt on Arduino and Raspberry Pi hardware with a cloud-based backend for remote access and data storage.',
+    image: 'https://picsum.photos/seed/smarthome/800/600',
+    rating: 4.1,
+    githubLink: null,
     category: 'IoT',
     specialization: 'System Engineering',
     year: 'Year 3',
@@ -57,13 +83,20 @@ const SAMPLE_PROJECTS = [
     status: 'Approved',
     difficulty: 'Hard',
     author: 'Emily Davis',
+    teamSize: 3,
     tags: ['IoT', 'Smart Home', 'Arduino', 'Mobile'],
+    techStack: ['Arduino', 'Raspberry Pi', 'MQTT', 'React Native', 'Firebase'],
+    releaseDate: '2024-01-25',
     createdAt: '2024-01-25'
   },
   {
     _id: '5',
     title: 'Data Visualization Dashboard for Climate Data',
     description: 'Interactive dashboard for visualizing climate change data with predictive analytics and trend analysis.',
+    fullDescription: 'An interactive data visualization platform that transforms complex climate datasets into intuitive charts, graphs, and maps. The dashboard enables researchers and policymakers to explore historical climate trends, compare regional data, and access predictive models.\n\nFeatures include time-series analysis, geographic heat maps, customizable dashboards, data export capabilities, and integration with public climate APIs. The system processes over 1 million data points from sources like NASA and NOAA.\n\nDeveloped with D3.js for custom visualizations, Python for data processing, and deployed as a Progressive Web App (PWA) for offline access.',
+    image: 'https://picsum.photos/seed/climate/800/600',
+    rating: 4.6,
+    githubLink: 'https://github.com/example/climate-dashboard',
     category: 'Data Science',
     specialization: 'Data Science',
     year: 'Year 4',
@@ -71,13 +104,20 @@ const SAMPLE_PROJECTS = [
     status: 'New',
     difficulty: 'Easy',
     author: 'Alex Wilson',
+    teamSize: 2,
     tags: ['Data Science', 'Visualization', 'D3.js', 'Python'],
+    techStack: ['D3.js', 'Python', 'Flask', 'PostgreSQL', 'React'],
+    releaseDate: '2024-02-15',
     createdAt: '2024-02-15'
   },
   {
     _id: '6',
     title: 'Mobile Banking Application with Biometric Auth',
     description: 'Secure mobile banking app featuring fingerprint and facial recognition authentication.',
+    fullDescription: 'A secure and user-friendly mobile banking application that provides comprehensive financial services on the go. The app features biometric authentication using fingerprint and facial recognition for enhanced security.\n\nCore features include account balance checking, fund transfers, bill payments, transaction history, budget tracking, and push notifications for account activities. The app implements end-to-end encryption and complies with banking security standards.\n\nDeveloped using Flutter for cross-platform compatibility with a Node.js backend and PostgreSQL database.',
+    image: null,
+    rating: 3.9,
+    githubLink: null,
     category: 'Mobile',
     specialization: 'SE',
     year: 'Year 3',
@@ -85,7 +125,10 @@ const SAMPLE_PROJECTS = [
     status: 'Approved',
     difficulty: 'Hard',
     author: 'Lisa Brown',
+    teamSize: 4,
     tags: ['Mobile', 'Security', 'Biometric', 'Flutter'],
+    techStack: ['Flutter', 'Dart', 'Node.js', 'PostgreSQL', 'JWT'],
+    releaseDate: '2024-03-05',
     createdAt: '2024-03-05'
   }
 ];
@@ -104,6 +147,10 @@ export default function StatusPage() {
     specialization: '',
     category: ''
   })
+  
+  // Modal state
+  const [selectedProject, setSelectedProject] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
 
   useEffect(() => {
     fetchStats()
@@ -235,6 +282,12 @@ export default function StatusPage() {
     const maxPossibleScore = 140 // Approximate max score
     const percentage = Math.min(100, Math.round((project.relevanceScore / maxPossibleScore) * 100))
     return percentage
+  }
+
+  // Handle view details button click
+  const handleViewDetails = (project) => {
+    setSelectedProject(project)
+    setShowDetailsModal(true)
   }
 
   // Get status badge color
@@ -379,7 +432,7 @@ export default function StatusPage() {
                   </div>
                   
                   {/* Action Button */}
-                  <button className="view-project-btn">
+                  <button className="view-project-btn" onClick={() => handleViewDetails(project)}>
                     View Details →
                   </button>
                 </div>
@@ -486,6 +539,14 @@ export default function StatusPage() {
       <footer className="status-footer">
         <p>IdeaBridge Project Status Dashboard • Last updated: {new Date().toLocaleString()}</p>
       </footer>
+      
+      {/* Project Details Modal */}
+      {showDetailsModal && selectedProject && (
+        <ProjectDetailsModal 
+          project={selectedProject} 
+          onClose={() => setShowDetailsModal(false)} 
+        />
+      )}
     </div>
   )
 }
