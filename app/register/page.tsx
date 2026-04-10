@@ -282,9 +282,9 @@ export default function RegisterPage() {
               </button>
             </form>
 
-            <p className="mt-5 text-center text-sm text-[#0F0F0F]/35">
+            <p className="mt-5 text-center text-sm text-[#0F0F0F]/55">
               Already have an account?{" "}
-              <Link href="/login" className="text-[#FFCBA4] hover:text-[#0F0F0F] font-semibold transition-colors">Sign in</Link>
+              <Link href="/login" className="text-[#C7792F] hover:text-[#0F0F0F] font-semibold transition-colors">Sign in</Link>
             </p>
           </div>
         </div>

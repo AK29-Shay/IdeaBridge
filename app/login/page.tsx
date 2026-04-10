@@ -159,7 +159,7 @@ export default function LoginPage() {
                 </Label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-[#F5A97F] hover:text-[#0F0F0F] transition-colors"
+                  className="text-xs text-[#C7792F] hover:text-[#0F0F0F] transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -227,7 +227,7 @@ export default function LoginPage() {
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="text-[#F5A97F] hover:text-[#0F0F0F] font-medium transition-colors"
+            className="text-[#C7792F] hover:text-[#0F0F0F] font-medium transition-colors"
           >
             Create one free
           </Link>
