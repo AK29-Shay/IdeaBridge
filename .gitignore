@@ -1,1 +1,9 @@
+<<<<<<< HEAD
 node_modules
+=======
+Backend/node_modules/
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.vite/
+Backend/.env
+>>>>>>> d1bba6b490a55cc9741ca97d72f19fd86bd35c43
