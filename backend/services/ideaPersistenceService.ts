@@ -193,6 +193,19 @@ function normalizeAnalyticsStatus(value: unknown): "pending" | "answered" | "com
   return "pending";
 }
 
+function isFetchThreadUnavailable(error: unknown) {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String((error as { code?: unknown }).code ?? "")
+      : "";
+  const message =
+    typeof error === "object" && error !== null && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : "";
+
+  return code === "PGRST202" || message.toLowerCase().includes("fetch_thread");
+}
+
 function formatRelativeTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -526,18 +539,66 @@ type ThreadRow = {
   author_role: string | null;
 };
 
-export async function fetchIdeaThread(postId: string): Promise<IdeaThreadNode[]> {
-  const post = await loadIdeaPost(postId);
+type RawCommentRow = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  parent_comment_id: string | null;
+  content: string;
+  is_accepted: boolean;
+  upvotes: number;
+  created_at: string;
+};
 
-  const { data, error } = await supabaseServer.rpc("fetch_thread", {
+async function loadThreadRowsWithFallback(postId: string): Promise<ThreadRow[]> {
+  const rpc = await supabaseServer.rpc("fetch_thread", {
     p_post_id: postId,
   });
 
-  if (error) {
-    throw new IdeaPersistenceError(error.message, 500);
+  if (!rpc.error) {
+    return (rpc.data ?? []) as ThreadRow[];
   }
 
-  const rows = (data ?? []) as ThreadRow[];
+  if (!isFetchThreadUnavailable(rpc.error)) {
+    throw new IdeaPersistenceError(rpc.error.message, 500);
+  }
+
+  const { data: commentsRaw, error: commentsError } = await supabaseServer
+    .from("comments")
+    .select("id,post_id,user_id,parent_comment_id,content,is_accepted,upvotes,created_at")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true });
+
+  if (commentsError) {
+    throw new IdeaPersistenceError(commentsError.message, 500);
+  }
+
+  const comments = (commentsRaw ?? []) as RawCommentRow[];
+  const userIds = Array.from(new Set(comments.map((comment) => comment.user_id).filter(Boolean)));
+  const profiles = await loadProfiles(userIds);
+
+  return comments.map((row) => {
+    const profile = profiles.get(row.user_id);
+    return {
+      id: row.id,
+      post_id: row.post_id,
+      user_id: row.user_id,
+      parent_comment_id: row.parent_comment_id,
+      content: row.content,
+      is_accepted: row.is_accepted,
+      upvotes: row.upvotes,
+      created_at: row.created_at,
+      author_name: profile?.full_name ?? "Anonymous",
+      author_avatar: profile?.avatar_url ?? null,
+      author_role: profile?.role ?? "Student",
+    };
+  });
+}
+
+export async function fetchIdeaThread(postId: string): Promise<IdeaThreadNode[]> {
+  const post = await loadIdeaPost(postId);
+
+  const rows = await loadThreadRowsWithFallback(postId);
 
   const map = new Map<string, IdeaThreadNode>();
   const roots: IdeaThreadNode[] = [];

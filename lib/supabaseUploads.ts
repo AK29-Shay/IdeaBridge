@@ -1,5 +1,3 @@
-import { supabase } from "@/lib/supabaseClient";
-
 export type ThreadMediaKind = "image" | "gif" | "video";
 export type UploadedAssetKind = ThreadMediaKind | "file";
 
@@ -92,30 +90,41 @@ async function uploadFileToBucket(params: {
   if (!bucket) {
     throw new Error("Supabase storage bucket name is missing.");
   }
-
   const ext = extensionOf(file.name);
   const safeBaseName = sanitizeFileName(file.name.replace(ext, ""));
-  const path = `${folder}/${safeBaseName}_${randomId()}${ext}`;
+  const normalizedFolder = folder.replace(/^\/+|\/+$/g, "") || "uploads";
+  const desiredPath = `${normalizedFolder}/${safeBaseName}_${randomId()}${ext}`;
 
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    cacheControl: "3600",
-    upsert: false,
-    contentType: file.type || "application/octet-stream",
+  const formData = new FormData();
+  formData.append("bucket", bucket);
+  formData.append("folder", normalizedFolder);
+  formData.append("path", desiredPath);
+  formData.append("file", file);
+
+  const response = await fetch("/api/uploads", {
+    method: "POST",
+    body: formData,
   });
 
-  if (error) {
-    throw new Error(error.message);
+  const payload = (await response.json().catch(() => null)) as Partial<UploadedSupabaseFile> | { error?: unknown } | null;
+
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === "object" && "error" in payload
+        ? String(payload.error ?? "Upload failed.")
+        : "Upload failed.";
+    throw new Error(message);
   }
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-
   return {
-    name: file.name,
-    url: data.publicUrl,
-    path,
-    mimeType: file.type || "application/octet-stream",
-    size: file.size,
-    kind: detectKind(file),
+    name: typeof payload?.name === "string" ? payload.name : file.name,
+    url: typeof payload?.url === "string" ? payload.url : "",
+    path: typeof payload?.path === "string" ? payload.path : desiredPath,
+    mimeType: typeof payload?.mimeType === "string" ? payload.mimeType : file.type || "application/octet-stream",
+    size: typeof payload?.size === "number" ? payload.size : file.size,
+    kind: payload?.kind === "image" || payload?.kind === "gif" || payload?.kind === "video" || payload?.kind === "file"
+      ? payload.kind
+      : detectKind(file),
   };
 }
 
