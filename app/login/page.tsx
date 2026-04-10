@@ -11,30 +11,13 @@ import { Mail, Lock, Eye, EyeOff } from "@/components/ui/icons";
 
 import { loginSchema } from "@/lib/zod/authSchemas";
 import { useAuth } from "@/context/AuthContext";
+import { supabaseClient } from "@/backend/config/supabaseClient";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type LoginInput = z.infer<typeof loginSchema>;
 
-type StoredUser = {
-  id: string;
-  role: "student" | "mentor";
-  fullName: string;
-  email: string;
-  password: string;
-  studentProfile?: Record<string, unknown>;
-  mentorProfile?: Record<string, unknown>;
-};
 
-function getUsersFromStorage(): StoredUser[] {
-  try {
-    const raw = localStorage.getItem("ideabridge_users_v1");
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? (parsed as StoredUser[]) : [];
-  } catch {
-    return [];
-  }
-}
 
 
 
@@ -64,28 +47,38 @@ export default function LoginPage() {
     },
   });
 
+
   async function handleSubmit(values: LoginInput) {
     setIsLoading(true);
     try {
+      // Use AuthContext login (which sets user)
       await login({ email: values.email, password: values.password });
-
-      const redirectTo =
-        typeof window !== "undefined"
-          ? new URLSearchParams(window.location.search).get("next") ?? ""
-          : "";
-
-      const users = getUsersFromStorage();
-      const match = users.find(
-        (u) => u.email.toLowerCase() === values.email.toLowerCase()
-      );
-      const nextRole = match?.role ?? user?.role;
-      if (!nextRole) throw new Error("Unable to determine your role.");
-
+      // Get session
+      const { data, error } = await supabaseClient.auth.getSession();
+      console.log("[Login] Session result:", { data, error });
+      if (error || !data.session) {
+        throw new Error(error?.message || "Login failed: No session");
+      }
+      // Fetch profile to get role
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("role")
+        .eq("user_id", data.session.user.id)
+        .single();
+      console.log("[Login] Profile fetch result:", profile);
+      console.log("[Login] Profile fetch error:", profileError);
+      if (profileError || !profile) {
+        toast.error("Could not fetch user profile/role.");
+        return;
+      }
+      console.log("[Login] Profile role:", profile.role);
+      let redirectPath = "/dashboard/student";
+      if (profile.role === "mentor") {
+        redirectPath = "/dashboard/mentor";
+      }
+      console.log("[Login] Redirecting to:", redirectPath);
+      router.push(redirectPath);
       toast.success("Welcome back to IdeaBridge! 🚀");
-      router.push(
-        redirectTo ||
-          (nextRole === "student" ? "/dashboard/student" : "/dashboard/mentor")
-      );
     } catch (rawError: unknown) {
       const message =
         rawError instanceof Error ? rawError.message : "Login failed.";

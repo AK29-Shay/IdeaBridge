@@ -24,13 +24,49 @@ import { ProjectsSection } from "@/components/student/ProjectsSection";
 import { RequestsSection } from "@/components/student/RequestsSection";
 import { ProfileSection } from "@/components/student/ProfileSection";
 
-type Tab = "dashboard" | "projects" | "requests" | "profile";
+// Small profile dropdown component localized to student dashboard (keeps header self-contained)
+function ProfileMenu({ userFullName, initials, onLogout }: { userFullName: string; initials: string; onLogout: () => void }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (open && ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("click", onDoc);
+    return () => document.removeEventListener("click", onDoc);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((s) => !s)}
+        className="inline-flex items-center gap-3 rounded-full px-2 py-1 hover:bg-white/20 transition"
+        aria-label="Open profile menu"
+      >
+        <div className="h-9 w-9 rounded-full bg-[#0F0F0F] flex items-center justify-center text-[#FFCBA4] font-bold text-sm shadow-md">{initials}</div>
+        <div className="hidden sm:block text-sm font-semibold text-slate-700">{userFullName}</div>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-2 w-44 rounded-lg bg-white border border-[#e9dfd6] shadow-md z-40">
+          <div className="py-1">
+            <a href="/dashboard/student/profile" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">View Profile</a>
+            <a href="/dashboard/student/profile?mode=edit" className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Edit Profile</a>
+            <button onClick={() => { setOpen(false); onLogout(); }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50">Logout</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type Tab = "dashboard" | "projects" | "requests";
 
 const NAV_ITEMS: { id: Tab; label: string; icon: React.FC<{ className?: string }> }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "projects", label: "My Projects", icon: FolderKanban },
   { id: "requests", label: "Requests", icon: SendHorizonal },
-  { id: "profile", label: "Profile", icon: UserCircle2 },
 ];
 
 export default function StudentDashboardPage() {
@@ -96,18 +132,9 @@ function StudentDashboard() {
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-3 border-b border-[#FFCBA4]/30 px-6 py-5">
-          <div className="h-10 w-10 rounded-2xl flex items-center justify-center font-black text-sm text-[#FFCBA4] shadow-md" style={{background:'linear-gradient(135deg,#0F0F0F 60%,#1c0f00)'}}>
-            IB
-          </div>
-          <div>
-            <div className="font-bold text-slate-800">IdeaBridge</div>
-            <div className="text-xs text-[#F5A97F] font-medium flex items-center gap-1">
-              <Sparkles className="h-3 w-3" />
-              Student Portal
-            </div>
-          </div>
+        {/* Sidebar top label (no duplicate full branding) */}
+        <div className="border-b border-[#FFCBA4]/30 px-6 py-5 flex items-center">
+          <div className="font-semibold text-slate-800">Student Portal</div>
           <button
             className="ml-auto lg:hidden text-slate-400 hover:text-slate-600"
             onClick={() => setSidebarOpen(false)}
@@ -197,22 +224,14 @@ function StudentDashboard() {
             </div>
 
             <div className="ml-auto flex items-center gap-3">
-              {/* Greeting */}
-              <div className="hidden md:block text-right">
-                <div className="text-xs text-slate-400">Welcome back 👋</div>
-                <div className="text-sm font-semibold text-slate-700">{user.fullName}</div>
-              </div>
-
               {/* Bell */}
               <button className="relative rounded-xl border border-[#FFCBA4]/30 bg-white p-2 text-slate-500 hover:bg-[#FFCBA4]/10 hover:text-[#0F0F0F] transition-colors shadow-sm">
                 <Bell className="h-4 w-4" />
                 <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#F5A97F]" />
               </button>
 
-              {/* Avatar */}
-              <div className="h-9 w-9 rounded-full bg-[#0F0F0F] flex items-center justify-center text-[#FFCBA4] font-bold text-sm shadow-md">
-                {initials}
-              </div>
+              {/* Profile avatar + name with dropdown */}
+              <ProfileMenu userFullName={user.fullName} initials={initials} onLogout={handleLogout} />
             </div>
           </div>
         </header>
@@ -230,7 +249,6 @@ function StudentDashboard() {
             />
           )}
           {activeTab === "requests" && <RequestsSection />}
-          {activeTab === "profile" && <ProfileSection />}
         </main>
       </div>
     </div>

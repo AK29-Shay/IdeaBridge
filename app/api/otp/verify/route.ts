@@ -1,19 +1,32 @@
-import { NextResponse } from 'next/server'
-import { verifyUserOtp } from '../../../../backend/controllers/otpController'
-import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
+/**
+ * POST /api/otp/verify
+ * Verifies the 6-digit OTP submitted by the authenticated user.
+ * Body: { otp: string }
+ */
+import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '../../../../backend/middleware/auth'
+import { handleVerifyOtp } from '../../../../backend/controllers/otpController'
+import { handleError } from '../../../../backend/utils/helpers'
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (req: NextRequest, user) => {
   try {
-    const authorization = request.headers.get('authorization')
-    const user = await getUserFromAuthHeader(authorization)
-    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
-
-    const body = await request.json()
+    const body = await req.json()
     const { otp } = body
-    const result = await verifyUserOtp(user.user.id, otp)
-    if (!result.ok) return new NextResponse(JSON.stringify({ error: result.reason }), { status: 400 })
-    return NextResponse.json({ ok: true })
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+
+    if (!otp || typeof otp !== 'string') {
+      return NextResponse.json({ error: 'otp is required' }, { status: 400 })
+    }
+
+    const result = await handleVerifyOtp({ user_id: user.id, otp })
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.reason ?? 'OTP verification failed' },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (e) {
+    return handleError(e)
   }
-}
+})

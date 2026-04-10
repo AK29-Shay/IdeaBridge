@@ -1,18 +1,26 @@
-import { NextResponse } from 'next/server'
-import { searchMentors } from '../../../../backend/controllers/mentorController'
-import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
+/**
+ * GET /api/mentors/search
+ *
+ * Query params (all optional):
+ *   skills              comma-separated, e.g. "React,TypeScript"
+ *   availability        Full-time | Part-time | Evenings
+ *   availability_status Available Now | Available in 1-2 days | Busy | On Leave
+ *   min_rating          0–5
+ *   limit               default 20, max 50
+ *   offset              default 0
+ *
+ * Public — no auth required so students can browse before signing in.
+ */
+import { NextRequest, NextResponse } from 'next/server'
+import { handleMentorSearch } from '../../../../backend/controllers/mentorController'
+import { handleError } from '../../../../backend/utils/helpers'
 
-export async function GET(request: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const authorization = request.headers.get('authorization')
-    const user = await getUserFromAuthHeader(authorization)
-    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
-
-    const url = new URL(request.url)
-    const skill = url.searchParams.get('skill') || undefined
-    const data = await searchMentors({ skill })
-    return NextResponse.json(data)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+    const params = Object.fromEntries(req.nextUrl.searchParams.entries())
+    const mentors = await handleMentorSearch(params)
+    return NextResponse.json({ data: mentors, count: mentors.length })
+  } catch (e) {
+    return handleError(e)
   }
 }

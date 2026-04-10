@@ -6,6 +6,7 @@ import type { MentorProfile } from "@/types/mentor";
 import type { UserRole } from "@/types/auth";
 import type { StudentProfile } from "@/types/student";
 import { IDEABRIDGE_STORAGE_KEYS } from "@/lib/constants";
+import { supabaseClient } from "@/backend/config/supabaseClient";
 
 type StoredUser = AuthUser;
 
@@ -16,7 +17,7 @@ type AuthContextValue = {
   register: (params: { user: Omit<StoredUser, "id"> & { fullName: string } }) => Promise<void>;
   logout: () => void;
   updateStudentProfile: (profile: StudentProfile) => void;
-  updateMentorProfile: (profile: MentorProfile) => void;
+  updateMentorProfile: (profile: MentorProfile & { fullName?: string; currentYear?: string; studentId?: string }) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -36,21 +37,18 @@ function makeId() {
   return `id_${Math.random().toString(16).slice(2)}_${Date.now()}`;
 }
 
-function getUsers(): StoredUser[] {
-  if (typeof window === "undefined") return [];
-  const parsed = safeParseJSON<StoredUser[]>(localStorage.getItem(IDEABRIDGE_STORAGE_KEYS.users));
-  return Array.isArray(parsed) ? parsed : [];
-}
-
-function setUsers(next: StoredUser[]) {
-  localStorage.setItem(IDEABRIDGE_STORAGE_KEYS.users, JSON.stringify(next));
-}
-
-function getAuthUserId(): StoredUser | null {
-  const parsed = safeParseJSON<{ email: string }>(localStorage.getItem(IDEABRIDGE_STORAGE_KEYS.auth));
-  if (!parsed?.email) return null;
-  const users = getUsers();
-  return users.find((u) => u.email.toLowerCase() === parsed.email.toLowerCase()) ?? null;
+// Supabase-based auth helpers
+// Supabase-based auth helpers
+async function getProfileByUserId(user_id: string) {
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("*")
+    .eq("user_id", user_id)
+    .single();
+  console.log("[AuthContext] Profile fetch result (helper):", data);
+  console.log("[AuthContext] Profile fetch error (helper):", error);
+  if (error) return null;
+  return data;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -58,10 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Load auth state from localStorage on first client render.
-    const existing = getAuthUserId();
-    setUser(existing);
-    setIsReady(true);
+    // Load auth state from Supabase session on first client render.
+    const session = supabaseClient.auth.getSession();
+    session.then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await getProfileByUserId(session.user.id);
+        setUser(profile);
+      }
+      setIsReady(true);
+    });
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -69,61 +72,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isReady,
       async login({ email, password }) {
-        const users = getUsers();
-        const match = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-        if (!match) {
-          throw new Error("No account found for this email.");
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        console.log("[AuthContext] Login response:", { data, error });
+        if (error || !data.user) {
+          throw new Error(error?.message || "Login failed");
         }
-        if (match.password !== password) {
-          throw new Error("Incorrect password.");
+        // Fetch profile by user_id
+        const { data: profile, error: profileError } = await supabaseClient
+          .from("profiles")
+          .select("*")
+          .eq("user_id", data.user.id)
+          .single();
+        console.log("[AuthContext] Profile fetch result (login):", profile);
+        console.log("[AuthContext] Profile fetch error (login):", profileError);
+        if (profileError || !profile) {
+          throw new Error("Could not fetch user profile/role");
         }
-
-        localStorage.setItem(IDEABRIDGE_STORAGE_KEYS.auth, JSON.stringify({ email: match.email }));
-        setUser(match);
+        setUser(profile);
       },
       async register({ user: incoming }) {
-        const users = getUsers();
-        const exists = users.some((u) => u.email.toLowerCase() === incoming.email.toLowerCase());
-        if (exists) {
-          throw new Error("An account with this email already exists.");
+        // Register with Supabase Auth
+        const { data, error } = await supabaseClient.auth.signUp({
+          email: incoming.email,
+          password: incoming.password,
+        });
+        console.log("[AuthContext] Register response:", { data, error });
+        if (error || !data.user) {
+          throw new Error(error?.message || "Registration failed");
         }
-
-        const newUser: StoredUser = {
-          ...incoming,
-          id: makeId(),
-        };
-
-        setUsers([...users, newUser]);
-        localStorage.setItem(IDEABRIDGE_STORAGE_KEYS.auth, JSON.stringify({ email: newUser.email }));
-        setUser(newUser);
+        // Insert profile row (basic fields only, no email column)
+        const { error: profileError } = await supabaseClient.from("profiles").insert({
+          user_id: data.user.id, // foreign key to auth.users.id
+          full_name: incoming.fullName,
+          role: incoming.role,
+        });
+        console.log("[AuthContext] Profile insert result (register):", { profileError });
+        if (profileError) {
+          throw new Error("Profile creation failed: " + profileError.message);
+        }
+        // Fetch and set user profile
+        const { data: profile, error: fetchError } = await supabaseClient
+          .from("profiles")
+          .select("*")
+          .eq("user_id", data.user.id)
+          .single();
+        console.log("[AuthContext] Profile fetch result (register):", profile);
+        console.log("[AuthContext] Profile fetch error (register):", fetchError);
+        if (fetchError || !profile) {
+          throw new Error("Could not fetch user profile/role after registration");
+        }
+        setUser(profile);
       },
-      logout() {
-        localStorage.removeItem(IDEABRIDGE_STORAGE_KEYS.auth);
+      async logout() {
+        await supabaseClient.auth.signOut();
         setUser(null);
       },
-      updateStudentProfile(profile) {
+      async updateStudentProfile(profile) {
         if (!user) return;
-        const updated: StoredUser = {
-          ...user,
-          role: "student",
-          studentProfile: profile,
-          mentorProfile: user.mentorProfile,
-        };
-        const users = getUsers().map((u) => (u.id === updated.id ? updated : u));
-        setUsers(users);
+        const { error } = await supabaseClient
+          .from("profiles")
+          .update({
+            ...profile,
+            role: "student",
+          })
+          .eq("user_id", user.id);
+        if (error) throw new Error(error.message);
+        const updated = await getProfileByUserId(user.id);
         setUser(updated);
       },
-      updateMentorProfile(profile) {
+      async updateMentorProfile(profileWithExtras) {
         if (!user) return;
-        const updated: StoredUser = {
-          ...user,
-          role: "mentor",
-          mentorProfile: profile,
-          availabilityStatus: profile.availabilityStatus,
-          studentProfile: user.studentProfile,
-        };
-        const users = getUsers().map((u) => (u.id === updated.id ? updated : u));
-        setUsers(users);
+        const { fullName, currentYear, studentId, ...mentorProfile } = profileWithExtras as any;
+        const { error } = await supabaseClient
+          .from("profiles")
+          .update({
+            ...mentorProfile,
+            full_name: fullName ?? user.fullName,
+            academic_year: currentYear ?? undefined,
+            role: "mentor",
+          })
+          .eq("user_id", user.id);
+        if (error) throw new Error(error.message);
+        const updated = await getProfileByUserId(user.id);
         setUser(updated);
       },
     }),
