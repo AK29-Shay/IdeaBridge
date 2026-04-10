@@ -3,11 +3,24 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ThumbsUp, MessageCircle, Pin, MoreHorizontal, Pencil, Trash2, Check, X } from "lucide-react";
+import { ThumbsUp, MessageCircle, Pin, MoreHorizontal, Pencil, Trash2, Check, X, Paperclip, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { CommentNode } from "@/lib/ideas/mockThread";
+import { toast } from "sonner";
+import { CommentNode, CommentAttachment } from "@/lib/ideas/mockThread";
 import { cn } from "@/lib/utils";
+import {
+  THREAD_MEDIA_ACCEPT,
+  SUPABASE_MAX_UPLOAD_BYTES,
+  formatBytes,
+  uploadThreadMediaFile,
+  validateThreadMediaFile,
+} from "@/lib/supabaseUploads";
+
+type ReplyPayload = {
+  content: string;
+  attachments: CommentAttachment[];
+};
 
 interface ProjectThreadProps {
   comments: CommentNode[];
@@ -34,6 +47,36 @@ export default function ProjectThread({ comments }: ProjectThreadProps) {
     setThreadComments((prev) => editNode(prev));
   };
 
+  const handleReply = (parentId: string, payload: ReplyPayload) => {
+    const nextReply: CommentNode = {
+      id: `reply_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      author: "You",
+      avatarUrl: "https://i.pravatar.cc/150?u=current-user",
+      role: "Student",
+      content: payload.content.trim() || "Shared media",
+      attachments: payload.attachments,
+      upvotes: 0,
+      timestamp: "Just now",
+      replies: [],
+    };
+
+    const appendReply = (nodes: CommentNode[]): CommentNode[] =>
+      nodes.map((node) => {
+        if (node.id === parentId) {
+          return {
+            ...node,
+            replies: [...(node.replies ?? []), nextReply],
+          };
+        }
+        return {
+          ...node,
+          replies: appendReply(node.replies ?? []),
+        };
+      });
+
+    setThreadComments((prev) => appendReply(prev));
+  };
+
   return (
     <div className="w-full flex flex-col pt-2">
       <h3 className="text-xl font-bold tracking-tight mb-8 px-2 flex items-center gap-2">
@@ -49,6 +92,7 @@ export default function ProjectThread({ comments }: ProjectThreadProps) {
             depth={0}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onReply={handleReply}
           />
         ))}
       </div>
@@ -62,13 +106,17 @@ interface CommentItemProps {
   depth: number;
   onDelete: (id: string) => void;
   onEdit: (id: string, newContent: string) => void;
+  onReply: (parentId: string, payload: ReplyPayload) => void;
 }
 
-function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemProps) {
+function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const [uploadingReply, setUploadingReply] = useState(false);
   const [upvotes, setUpvotes] = useState(comment.upvotes);
   const [upvoted, setUpvoted] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -117,6 +165,68 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
   const handleEditCancel = () => {
     setEditText(comment.content);
     setIsEditing(false);
+  };
+
+  const handleReplyFilesChosen = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const selected = Array.from(files);
+    const next: File[] = [];
+    for (const file of selected) {
+      const error = validateThreadMediaFile(file);
+      if (error) {
+        toast.error(error);
+        continue;
+      }
+      next.push(file);
+    }
+
+    if (next.length > 0) {
+      setReplyFiles((prev) => [...prev, ...next]);
+    }
+  };
+
+  const handleRemoveReplyFile = (indexToRemove: number) => {
+    setReplyFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handlePostReply = async () => {
+    if (uploadingReply) return;
+
+    const content = replyText.trim();
+    if (!content && replyFiles.length === 0) return;
+
+    setUploadingReply(true);
+    try {
+      const uploadedAttachments: CommentAttachment[] = [];
+      for (const file of replyFiles) {
+        const uploaded = await uploadThreadMediaFile(file);
+        if (uploaded.kind === "file") continue;
+        uploadedAttachments.push({
+          id: uploaded.path,
+          name: uploaded.name,
+          url: uploaded.url,
+          mimeType: uploaded.mimeType,
+          size: uploaded.size,
+          kind: uploaded.kind,
+          path: uploaded.path,
+        });
+      }
+
+      onReply(comment.id, {
+        content,
+        attachments: uploadedAttachments,
+      });
+
+      setReplyText("");
+      setReplyFiles([]);
+      setShowReplyForm(false);
+      toast.success("Reply posted.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to post reply.");
+    } finally {
+      setUploadingReply(false);
+    }
   };
 
   return (
@@ -321,6 +431,28 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
             )}
           </AnimatePresence>
 
+          {comment.attachments && comment.attachments.length > 0 ? (
+            <div className="mb-3 grid grid-cols-1 gap-2">
+              {comment.attachments.map((attachment) => (
+                <div key={attachment.id} className="rounded-xl border border-border bg-background p-2">
+                  {attachment.kind === "video" ? (
+                    <video src={attachment.url} controls className="w-full rounded-md" />
+                  ) : (
+                    <img src={attachment.url} alt={attachment.name} className="w-full rounded-md object-cover" loading="lazy" />
+                  )}
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block text-xs text-primary hover:underline"
+                  >
+                    {attachment.name} ({formatBytes(attachment.size)})
+                  </a>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {/* Action Row */}
           <div className="flex items-center gap-5 text-muted-foreground">
             <button
@@ -348,17 +480,70 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="flex gap-2 mt-3">
+                <div className="mt-3 space-y-2">
                   <input
                     type="text"
                     value={replyText}
                     onChange={e => setReplyText(e.target.value)}
                     placeholder={`Reply to ${comment.author}...`}
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
-                  <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors flex-shrink-0">
-                    Post
-                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept={THREAD_MEDIA_ACCEPT}
+                    className="hidden"
+                    onChange={(e) => {
+                      handleReplyFilesChosen(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"
+                    >
+                      <Paperclip size={13} />
+                      Attach media
+                    </button>
+                    <span className="text-[11px] text-muted-foreground">
+                      Image/GIF/Video, max {formatBytes(SUPABASE_MAX_UPLOAD_BYTES)} each
+                    </span>
+                  </div>
+
+                  {replyFiles.length > 0 ? (
+                    <div className="space-y-1">
+                      {replyFiles.map((file, idx) => (
+                        <div key={`${file.name}_${idx}`} className="flex items-center justify-between rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                          <span className="truncate max-w-[75%]">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveReplyFile(idx)}
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={`Remove ${file.name}`}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void handlePostReply()}
+                      disabled={uploadingReply || (!replyText.trim() && replyFiles.length === 0)}
+                      className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {uploadingReply ? <Loader2 size={14} className="animate-spin" /> : null}
+                      Post
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -378,6 +563,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                 depth={depth + 1}
                 onDelete={onDelete}
                 onEdit={onEdit}
+                onReply={onReply}
               />
             ))}
           </div>

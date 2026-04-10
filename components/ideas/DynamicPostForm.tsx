@@ -1,10 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Send, FileCode2, Sparkles, GraduationCap, Link2, Upload, MessageSquarePlus, RefreshCw } from "lucide-react";
+import { ChevronDown, Send, FileCode2, Sparkles, GraduationCap, Link2, Upload, MessageSquarePlus, RefreshCw, Loader2, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
+import {
+  DYNAMIC_FORM_ACCEPT,
+  SUPABASE_MAX_UPLOAD_BYTES,
+  formatBytes,
+  uploadDynamicFormFile,
+  validateDynamicFormFile,
+} from "@/lib/supabaseUploads";
+import type { UploadedSupabaseFile } from "@/lib/supabaseUploads";
 
 type FormMode = "Request" | "Post";
 type PostVariant = "Full Project Details" | "Project Idea" | "Fully AI-Driven Project" | "Campus Requirement";
@@ -19,6 +28,9 @@ export default function DynamicPostForm() {
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [extras, setExtras] = useState<Record<string, string>>({});
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedSupabaseFile[]>([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const variants: PostVariant[] = [
     "Full Project Details",
@@ -39,6 +51,40 @@ export default function DynamicPostForm() {
       campusComponent: "User Profile Module",
       campusCrud: "Create, Read, Update, Delete for User Profiles"
     });
+  };
+
+  const handleFilesChosen = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const selected = Array.from(files);
+    const errors = selected
+      .map((file) => validateDynamicFormFile(file))
+      .filter((msg): msg is string => !!msg);
+
+    if (errors.length > 0) {
+      errors.forEach((msg) => toast.error(msg));
+      return;
+    }
+
+    setIsUploadingFiles(true);
+    try {
+      const nextUploads: UploadedSupabaseFile[] = [];
+      for (const file of selected) {
+        const uploaded = await uploadDynamicFormFile(file);
+        nextUploads.push(uploaded);
+      }
+
+      setUploadedFiles((prev) => [...prev, ...nextUploads]);
+      toast.success(`${nextUploads.length} file(s) uploaded.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload files.");
+    } finally {
+      setIsUploadingFiles(false);
+    }
+  };
+
+  const removeUploadedFile = (indexToRemove: number) => {
+    setUploadedFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   const formVariants = {
@@ -206,10 +252,46 @@ export default function DynamicPostForm() {
                     </div>
                     <div className="md:col-span-2 mt-2">
                        <label className="text-sm font-medium text-foreground mb-1 block">File / Zip Upload</label>
-                       <div className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-muted hover:border-primary transition cursor-pointer">
-                         <Upload size={24} className="mb-2" />
-                         <span className="text-sm font-medium">Click to upload or drag & drop</span>
-                       </div>
+                       <input
+                         ref={fileInputRef}
+                         type="file"
+                         multiple
+                         accept={DYNAMIC_FORM_ACCEPT}
+                         className="hidden"
+                         onChange={(e) => {
+                           void handleFilesChosen(e.target.files);
+                           e.currentTarget.value = "";
+                         }}
+                       />
+                       <button
+                         type="button"
+                         onClick={() => fileInputRef.current?.click()}
+                         className="w-full border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-muted hover:border-primary transition"
+                       >
+                         {isUploadingFiles ? <Loader2 size={24} className="mb-2 animate-spin" /> : <Upload size={24} className="mb-2" />}
+                         <span className="text-sm font-medium">Click to upload files (all types, including zip)</span>
+                         <span className="text-xs mt-1">Max {formatBytes(SUPABASE_MAX_UPLOAD_BYTES)} per file (Supabase bucket limit)</span>
+                       </button>
+
+                       {uploadedFiles.length > 0 ? (
+                         <div className="mt-3 space-y-2">
+                           {uploadedFiles.map((file, idx) => (
+                             <div key={`${file.path}_${idx}`} className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2">
+                               <a href={file.url} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate max-w-[80%]">
+                                 {file.name}
+                               </a>
+                               <button
+                                 type="button"
+                                 className="text-muted-foreground hover:text-foreground"
+                                 onClick={() => removeUploadedFile(idx)}
+                                 aria-label={`Remove ${file.name}`}
+                               >
+                                 <X size={14} />
+                               </button>
+                             </div>
+                           ))}
+                         </div>
+                       ) : null}
                     </div>
                   </div>
                 )}
