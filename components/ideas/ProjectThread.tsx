@@ -24,20 +24,56 @@ type ReplyPayload = {
 
 interface ProjectThreadProps {
   comments: CommentNode[];
+  postId?: string;
+  actorEmail?: string;
+  isLoading?: boolean;
+  onRefresh?: () => Promise<void> | void;
 }
 
-export default function ProjectThread({ comments }: ProjectThreadProps) {
+function parseApiError(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object") return fallback;
+  const error = "error" in payload ? String((payload as { error?: unknown }).error ?? "") : "";
+  return error || fallback;
+}
+
+export default function ProjectThread({ comments, postId, actorEmail, isLoading = false, onRefresh }: ProjectThreadProps) {
   const [threadComments, setThreadComments] = useState<CommentNode[]>(comments);
 
-  const handleDelete = (id: string) => {
+  useEffect(() => {
+    setThreadComments(comments);
+  }, [comments]);
+
+  const handleDelete = async (id: string) => {
+    const previous = threadComments;
     const deleteNode = (nodes: CommentNode[]): CommentNode[] =>
       nodes
         .filter((n) => n.id !== id)
         .map((n) => ({ ...n, replies: deleteNode(n.replies ?? []) }));
     setThreadComments((prev) => deleteNode(prev));
+
+    if (!postId || !actorEmail) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments/${id}?actorEmail=${encodeURIComponent(actorEmail)}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(parseApiError(payload, "Failed to delete reply."));
+      }
+
+      await onRefresh?.();
+      toast.success("Reply deleted.");
+    } catch (error) {
+      setThreadComments(previous);
+      toast.error(error instanceof Error ? error.message : "Failed to delete reply.");
+    }
   };
 
-  const handleEdit = (id: string, newContent: string) => {
+  const handleEdit = async (id: string, newContent: string) => {
+    const previous = threadComments;
     const editNode = (nodes: CommentNode[]): CommentNode[] =>
       nodes.map((n) =>
         n.id === id
@@ -45,9 +81,37 @@ export default function ProjectThread({ comments }: ProjectThreadProps) {
           : { ...n, replies: editNode(n.replies ?? []) }
       );
     setThreadComments((prev) => editNode(prev));
+
+    if (!postId || !actorEmail) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments/${id}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          actorEmail,
+          content: newContent,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(parseApiError(payload, "Failed to update reply."));
+      }
+
+      await onRefresh?.();
+      toast.success("Reply updated.");
+    } catch (error) {
+      setThreadComments(previous);
+      toast.error(error instanceof Error ? error.message : "Failed to update reply.");
+    }
   };
 
-  const handleReply = (parentId: string, payload: ReplyPayload) => {
+  const handleReply = async (parentId: string, payload: ReplyPayload) => {
     const nextReply: CommentNode = {
       id: `reply_${Date.now()}_${Math.random().toString(16).slice(2)}`,
       author: "You",
@@ -74,7 +138,34 @@ export default function ProjectThread({ comments }: ProjectThreadProps) {
         };
       });
 
-    setThreadComments((prev) => appendReply(prev));
+    if (!postId || !actorEmail) {
+      setThreadComments((prev) => appendReply(prev));
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          actorEmail,
+          content: payload.content,
+          parent_comment_id: parentId,
+          attachments: payload.attachments,
+        }),
+      });
+
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(parseApiError(body, "Failed to post reply."));
+      }
+
+      await onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to post reply.");
+    }
   };
 
   return (
@@ -83,6 +174,9 @@ export default function ProjectThread({ comments }: ProjectThreadProps) {
         <MessageCircle size={20} className="text-primary" />
         Discussion Thread
       </h3>
+      {isLoading ? (
+        <div className="mb-5 rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">Loading thread...</div>
+      ) : null}
       <div className="flex flex-col">
         {threadComments.map((comment, i) => (
           <CommentItem
@@ -104,9 +198,9 @@ interface CommentItemProps {
   comment: CommentNode;
   isLast: boolean;
   depth: number;
-  onDelete: (id: string) => void;
-  onEdit: (id: string, newContent: string) => void;
-  onReply: (parentId: string, payload: ReplyPayload) => void;
+  onDelete: (id: string) => Promise<void> | void;
+  onEdit: (id: string, newContent: string) => Promise<void> | void;
+  onReply: (parentId: string, payload: ReplyPayload) => Promise<void> | void;
 }
 
 function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: CommentItemProps) {
@@ -153,7 +247,6 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
 
   const hasReplies = comment.replies && comment.replies.length > 0;
   const showLine = !isLast || hasReplies;
-
   const handleEditSave = () => {
     const trimmed = editText.trim();
     if (trimmed && trimmed !== comment.content) {
@@ -213,10 +306,10 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
         });
       }
 
-      onReply(comment.id, {
+      await Promise.resolve(onReply(comment.id, {
         content,
         attachments: uploadedAttachments,
-      });
+      }));
 
       setReplyText("");
       setReplyFiles([]);
@@ -239,7 +332,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
     >
       <div className="flex items-start gap-3">
         {/* Left Vertical Thread Column */}
-        <div className="flex flex-col items-center flex-shrink-0" style={{ width: 40 }}>
+        <div className="flex w-10 shrink-0 flex-col items-center">
           <Image
             src={comment.avatarUrl}
             alt={comment.author}
@@ -248,7 +341,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
             className="w-10 h-10 rounded-full border-2 border-border object-cover z-10 bg-muted"
           />
           {showLine && (
-            <div className="w-[2px] bg-border flex-1 min-h-[24px] mt-1 group-hover:bg-primary/30 transition-colors" />
+            <div className="mt-1 min-h-6 w-0.5 flex-1 bg-border transition-colors group-hover:bg-primary/30" />
           )}
         </div>
 
@@ -268,7 +361,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               {comment.isAcceptedAnswer && (
                 <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md text-xs font-bold">
                   <Pin size={11} className="fill-current" />
@@ -280,7 +373,9 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
               <div className="relative">
                 <button
                   ref={buttonRef}
-                  id={`comment-menu-${comment.id}`}
+                  type="button"
+                  title="Open comment actions"
+                  aria-label="Open comment actions"
                   onClick={() => setMenuOpen((v) => !v)}
                   className={cn(
                     "text-muted-foreground hover:text-foreground transition-all p-1 rounded-md hover:bg-muted",
@@ -298,10 +393,10 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.92, y: -4 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-8 z-50 min-w-[130px] bg-popover border border-border rounded-xl shadow-xl overflow-hidden"
+                      className="absolute right-0 top-8 z-50 min-w-32.5 overflow-hidden rounded-xl border border-border bg-popover shadow-xl"
                     >
                       <button
-                        id={`edit-comment-${comment.id}`}
+                        type="button"
                         onClick={() => {
                           setIsEditing(true);
                           setEditText(comment.content);
@@ -315,7 +410,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
                       </button>
                       <div className="h-px bg-border" />
                       <button
-                        id={`delete-comment-${comment.id}`}
+                        type="button"
                         onClick={() => {
                           setShowDeleteConfirm(true);
                           setMenuOpen(false);
@@ -346,10 +441,12 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
                   <p className="text-sm text-red-700 dark:text-red-400 font-medium">
                     Delete this comment permanently?
                   </p>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
-                      id={`confirm-delete-${comment.id}`}
-                      onClick={() => onDelete(comment.id)}
+                      type="button"
+                      onClick={() => {
+                        void onDelete(comment.id);
+                      }}
                       className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                     >
                       <Trash2 size={12} />
@@ -380,7 +477,9 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
                 className="mb-3"
               >
                 <textarea
-                  id={`edit-textarea-${comment.id}`}
+                  title="Edit comment text"
+                  aria-label="Edit comment text"
+                  placeholder="Edit your comment"
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   onKeyDown={(e) => {
@@ -393,7 +492,6 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
                 />
                 <div className="flex items-center gap-2 mt-2">
                   <button
-                    id={`save-edit-${comment.id}`}
                     onClick={handleEditSave}
                     className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                   >
@@ -420,7 +518,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
                 className={cn(
-                  "text-sm prose prose-sm dark:prose-invert max-w-none mb-3 break-words rounded-xl p-3.5 transition-colors",
+                  "text-sm prose prose-sm dark:prose-invert max-w-none mb-3 wrap-break-word rounded-xl p-3.5 transition-colors",
                   comment.isAcceptedAnswer
                     ? "bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50"
                     : "bg-muted/30 border border-transparent hover:border-border"
@@ -494,6 +592,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: Comm
                     type="file"
                     multiple
                     accept={THREAD_MEDIA_ACCEPT}
+                    title="Attach media files"
                     className="hidden"
                     onChange={(e) => {
                       handleReplyFilesChosen(e.target.files);

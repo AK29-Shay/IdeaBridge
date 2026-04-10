@@ -66,3 +66,14 @@ CREATE TABLE IF NOT EXISTS otps (
   attempts int default 0,
   created_at timestamptz default now()
 );
+
+CREATE TABLE IF NOT EXISTS mentor_blogs (
+  id uuid primary key default gen_random_uuid(),
+  author_email text not null,
+  title text not null,
+  content text not null,
+  image_url text,
+  video_url text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);

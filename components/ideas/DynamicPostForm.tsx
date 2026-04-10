@@ -6,6 +6,7 @@ import { ChevronDown, Send, FileCode2, Sparkles, GraduationCap, Link2, Upload, M
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import {
   DYNAMIC_FORM_ACCEPT,
   SUPABASE_MAX_UPLOAD_BYTES,
@@ -18,7 +19,19 @@ import type { UploadedSupabaseFile } from "@/lib/supabaseUploads";
 type FormMode = "Request" | "Post";
 type PostVariant = "Full Project Details" | "Project Idea" | "Fully AI-Driven Project" | "Campus Requirement";
 
-export default function DynamicPostForm() {
+type DynamicPostFormProps = {
+  onPostCreated?: (post: unknown) => void;
+};
+
+function parseApiError(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object") return fallback;
+  const error = "error" in payload ? String((payload as { error?: unknown }).error ?? "") : "";
+  return error || fallback;
+}
+
+export default function DynamicPostForm({ onPostCreated }: DynamicPostFormProps) {
+  const { user } = useAuth();
+
   const [mode, setMode] = useState<FormMode>("Post");
   const [variant, setVariant] = useState<PostVariant>("Full Project Details");
   const [isVariantOpen, setIsVariantOpen] = useState(false);
@@ -30,6 +43,7 @@ export default function DynamicPostForm() {
   const [extras, setExtras] = useState<Record<string, string>>({});
   const [uploadedFiles, setUploadedFiles] = useState<UploadedSupabaseFile[]>([]);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const variants: PostVariant[] = [
@@ -91,6 +105,98 @@ export default function DynamicPostForm() {
     hidden: { opacity: 0, y: 10, filter: "blur(4px)" },
     visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.3 } },
     exit: { opacity: 0, y: -10, filter: "blur(4px)", transition: { duration: 0.2 } }
+  };
+
+  const postTypeByVariant: Record<PostVariant, "full_project" | "idea" | "ai_driven" | "campus_req"> = {
+    "Full Project Details": "full_project",
+    "Project Idea": "idea",
+    "Fully AI-Driven Project": "ai_driven",
+    "Campus Requirement": "campus_req",
+  };
+
+  const handleSubmit = async () => {
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+    const actorEmail = (user?.email ?? "").trim().toLowerCase();
+
+    if (!actorEmail) {
+      toast.error("Sign in to submit posts and requests.");
+      return;
+    }
+
+    if (!trimmedTitle) {
+      toast.error("Title is required.");
+      return;
+    }
+
+    if (!trimmedDescription) {
+      toast.error("Description is required.");
+      return;
+    }
+
+    const techStack = tags
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const normalizedMode = mode === "Request" ? "request" : "post";
+    const postType = mode === "Request" ? "idea" : postTypeByVariant[variant];
+
+    const dynamicContent = {
+      module: "idea_guidance",
+      variant: mode === "Request" ? "Guidance Request" : variant,
+      extras,
+      attachments: uploadedFiles.map((file) => ({
+        name: file.name,
+        url: file.url,
+        mimeType: file.mimeType,
+        size: file.size,
+        kind: file.kind,
+      })),
+    };
+
+    setIsSubmittingPost(true);
+    try {
+      const response = await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          actorEmail,
+          actorName: user?.fullName,
+          actorRole: user?.role,
+          post_mode: normalizedMode,
+          post_type: postType,
+          title: trimmedTitle,
+          description: trimmedDescription,
+          tech_stack: techStack,
+          dynamic_content: dynamicContent,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          parseApiError(payload, mode === "Request" ? "Failed to submit request." : "Failed to publish post.")
+        );
+      }
+
+      toast.success(mode === "Request" ? "Request submitted." : "Post published.");
+
+      setTitle("");
+      setDescription("");
+      setTags("");
+      setExtras({});
+      setUploadedFiles([]);
+
+      onPostCreated?.(payload);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to submit.");
+    } finally {
+      setIsSubmittingPost(false);
+    }
   };
 
   return (
@@ -195,7 +301,8 @@ export default function DynamicPostForm() {
                 <label className="text-sm font-medium text-foreground mb-1 block">What exactly are you stuck on? (Markdown)</label>
                 <textarea 
                   value={description} onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm min-h-[120px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-mono"
+                  title="Request description"
+                  className="w-full bg-background border border-border rounded-lg px-4 py-3 text-sm min-h-30 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all font-mono"
                   placeholder="Explain your issue or what you need guidance on..."
                 />
               </div>
@@ -216,7 +323,7 @@ export default function DynamicPostForm() {
                   </div>
                   <div className="flex flex-col">
                     <label className="text-sm font-medium text-foreground mb-1 block">Live Preview</label>
-                    <div className="flex-1 bg-muted/50 border border-border rounded-lg p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none text-sm break-words">
+                    <div className="flex-1 bg-muted/50 border border-border rounded-lg p-4 overflow-y-auto prose prose-sm dark:prose-invert max-w-none text-sm wrap-break-word">
                       {description ? (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
                       ) : (
@@ -257,6 +364,7 @@ export default function DynamicPostForm() {
                          type="file"
                          multiple
                          accept={DYNAMIC_FORM_ACCEPT}
+                         title="Upload project files"
                          className="hidden"
                          onChange={(e) => {
                            void handleFilesChosen(e.target.files);
@@ -330,9 +438,14 @@ export default function DynamicPostForm() {
 
             {/* Output Submit */}
             <div className="pt-4 flex justify-end">
-              <button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-transform active:scale-95 shadow-md">
+              <button
+                type="button"
+                onClick={() => void handleSubmit()}
+                disabled={isSubmittingPost}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-transform active:scale-95 shadow-md disabled:cursor-not-allowed disabled:opacity-70"
+              >
                 <Send size={16} />
-                {mode === "Request" ? "Submit Request" : "Publish Post"}
+                {isSubmittingPost ? "Submitting..." : mode === "Request" ? "Submit Request" : "Publish Post"}
               </button>
             </div>
           </motion.div>

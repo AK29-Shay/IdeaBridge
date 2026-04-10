@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
     const body = await request.json()
-    body.user_id = user.user.id
+    body.id = user.user.id
     const data = await createOrUpdateProfile(body)
     return NextResponse.json(data)
   } catch (e: any) {

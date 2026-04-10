@@ -5,7 +5,9 @@ function decodeJwtPayload(token: string) {
   try {
     const parts = token.split('.')
     if (parts.length < 2) return null
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'))
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'))
     return payload
   } catch (e) {
     return null
@@ -14,9 +16,9 @@ function decodeJwtPayload(token: string) {
 
 export async function getUserFromAuthHeader(authorization?: string | null) {
   if (!authorization) return null
-  const match = authorization.match(/Bearer (.+)/)
-  if (!match) return null
-  const token = match[1]
+  const match = authorization.match(/Bearer\s+(.+)/i)
+  const token = match ? match[1] : authorization.trim()
+  if (!token) return null
   const payload = decodeJwtPayload(token)
   if (!payload || !payload.sub) return null
   if (payload.exp && typeof payload.exp === 'number') {

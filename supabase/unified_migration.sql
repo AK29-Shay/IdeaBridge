@@ -336,6 +336,53 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 
 -- ============================================================
+-- SECTION 11A: MENTOR BLOGS
+-- (Mentor dashboard blog persistence)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.mentor_blogs (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  author_email TEXT        NOT NULL,
+  title        TEXT        NOT NULL,
+  content      TEXT        NOT NULL,
+  image_url    TEXT,
+  video_url    TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.mentor_blogs ENABLE ROW LEVEL SECURITY;
+
+DROP TRIGGER IF EXISTS mentor_blogs_updated_at ON public.mentor_blogs;
+CREATE TRIGGER mentor_blogs_updated_at
+  BEFORE UPDATE ON public.mentor_blogs
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE INDEX IF NOT EXISTS mentor_blogs_author_email_idx ON public.mentor_blogs(author_email);
+CREATE INDEX IF NOT EXISTS mentor_blogs_created_at_idx   ON public.mentor_blogs(created_at DESC);
+
+DROP POLICY IF EXISTS "Users read own mentor blogs"   ON public.mentor_blogs;
+DROP POLICY IF EXISTS "Users create own mentor blogs" ON public.mentor_blogs;
+DROP POLICY IF EXISTS "Users update own mentor blogs" ON public.mentor_blogs;
+DROP POLICY IF EXISTS "Users delete own mentor blogs" ON public.mentor_blogs;
+
+CREATE POLICY "Users read own mentor blogs"
+  ON public.mentor_blogs FOR SELECT TO authenticated
+  USING ((auth.jwt() ->> 'email') = author_email);
+
+CREATE POLICY "Users create own mentor blogs"
+  ON public.mentor_blogs FOR INSERT TO authenticated
+  WITH CHECK ((auth.jwt() ->> 'email') = author_email);
+
+CREATE POLICY "Users update own mentor blogs"
+  ON public.mentor_blogs FOR UPDATE TO authenticated
+  USING ((auth.jwt() ->> 'email') = author_email);
+
+CREATE POLICY "Users delete own mentor blogs"
+  ON public.mentor_blogs FOR DELETE TO authenticated
+  USING ((auth.jwt() ->> 'email') = author_email);
+
+
+-- ============================================================
 -- SECTION 12: ANALYTICS VIEW
 -- (Member 4 – abinayan03 | Aggregated platform metrics)
 -- ============================================================
