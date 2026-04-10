@@ -1,8 +1,8 @@
 "use client";
 
-import DynamicPostForm from "@/src/components/DynamicPostForm";
-import ProjectThread from "@/src/components/ProjectThread";
-import { mockThreadData } from "@/src/data/mockThread";
+import DynamicPostForm from "@/components/ideas/DynamicPostForm";
+import ProjectThread from "@/components/ideas/ProjectThread";
+import { mockThreadData } from "@/lib/ideas/mockThread";
 
 export default function IdeasExplorePage() {
   return (

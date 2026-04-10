@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { submitRating } from '../../../backend/controllers/ratingController'
+import { submitRating } from '@/backend/modules/rating'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
 
 export async function POST(request: Request) {

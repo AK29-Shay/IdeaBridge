@@ -1,4 +1,5 @@
 import supabaseServer from '../config/supabaseServer'
+import type { User } from '@supabase/supabase-js'
 
 function decodeJwtPayload(token: string) {
   try {
@@ -27,8 +28,8 @@ export async function getUserFromAuthHeader(authorization?: string | null) {
   try {
     // @ts-ignore - admin namespace used with service role
     const { data, error } = await supabaseServer.auth.admin.getUserById(payload.sub)
-    if (error) return null
-    return { user: data, token }
+    if (error || !data?.user) return null
+    return { user: data.user as User, token }
   } catch (e) {
     return null
   }

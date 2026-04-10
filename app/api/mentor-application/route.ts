@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { submitApplication } from '../../../backend/controllers/mentorApplicationController'
+import { submitApplication } from '@/backend/modules/mentor-application'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
 
 export async function POST(request: Request) {

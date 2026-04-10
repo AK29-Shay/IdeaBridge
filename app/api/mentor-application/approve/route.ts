@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { approveApplication } from '../../../../backend/controllers/mentorApplicationController'
+import { approveApplication } from '@/backend/modules/mentor-application'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
-import { getProfileByUserId } from '../../../../backend/services/profileService'
+import { getProfileByUserId } from '@/backend/modules/profile'
 
 export async function PATCH(request: Request) {
   try {

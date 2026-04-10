@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 
-// The Idea & Guidance module lives in src/app/page.tsx (Next.js nested routing)
-// This catches /ideas and proxies to the src-based route.
+// Keep /ideas as a short entry URL and route to the Ideas feature page.
 export default function IdeasPage() {
-  // Redirect to the dedicated ideas module entry point
   redirect("/ideas/explore");
 }

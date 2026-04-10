@@ -3,7 +3,7 @@ import { Lightbulb, Search, BarChart3, Users, Bell, User, ArrowRight, Sparkles }
 
 const MODULE_CARDS = [
   {
-    href: "/ideas",
+    href: "/ideas/explore",
     label: "Idea & Guidance",
     description: "Post your project ideas, request guidance, and engage in threaded discussions.",
     icon: Lightbulb,

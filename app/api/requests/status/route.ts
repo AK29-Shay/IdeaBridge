@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
-import { getRequestById, updateRequestStatus } from '../../../../backend/services/requestService'
-import { getProfileByUserId } from '../../../../backend/services/profileService'
+import { getRequestById, updateRequestStatus } from '@/backend/modules/request'
+import { getProfileByUserId } from '@/backend/modules/profile'
 
 export async function PATCH(request: Request) {
   try {

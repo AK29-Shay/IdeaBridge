@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { submitRequest } from '../../../backend/controllers/requestController'
+import { submitRequest } from '@/backend/modules/request'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
 
 export async function POST(request: Request) {

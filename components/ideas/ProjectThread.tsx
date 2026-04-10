@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ThumbsUp, MessageCircle, Pin, MoreHorizontal, Pencil, Trash2, Check, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { CommentNode } from "../data/mockThread";
-import { cn } from "../lib/utils";
+import { CommentNode } from "@/lib/ideas/mockThread";
+import { cn } from "@/lib/utils";
 
 interface ProjectThreadProps {
   comments: CommentNode[];
