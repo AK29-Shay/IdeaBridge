@@ -128,9 +128,7 @@ export default function RegisterPage() {
   const inputIconCls = "pl-9 " + inputCls;
 
   return (
-    <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap');`}</style>
-      <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-12" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-12" style={{ fontFamily: "'Inter', sans-serif" }}>
         {/* Warm gradient background */}
         <div className="fixed inset-0 bg-gradient-to-br from-[#FFF8F3] to-[#FFEFE6]" />
         <div className="fixed top-[-12%] right-[-8%] w-[520px] h-[520px] rounded-full bg-[#FFCBA4]/30 blur-3xl pointer-events-none" />
@@ -291,6 +289,5 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-    </>
   );
 }
