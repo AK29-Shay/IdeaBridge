@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { notify } from '../../backend/controllers/notificationController'
-import { getUserFromAuthHeader } from '../../backend/middleware/auth'
+import { notify } from '@/backend/modules/notification'
+import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
 
 export async function POST(request: Request) {
   try {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { verifyUserOtp } from '../../../../backend/controllers/otpController'
+import { verifyUserOtp } from '@/backend/modules/otp'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 
 export async function POST(request: Request) {

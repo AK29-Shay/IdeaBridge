@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-type UpdateProgressInput = z.infer<typeof updateProgressSchema>;
+type UpdateProgressFormValues = z.input<typeof updateProgressSchema>;
+type UpdateProgressInput = z.output<typeof updateProgressSchema>;
 
 function toDateInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -34,7 +35,7 @@ export function UpdateProgressModal({
   onSave: (next: UpdateProgressInput) => Promise<void> | void;
 }) {
   const todayValue = toDateInputValue(new Date());
-  const form = useForm<UpdateProgressInput>({
+  const form = useForm<UpdateProgressFormValues, unknown, UpdateProgressInput>({
     resolver: zodResolver(updateProgressSchema),
     mode: "onChange",
     defaultValues: {
@@ -116,7 +117,7 @@ export function UpdateProgressModal({
                   onChange={(e) => form.setValue("progressPercent", Number(e.target.value))}
                 />
               </div>
-              <div className="text-sm text-gray-400">Current: {form.watch("progressPercent") ?? 0}%</div>
+              <div className="text-sm text-gray-400">Current: {Number(form.watch("progressPercent") ?? 0)}%</div>
               {form.formState.errors.progressPercent ? (
                 <div className="text-sm text-destructive">{form.formState.errors.progressPercent.message}</div>
               ) : null}
@@ -168,19 +169,22 @@ export function UpdateProgressModal({
   );
 }
 
-function ControllerSelect<TName extends keyof UpdateProgressInput>({
+function ControllerSelect({
   form,
   name,
   options,
 }: {
-  form: UseFormReturn<UpdateProgressInput>;
-  name: TName;
-  options: string[];
+  form: UseFormReturn<UpdateProgressFormValues, unknown, UpdateProgressInput>;
+  name: "status";
+  options: UpdateProgressInput["status"][];
 }) {
   // Keep a small helper local to the modal for Select wiring.
   // Using watch/setValue avoids pulling in Controller for each field.
   return (
-    <Select value={String(form.watch(name as any) ?? "")} onValueChange={(v) => form.setValue(name as any, v as any)}>
+    <Select
+      value={form.watch(name) ?? ""}
+      onValueChange={(v) => form.setValue(name, v as UpdateProgressInput["status"])}
+    >
       <SelectTrigger>
         <SelectValue placeholder="Select status" />
       </SelectTrigger>

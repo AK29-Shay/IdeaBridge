@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { searchMentors } from '../../../../backend/controllers/mentorController'
+import { searchMentors } from '@/backend/modules/mentor'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 
 export async function GET(request: Request) {

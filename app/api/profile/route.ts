@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createOrUpdateProfile, fetchProfile } from '../../../backend/controllers/profileController'
+import { createOrUpdateProfile, fetchProfile } from '@/backend/modules/profile'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
 
 export async function POST(request: Request) {

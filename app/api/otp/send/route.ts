@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { sendOtp } from '../../../../backend/controllers/otpController'
+import { sendOtp } from '@/backend/modules/otp'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 
 export async function POST(request: Request) {

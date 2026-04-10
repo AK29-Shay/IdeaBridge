@@ -21,7 +21,8 @@ const profileSchema = z.object({
   github:             z.string().url("Must be a valid URL.").optional().or(z.literal("")),
   avatarUrl:          z.string().optional(),
 });
-type ProfileInput = z.infer<typeof profileSchema>;
+type ProfileFormValues = z.input<typeof profileSchema>;
+type ProfileInput = z.output<typeof profileSchema>;
 
 const SUGGESTED_SKILLS = [
   "Python", "JavaScript", "TypeScript", "React", "Node.js", "Machine Learning",
@@ -43,7 +44,7 @@ export function ProfileSection() {
   const defaultProfile = user?.mentorProfile;
 
   const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } =
-    useForm<ProfileInput>({
+    useForm<ProfileFormValues, unknown, ProfileInput>({
       resolver: zodResolver(profileSchema),
       mode: "onChange",
       defaultValues: {
@@ -325,7 +326,7 @@ export function ProfileSection() {
                 <FieldError msg={errors.yearsExperience?.message} />
               </>
             ) : (
-              <p className="text-sm text-slate-700">{watch("yearsExperience") ?? 0} yrs</p>
+              <p className="text-sm text-slate-700">{Number(watch("yearsExperience") ?? 0)} yrs</p>
             )}
           </div>
         </div>
