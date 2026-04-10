@@ -16,28 +16,6 @@ import { Label } from "@/components/ui/label";
 
 type LoginInput = z.infer<typeof loginSchema>;
 
-type StoredUser = {
-  id: string;
-  role: "student" | "mentor";
-  fullName: string;
-  email: string;
-  password: string;
-  studentProfile?: Record<string, unknown>;
-  mentorProfile?: Record<string, unknown>;
-};
-
-function getUsersFromStorage(): StoredUser[] {
-  try {
-    const raw = localStorage.getItem("ideabridge_users_v1");
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? (parsed as StoredUser[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-
-
 function ErrorMsg({ msg }: { msg?: string }) {
   if (!msg) return null;
   return (
@@ -50,7 +28,7 @@ function ErrorMsg({ msg }: { msg?: string }) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -67,18 +45,14 @@ export default function LoginPage() {
   async function handleSubmit(values: LoginInput) {
     setIsLoading(true);
     try {
-      await login({ email: values.email, password: values.password });
+      const signedInUser = await login({ email: values.email, password: values.password });
 
       const redirectTo =
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("next") ?? ""
           : "";
 
-      const users = getUsersFromStorage();
-      const match = users.find(
-        (u) => u.email.toLowerCase() === values.email.toLowerCase()
-      );
-      const nextRole = match?.role ?? user?.role;
+      const nextRole = signedInUser.role;
       if (!nextRole) throw new Error("Unable to determine your role.");
 
       toast.success("Welcome back to IdeaBridge! 🚀");
@@ -110,7 +84,7 @@ export default function LoginPage() {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#FFCBA4] shadow-md mb-4">
-            <span className="text-[#0F0F0F] font-bold text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>IB</span>
+            <span className="text-[#0F0F0F] font-bold text-lg">IB</span>
           </div>
           <h1 className="text-3xl font-bold text-[#0F0F0F] tracking-tight">
             Welcome back
@@ -159,7 +133,7 @@ export default function LoginPage() {
                 </Label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-[#F5A97F] hover:text-[#0F0F0F] transition-colors"
+                  className="text-xs text-[#C7792F] hover:text-[#0F0F0F] transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -223,11 +197,17 @@ export default function LoginPage() {
           </form>
         </div>
 
+        <div className="mt-4 rounded-xl border border-[#FFCBA4]/40 bg-[#FFF4EA] p-3 text-xs text-[#0F0F0F]/70">
+          <p className="font-semibold text-[#8A4E2A]">Demo accounts</p>
+          <p className="mt-1">Student: student.demo@ideabridge.dev / Demo@123</p>
+          <p>Mentor: mentor.demo@ideabridge.dev / Demo@123</p>
+        </div>
+
         <p className="mt-5 text-center text-sm text-[#0F0F0F]/50">
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="text-[#F5A97F] hover:text-[#0F0F0F] font-medium transition-colors"
+            className="text-[#C7792F] hover:text-[#0F0F0F] font-medium transition-colors"
           >
             Create one free
           </Link>

@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, X, FileText, Image, Link2, Save, BookOpen } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { uploadDynamicFormFile } from "@/lib/supabaseUploads";
 
 /* ───── Schema ───── */
 const blogSchema = z.object({
@@ -23,6 +25,15 @@ export interface BlogPost {
   imageUrl?: string;
   videoUrl?: string;
   createdAt: string;
+}
+
+interface BlogApiRow {
+  id: string;
+  title: string;
+  content: string;
+  image_url: string | null;
+  video_url: string | null;
+  created_at: string;
 }
 
 const INITIAL_BLOGS: BlogPost[] = [
@@ -44,15 +55,41 @@ const INITIAL_BLOGS: BlogPost[] = [
   },
 ];
 
+function mapApiRowToBlog(row: BlogApiRow): BlogPost {
+  return {
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    imageUrl: row.image_url ?? "",
+    videoUrl: row.video_url ?? "",
+    createdAt: row.created_at,
+  };
+}
+
+function parseApiError(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object") return fallback;
+  const error = "error" in payload ? String((payload as { error?: unknown }).error ?? "") : "";
+  const hint = "hint" in payload ? String((payload as { hint?: unknown }).hint ?? "") : "";
+  if (error && hint) return `${error} ${hint}`;
+  return error || fallback;
+}
+
 function FieldError({ msg }: { msg?: string }) {
   if (!msg) return null;
   return <p className="text-xs text-red-500 mt-1">{msg}</p>;
 }
 
 export function BlogSection() {
-  const [blogs, setBlogs] = React.useState<BlogPost[]>(INITIAL_BLOGS);
+  const { user } = useAuth();
+  const authorEmail = (user?.email ?? "").trim().toLowerCase();
+
+  const [blogs, setBlogs] = React.useState<BlogPost[]>([]);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [showForm, setShowForm] = React.useState(false);
+  const [isLoadingBlogs, setIsLoadingBlogs] = React.useState(true);
+  const [isSavingBlog, setIsSavingBlog] = React.useState(false);
+  const [isUploadingImage, setIsUploadingImage] = React.useState(false);
+  const [isUploadingVideo, setIsUploadingVideo] = React.useState(false);
   const IMAGE_MAX = 2 * 1024 * 1024; // 2MB
   const VIDEO_MAX = 50 * 1024 * 1024; // 50MB
   const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -63,8 +100,44 @@ export function BlogSection() {
   const [videoFileError, setVideoFileError] = React.useState<string | null>(null);
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
   const [videoPreview, setVideoPreview] = React.useState<string | null>(null);
-  const imageRef = React.useRef<File | null>(null);
-  const videoRef = React.useRef<File | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadBlogs() {
+      setIsLoadingBlogs(true);
+
+      try {
+        const query = authorEmail ? `?authorEmail=${encodeURIComponent(authorEmail)}` : "";
+        const response = await fetch(`/api/blog${query}`, { cache: "no-store" });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(parseApiError(payload, "Failed to load blogs."));
+        }
+
+        const rows = Array.isArray(payload) ? (payload as BlogApiRow[]) : [];
+        if (!cancelled) {
+          setBlogs(rows.map(mapApiRowToBlog));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setBlogs(INITIAL_BLOGS);
+          toast.error(error instanceof Error ? error.message : "Failed to load blogs.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingBlogs(false);
+        }
+      }
+    }
+
+    void loadBlogs();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authorEmail]);
 
   function hasAllowedExtension(url: string, allowed: string[]) {
     try {
@@ -116,6 +189,10 @@ export function BlogSection() {
 
   function openNew() {
     reset({ title: "", content: "", imageUrl: "", videoUrl: "" });
+    setImagePreview(null);
+    setVideoPreview(null);
+    setImageFileError(null);
+    setVideoFileError(null);
     setEditingId(null);
     setShowForm(true);
   }
@@ -130,44 +207,127 @@ export function BlogSection() {
     else setImagePreview(null);
     if (blog.videoUrl) setVideoPreview(blog.videoUrl);
     else setVideoPreview(null);
+    setImageFileError(null);
+    setVideoFileError(null);
     setEditingId(blog.id);
     setShowForm(true);
   }
 
-  function deleteBlog(id: string) {
+  async function deleteBlog(id: string) {
+    if (!authorEmail) {
+      toast.error("Sign in to delete blog posts.");
+      return;
+    }
+
+    const previous = blogs;
     setBlogs(prev => prev.filter(b => b.id !== id));
-    toast.success("Blog deleted.");
+
+    try {
+      const response = await fetch(`/api/blog/${id}?authorEmail=${encodeURIComponent(authorEmail)}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(parseApiError(payload, "Failed to delete blog."));
+      }
+
+      toast.success("Blog deleted.");
+    } catch (error) {
+      setBlogs(previous);
+      toast.error(error instanceof Error ? error.message : "Failed to delete blog.");
+    }
   }
 
-  function onSubmit(data: BlogInput) {
-    if (editingId) {
-      setBlogs(prev => prev.map(b => b.id === editingId
-        ? { ...b, title: data.title, content: data.content, imageUrl: data.imageUrl, videoUrl: data.videoUrl }
-        : b
-      ));
-      toast.success("Blog updated! ✨");
-    } else {
-      const newBlog: BlogPost = {
-        id: `b_${Date.now()}`,
-        title: data.title,
-        content: data.content,
-        imageUrl: data.imageUrl,
-        videoUrl: data.videoUrl,
-        createdAt: new Date().toISOString().slice(0, 10),
-      };
-      setBlogs(prev => [newBlog, ...prev]);
-      toast.success("Blog published! 🎉");
+  async function uploadMediaFile(file: File, kind: "image" | "video") {
+    try {
+      if (kind === "image") {
+        setIsUploadingImage(true);
+      } else {
+        setIsUploadingVideo(true);
+      }
+
+      const uploaded = await uploadDynamicFormFile(file);
+      if (kind === "image") {
+        setImagePreview(uploaded.url);
+        setImageFileError(null);
+        setValue("imageUrl", uploaded.url, { shouldDirty: true, shouldValidate: true });
+      } else {
+        setVideoPreview(uploaded.url);
+        setVideoFileError(null);
+        setValue("videoUrl", uploaded.url, { shouldDirty: true, shouldValidate: true });
+      }
+
+      toast.success(`${kind === "image" ? "Image" : "Video"} uploaded successfully.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `Failed to upload ${kind}.`;
+      if (kind === "image") {
+        setImageFileError(message);
+      } else {
+        setVideoFileError(message);
+      }
+      toast.error(message);
+    } finally {
+      if (kind === "image") {
+        setIsUploadingImage(false);
+      } else {
+        setIsUploadingVideo(false);
+      }
     }
-    reset({ title: "", content: "", imageUrl: "", videoUrl: "" });
-    // revoke any previews and clear refs
-    if (imagePreview && imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
-    if (videoPreview && videoPreview.startsWith("blob:")) URL.revokeObjectURL(videoPreview);
-    imageRef.current = null;
-    videoRef.current = null;
-    setImagePreview(null);
-    setVideoPreview(null);
-    setEditingId(null);
-    setShowForm(false);
+  }
+
+  async function onSubmit(data: BlogInput) {
+    if (!authorEmail) {
+      toast.error("Sign in to publish or update blog posts.");
+      return;
+    }
+
+    setIsSavingBlog(true);
+
+    try {
+      const endpoint = editingId ? `/api/blog/${editingId}` : "/api/blog";
+      const method = editingId ? "PATCH" : "POST";
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          authorEmail,
+          title: data.title,
+          content: data.content,
+          imageUrl: data.imageUrl,
+          videoUrl: data.videoUrl,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(parseApiError(payload, editingId ? "Failed to update blog." : "Failed to publish blog."));
+      }
+
+      const savedBlog = mapApiRowToBlog(payload as BlogApiRow);
+
+      if (editingId) {
+        setBlogs(prev => prev.map(b => (b.id === editingId ? savedBlog : b)));
+        toast.success("Blog updated! ✨");
+      } else {
+        setBlogs(prev => [savedBlog, ...prev]);
+        toast.success("Blog published! 🎉");
+      }
+
+      reset({ title: "", content: "", imageUrl: "", videoUrl: "" });
+      setImagePreview(null);
+      setVideoPreview(null);
+      setImageFileError(null);
+      setVideoFileError(null);
+      setEditingId(null);
+      setShowForm(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save blog.");
+    } finally {
+      setIsSavingBlog(false);
+    }
   }
 
   return (
@@ -181,7 +341,7 @@ export function BlogSection() {
         {!showForm && (
           <button
             onClick={openNew}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#0F0F0F] to-[#1A1A2E] px-5 py-2.5 text-sm font-semibold text-[#FFFFFF] shadow-sm hover:brightness-110 hover:-translate-y-0.5 transition-all duration-200"
+            className="flex items-center gap-2 rounded-xl bg-linear-to-r from-[#0F0F0F] to-[#1A1A2E] px-5 py-2.5 text-sm font-semibold text-[#FFFFFF] shadow-sm hover:brightness-110 hover:-translate-y-0.5 transition-all duration-200"
           >
             <Plus className="h-4 w-4" />
             Create Blog
@@ -192,12 +352,17 @@ export function BlogSection() {
       {/* Blog Form */}
       {showForm && (
         <div className="rounded-2xl border border-[#FFCBA4]/30 bg-white shadow-md overflow-hidden">
-          <div className="flex items-center justify-between bg-gradient-to-r from-white to-white px-6 py-4 border-b border-[#FFCBA4]/30">
+          <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-[#FFCBA4]/30">
             <h3 className="font-semibold text-slate-800 flex items-center gap-2">
               <FileText className="h-4 w-4 text-[#0F0F0F]" />
               {editingId ? "Edit Blog Post" : "New Blog Post"}
             </h3>
-            <button onClick={() => { setShowForm(false); setEditingId(null); }} className="text-slate-400 hover:text-slate-600">
+            <button
+              onClick={() => { setShowForm(false); setEditingId(null); }}
+              title="Close form"
+              aria-label="Close form"
+              className="text-slate-400 hover:text-slate-600"
+            >
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -233,7 +398,7 @@ export function BlogSection() {
             <div className="grid gap-5 sm:grid-cols-2">
               {/* Image URL */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
                   <Image className="h-3.5 w-3.5 text-slate-400" />
                   Image URL <span className="text-slate-400 font-normal">(optional)</span>
                 </label>
@@ -249,6 +414,7 @@ export function BlogSection() {
                   <input
                     accept="image/*"
                     type="file"
+                    title="Upload image"
                     onChange={(e) => {
                       const f = e.target.files?.[0] ?? null;
                       if (!f) return;
@@ -263,17 +429,13 @@ export function BlogSection() {
                         setImageFileError("Image is too large. Max 2MB.");
                         return;
                       }
-                      setImageFileError(null);
-                      // revoke previous preview if blob
-                      if (imagePreview && imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
-                      const url = URL.createObjectURL(f);
-                      imageRef.current = f;
-                      setImagePreview(url);
-                      setValue("imageUrl", url);
+                      void uploadMediaFile(f, "image");
+                      e.currentTarget.value = "";
                     }}
                     className="mt-2"
                   />
                   {imageFileError ? <p className="text-xs text-red-500">{imageFileError}</p> : null}
+                  {isUploadingImage ? <p className="text-xs text-slate-500">Uploading image...</p> : null}
                   {imagePreview ? (
                     <div className="mt-2 h-40 w-full overflow-hidden rounded-md">
                       <img src={imagePreview} alt="preview" className="h-full w-full object-cover" />
@@ -283,7 +445,7 @@ export function BlogSection() {
 
               {/* Video URL */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
                   <Link2 className="h-3.5 w-3.5 text-slate-400" />
                   Video URL <span className="text-slate-400 font-normal">(optional)</span>
                 </label>
@@ -299,6 +461,7 @@ export function BlogSection() {
                 <input
                   accept="video/*"
                   type="file"
+                  title="Upload video"
                   onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
                     if (!f) return;
@@ -313,16 +476,13 @@ export function BlogSection() {
                         setVideoFileError("Video is too large. Max 50MB.");
                         return;
                       }
-                    setVideoFileError(null);
-                    if (videoPreview && videoPreview.startsWith("blob:")) URL.revokeObjectURL(videoPreview);
-                    const url = URL.createObjectURL(f);
-                    videoRef.current = f;
-                    setVideoPreview(url);
-                    setValue("videoUrl", url);
+                    void uploadMediaFile(f, "video");
+                    e.currentTarget.value = "";
                   }}
                   className="mt-2"
                 />
                 {videoFileError ? <p className="text-xs text-red-500">{videoFileError}</p> : null}
+                {isUploadingVideo ? <p className="text-xs text-slate-500">Uploading video...</p> : null}
                 {videoPreview ? (
                   <div className="mt-2">
                     <video src={videoPreview} controls className="w-full rounded-md max-h-48" />
@@ -341,11 +501,11 @@ export function BlogSection() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#0F0F0F] to-[#1A1A2E] px-6 py-2.5 text-sm font-semibold text-[#FFFFFF] shadow-sm hover:brightness-110 disabled:opacity-60 transition-all duration-200"
+                disabled={isSubmitting || isSavingBlog || isUploadingImage || isUploadingVideo}
+                className="flex items-center gap-2 rounded-xl bg-linear-to-r from-[#0F0F0F] to-[#1A1A2E] px-6 py-2.5 text-sm font-semibold text-[#FFFFFF] shadow-sm hover:brightness-110 disabled:opacity-60 transition-all duration-200"
               >
                 <Save className="h-4 w-4" />
-                {editingId ? "Save Changes" : "Publish Blog"}
+                {isSavingBlog ? "Saving..." : editingId ? "Save Changes" : "Publish Blog"}
               </button>
             </div>
           </form>
@@ -353,7 +513,11 @@ export function BlogSection() {
       )}
 
       {/* Blog Grid */}
-      {blogs.length === 0 ? (
+      {isLoadingBlogs ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-center">
+          <p className="text-slate-600 font-medium">Loading blogs...</p>
+        </div>
+      ) : blogs.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#FFCBA4]/30 bg-[#FFCBA4]/5 py-16 text-center">
           <BookOpen className="h-10 w-10 text-[#F5A97F] mb-3" />
           <p className="text-slate-600 font-medium">No blogs yet</p>
@@ -375,7 +539,7 @@ export function BlogSection() {
                 </div>
               )}
               {!blog.imageUrl && (
-                <div className="h-2 w-full bg-gradient-to-r from-[#0F0F0F] via-[#1c0f00] to-[#FFCBA4]" />
+                <div className="h-2 w-full bg-linear-to-r from-[#0F0F0F] via-[#1c0f00] to-[#FFCBA4]" />
               )}
 
               <div className="p-5 space-y-3">
@@ -384,12 +548,16 @@ export function BlogSection() {
                   <div className="flex gap-1.5 shrink-0">
                     <button
                       onClick={() => openEdit(blog)}
+                      title="Edit blog"
+                      aria-label="Edit blog"
                       className="rounded-lg p-2 text-slate-400 hover:text-[#0F0F0F] hover:bg-[#FFCBA4]/10 transition-colors"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => deleteBlog(blog.id)}
+                      onClick={() => void deleteBlog(blog.id)}
+                      title="Delete blog"
+                      aria-label="Delete blog"
                       className="rounded-lg p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -408,7 +576,9 @@ export function BlogSection() {
                     Watch Video
                   </a>
                 )}
-                <div className="text-xs text-slate-400 pt-1 border-t border-slate-50">{blog.createdAt}</div>
+                <div className="text-xs text-slate-400 pt-1 border-t border-slate-50">
+                  {new Date(blog.createdAt).toLocaleDateString()}
+                </div>
               </div>
             </div>
           ))}

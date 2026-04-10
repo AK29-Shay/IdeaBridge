@@ -15,8 +15,9 @@ export async function PATCH(request: Request) {
     if (!reqRecord) return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404 })
 
     const profile = await getProfileByUserId(user.user.id)
+    const role = typeof profile?.role === 'string' ? profile.role.toLowerCase() : ''
     // only assigned mentor or admin may update
-    if (!(profile && (profile.role === 'admin' || String(reqRecord.assigned_mentor) === String(user.user.id)))) {
+    if (!(profile && (role === 'admin' || String(reqRecord.assigned_mentor) === String(user.user.id)))) {
       return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
     }
 

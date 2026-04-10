@@ -40,3 +40,6 @@ next-env.d.ts
 
 # Turbopack
 .turbo
+
+# Supabase local temp artifacts
+supabase/.temp/

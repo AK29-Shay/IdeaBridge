@@ -15,7 +15,7 @@ export async function addRating(payload: any) {
     if (agg) {
       const ratings = agg.map((r: any) => r.rating)
       const avg = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length
-      await supabaseServer.from('profiles').update({ reputation: avg }).eq('user_id', payload.mentor_id)
+      await supabaseServer.from('profiles').update({ reputation: avg }).eq('id', payload.mentor_id)
     }
   } catch (e) {
     // ignore aggregation errors for now

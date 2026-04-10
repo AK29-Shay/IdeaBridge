@@ -7,7 +7,18 @@ export interface CommentNode {
   upvotes: number;
   timestamp: string;
   isAcceptedAnswer?: boolean;
+  attachments?: CommentAttachment[];
   replies?: CommentNode[];
+}
+
+export interface CommentAttachment {
+  id: string;
+  name: string;
+  url: string;
+  mimeType: string;
+  size: number;
+  kind: "image" | "gif" | "video";
+  path?: string;
 }
 
 export const mockThreadData: CommentNode[] = [

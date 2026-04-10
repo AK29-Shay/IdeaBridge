@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 
 import { ALL_SKILLS } from "@/lib/constants";
 import { getStoredMentors } from "@/lib/storage";
 import type { AvailabilityStatus } from "@/types/auth";
+import type { Mentor } from "@/types/mentor";
 import { MentorCard } from "@/components/cards/MentorCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,9 +29,14 @@ export default function MentorsDirectoryPage() {
   const [skill, setSkill] = React.useState<string>("Any");
   const [ratingMin, setRatingMin] = React.useState<string>("Any");
   const [availability, setAvailability] = React.useState<AvailabilityStatus | "Any">("Any");
+  const [mentorsList, setMentorsList] = React.useState<Mentor[]>([]);
+
+  React.useEffect(() => {
+    // Local storage is client-only; load mentors after mount to avoid hydration mismatch.
+    setMentorsList(getStoredMentors());
+  }, []);
 
   const [selectedMentorId, setSelectedMentorId] = React.useState<string | null>(null);
-  const mentorsList = React.useMemo(() => getStoredMentors(), []);
   const selectedMentor = React.useMemo(() => mentorsList.find((m) => m.id === selectedMentorId) ?? null, [selectedMentorId, mentorsList]);
 
   const filtered = React.useMemo(() => {
@@ -129,29 +134,52 @@ export default function MentorsDirectoryPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((mentor) => (
-          <MentorCard
-            key={mentor.id}
-            mentor={mentor}
-            actionSlot={
-              <div className="flex flex-col gap-2">
-                <Button
-                  className="rounded-xl"
-                  onClick={() => {
-                    setSelectedMentorId(mentor.id);
-                  }}
-                >
-                  Check Availability
-                </Button>
-                <Button asChild variant="outline" className="rounded-xl">
-                  <Link href={`/mentors/${mentor.id}`}>View Profile</Link>
-                </Button>
-              </div>
-            }
-          />
-        ))}
-      </div>
+      {filtered.length > 0 ? (
+        <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((mentor) => (
+            <MentorCard
+              key={mentor.id}
+              mentor={mentor}
+              actionSlot={
+                <div className="flex flex-col gap-2">
+                  <Button
+                    className="rounded-xl"
+                    onClick={() => {
+                      setSelectedMentorId(mentor.id);
+                    }}
+                  >
+                    Check Availability
+                  </Button>
+                  <Button asChild variant="outline" className="rounded-xl">
+                    <Link href={`/mentors/${mentor.id}`}>View Profile</Link>
+                  </Button>
+                </div>
+              }
+            />
+          ))}
+        </div>
+      ) : (
+        <Card className="mt-8 border-border/70">
+          <CardContent className="p-6">
+            <h2 className="text-base font-semibold">No mentors found</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try changing your filters, or register a mentor account to populate this directory.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4 rounded-xl"
+              onClick={() => {
+                setSearch("");
+                setSkill("Any");
+                setRatingMin("Any");
+                setAvailability("Any");
+              }}
+            >
+              Clear Filters
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {selectedMentor ? (
         <CheckAvailabilityModal

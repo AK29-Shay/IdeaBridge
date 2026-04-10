@@ -12,7 +12,7 @@ type StoredUser = AuthUser;
 type AuthContextValue = {
   user: StoredUser | null;
   isReady: boolean;
-  login: (params: { email: string; password: string }) => Promise<void>;
+  login: (params: { email: string; password: string }) => Promise<StoredUser>;
   register: (params: { user: Omit<StoredUser, "id"> & { fullName: string } }) => Promise<void>;
   logout: () => void;
   updateStudentProfile: (profile: StudentProfile) => void;
@@ -36,6 +36,59 @@ function makeId() {
   return `id_${Math.random().toString(16).slice(2)}_${Date.now()}`;
 }
 
+const DEMO_USERS: StoredUser[] = [
+  {
+    id: "demo-student",
+    role: "student",
+    fullName: "Demo Student",
+    email: "student.demo@ideabridge.dev",
+    password: "Demo@123",
+    studentProfile: {
+      bio: "Student demo profile for login and dashboard testing.",
+      skills: ["React", "TypeScript"],
+      studyYear: "3rd Year",
+      faculty: "Computing",
+      specialization: "Software Engineering",
+      portfolioLinks: ["https://example.com/student-demo"],
+      avatarUrl: "",
+    },
+  },
+  {
+    id: "demo-mentor",
+    role: "mentor",
+    fullName: "Demo Mentor",
+    email: "mentor.demo@ideabridge.dev",
+    password: "Demo@123",
+    mentorProfile: {
+      bio: "Mentor demo profile for collaboration and guidance testing.",
+      skills: ["System Design", "Node.js", "Databases"],
+      availability: "Part-time",
+      availabilityStatus: "Available in 1-2 days",
+      yearsExperience: 6,
+      linkedIn: "https://linkedin.com/in/demo-mentor",
+      github: "https://github.com/demo-mentor",
+      portfolioLinks: ["https://example.com/mentor-demo"],
+      availabilityCalendarNote: "Demo slot for QA checks.",
+      avatarUrl: "",
+    },
+    availabilityStatus: "Available in 1-2 days",
+  },
+];
+
+function cloneUsers(users: StoredUser[]): StoredUser[] {
+  return users.map((user) => ({
+    ...user,
+    studentProfile: user.studentProfile ? { ...user.studentProfile } : undefined,
+    mentorProfile: user.mentorProfile
+      ? {
+          ...user.mentorProfile,
+          skills: [...user.mentorProfile.skills],
+          portfolioLinks: user.mentorProfile.portfolioLinks ? [...user.mentorProfile.portfolioLinks] : undefined,
+        }
+      : undefined,
+  }));
+}
+
 function getUsers(): StoredUser[] {
   if (typeof window === "undefined") return [];
   const parsed = safeParseJSON<StoredUser[]>(localStorage.getItem(IDEABRIDGE_STORAGE_KEYS.users));
@@ -44,6 +97,16 @@ function getUsers(): StoredUser[] {
 
 function setUsers(next: StoredUser[]) {
   localStorage.setItem(IDEABRIDGE_STORAGE_KEYS.users, JSON.stringify(next));
+}
+
+function ensureSeedUsers(): StoredUser[] {
+  if (typeof window === "undefined") return [];
+  const existing = getUsers();
+  if (existing.length > 0) return existing;
+
+  const seeded = cloneUsers(DEMO_USERS);
+  setUsers(seeded);
+  return seeded;
 }
 
 function getAuthUserId(): StoredUser | null {
@@ -58,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    ensureSeedUsers();
     // Load auth state from localStorage on first client render.
     const existing = getAuthUserId();
     setUser(existing);
@@ -69,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       isReady,
       async login({ email, password }) {
-        const users = getUsers();
+        const users = ensureSeedUsers();
         const match = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
         if (!match) {
           throw new Error("No account found for this email.");
@@ -80,9 +144,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         localStorage.setItem(IDEABRIDGE_STORAGE_KEYS.auth, JSON.stringify({ email: match.email }));
         setUser(match);
+        return match;
       },
       async register({ user: incoming }) {
-        const users = getUsers();
+        const users = ensureSeedUsers();
         const exists = users.some((u) => u.email.toLowerCase() === incoming.email.toLowerCase());
         if (exists) {
           throw new Error("An account with this email already exists.");

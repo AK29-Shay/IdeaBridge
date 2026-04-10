@@ -3,28 +3,77 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ThumbsUp, MessageCircle, Pin, MoreHorizontal, Pencil, Trash2, Check, X } from "lucide-react";
+import { ThumbsUp, MessageCircle, Pin, MoreHorizontal, Pencil, Trash2, Check, X, Paperclip, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { CommentNode } from "@/lib/ideas/mockThread";
+import { toast } from "sonner";
+import { CommentNode, CommentAttachment } from "@/lib/ideas/mockThread";
 import { cn } from "@/lib/utils";
+import {
+  THREAD_MEDIA_ACCEPT,
+  SUPABASE_MAX_UPLOAD_BYTES,
+  formatBytes,
+  uploadThreadMediaFile,
+  validateThreadMediaFile,
+} from "@/lib/supabaseUploads";
+
+type ReplyPayload = {
+  content: string;
+  attachments: CommentAttachment[];
+};
 
 interface ProjectThreadProps {
   comments: CommentNode[];
+  postId?: string;
+  actorEmail?: string;
+  isLoading?: boolean;
+  onRefresh?: () => Promise<void> | void;
 }
 
-export default function ProjectThread({ comments }: ProjectThreadProps) {
+function parseApiError(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object") return fallback;
+  const error = "error" in payload ? String((payload as { error?: unknown }).error ?? "") : "";
+  return error || fallback;
+}
+
+export default function ProjectThread({ comments, postId, actorEmail, isLoading = false, onRefresh }: ProjectThreadProps) {
   const [threadComments, setThreadComments] = useState<CommentNode[]>(comments);
 
-  const handleDelete = (id: string) => {
+  useEffect(() => {
+    setThreadComments(comments);
+  }, [comments]);
+
+  const handleDelete = async (id: string) => {
+    const previous = threadComments;
     const deleteNode = (nodes: CommentNode[]): CommentNode[] =>
       nodes
         .filter((n) => n.id !== id)
         .map((n) => ({ ...n, replies: deleteNode(n.replies ?? []) }));
     setThreadComments((prev) => deleteNode(prev));
+
+    if (!postId || !actorEmail) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments/${id}?actorEmail=${encodeURIComponent(actorEmail)}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(parseApiError(payload, "Failed to delete reply."));
+      }
+
+      await onRefresh?.();
+      toast.success("Reply deleted.");
+    } catch (error) {
+      setThreadComments(previous);
+      toast.error(error instanceof Error ? error.message : "Failed to delete reply.");
+    }
   };
 
-  const handleEdit = (id: string, newContent: string) => {
+  const handleEdit = async (id: string, newContent: string) => {
+    const previous = threadComments;
     const editNode = (nodes: CommentNode[]): CommentNode[] =>
       nodes.map((n) =>
         n.id === id
@@ -32,6 +81,91 @@ export default function ProjectThread({ comments }: ProjectThreadProps) {
           : { ...n, replies: editNode(n.replies ?? []) }
       );
     setThreadComments((prev) => editNode(prev));
+
+    if (!postId || !actorEmail) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments/${id}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          actorEmail,
+          content: newContent,
+        }),
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(parseApiError(payload, "Failed to update reply."));
+      }
+
+      await onRefresh?.();
+      toast.success("Reply updated.");
+    } catch (error) {
+      setThreadComments(previous);
+      toast.error(error instanceof Error ? error.message : "Failed to update reply.");
+    }
+  };
+
+  const handleReply = async (parentId: string, payload: ReplyPayload) => {
+    const nextReply: CommentNode = {
+      id: `reply_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      author: "You",
+      avatarUrl: "https://i.pravatar.cc/150?u=current-user",
+      role: "Student",
+      content: payload.content.trim() || "Shared media",
+      attachments: payload.attachments,
+      upvotes: 0,
+      timestamp: "Just now",
+      replies: [],
+    };
+
+    const appendReply = (nodes: CommentNode[]): CommentNode[] =>
+      nodes.map((node) => {
+        if (node.id === parentId) {
+          return {
+            ...node,
+            replies: [...(node.replies ?? []), nextReply],
+          };
+        }
+        return {
+          ...node,
+          replies: appendReply(node.replies ?? []),
+        };
+      });
+
+    if (!postId || !actorEmail) {
+      setThreadComments((prev) => appendReply(prev));
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          actorEmail,
+          content: payload.content,
+          parent_comment_id: parentId,
+          attachments: payload.attachments,
+        }),
+      });
+
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(parseApiError(body, "Failed to post reply."));
+      }
+
+      await onRefresh?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to post reply.");
+    }
   };
 
   return (
@@ -40,6 +174,9 @@ export default function ProjectThread({ comments }: ProjectThreadProps) {
         <MessageCircle size={20} className="text-primary" />
         Discussion Thread
       </h3>
+      {isLoading ? (
+        <div className="mb-5 rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">Loading thread...</div>
+      ) : null}
       <div className="flex flex-col">
         {threadComments.map((comment, i) => (
           <CommentItem
@@ -49,6 +186,7 @@ export default function ProjectThread({ comments }: ProjectThreadProps) {
             depth={0}
             onDelete={handleDelete}
             onEdit={handleEdit}
+            onReply={handleReply}
           />
         ))}
       </div>
@@ -60,15 +198,19 @@ interface CommentItemProps {
   comment: CommentNode;
   isLast: boolean;
   depth: number;
-  onDelete: (id: string) => void;
-  onEdit: (id: string, newContent: string) => void;
+  onDelete: (id: string) => Promise<void> | void;
+  onEdit: (id: string, newContent: string) => Promise<void> | void;
+  onReply: (parentId: string, payload: ReplyPayload) => Promise<void> | void;
 }
 
-function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemProps) {
+function CommentItem({ comment, isLast, depth, onDelete, onEdit, onReply }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const [uploadingReply, setUploadingReply] = useState(false);
   const [upvotes, setUpvotes] = useState(comment.upvotes);
   const [upvoted, setUpvoted] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -105,7 +247,6 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
 
   const hasReplies = comment.replies && comment.replies.length > 0;
   const showLine = !isLast || hasReplies;
-
   const handleEditSave = () => {
     const trimmed = editText.trim();
     if (trimmed && trimmed !== comment.content) {
@@ -119,6 +260,68 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
     setIsEditing(false);
   };
 
+  const handleReplyFilesChosen = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const selected = Array.from(files);
+    const next: File[] = [];
+    for (const file of selected) {
+      const error = validateThreadMediaFile(file);
+      if (error) {
+        toast.error(error);
+        continue;
+      }
+      next.push(file);
+    }
+
+    if (next.length > 0) {
+      setReplyFiles((prev) => [...prev, ...next]);
+    }
+  };
+
+  const handleRemoveReplyFile = (indexToRemove: number) => {
+    setReplyFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handlePostReply = async () => {
+    if (uploadingReply) return;
+
+    const content = replyText.trim();
+    if (!content && replyFiles.length === 0) return;
+
+    setUploadingReply(true);
+    try {
+      const uploadedAttachments: CommentAttachment[] = [];
+      for (const file of replyFiles) {
+        const uploaded = await uploadThreadMediaFile(file);
+        if (uploaded.kind === "file") continue;
+        uploadedAttachments.push({
+          id: uploaded.path,
+          name: uploaded.name,
+          url: uploaded.url,
+          mimeType: uploaded.mimeType,
+          size: uploaded.size,
+          kind: uploaded.kind,
+          path: uploaded.path,
+        });
+      }
+
+      await Promise.resolve(onReply(comment.id, {
+        content,
+        attachments: uploadedAttachments,
+      }));
+
+      setReplyText("");
+      setReplyFiles([]);
+      setShowReplyForm(false);
+      toast.success("Reply posted.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to post reply.");
+    } finally {
+      setUploadingReply(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -129,7 +332,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
     >
       <div className="flex items-start gap-3">
         {/* Left Vertical Thread Column */}
-        <div className="flex flex-col items-center flex-shrink-0" style={{ width: 40 }}>
+        <div className="flex w-10 shrink-0 flex-col items-center">
           <Image
             src={comment.avatarUrl}
             alt={comment.author}
@@ -138,7 +341,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
             className="w-10 h-10 rounded-full border-2 border-border object-cover z-10 bg-muted"
           />
           {showLine && (
-            <div className="w-[2px] bg-border flex-1 min-h-[24px] mt-1 group-hover:bg-primary/30 transition-colors" />
+            <div className="mt-1 min-h-6 w-0.5 flex-1 bg-border transition-colors group-hover:bg-primary/30" />
           )}
         </div>
 
@@ -158,7 +361,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               {comment.isAcceptedAnswer && (
                 <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md text-xs font-bold">
                   <Pin size={11} className="fill-current" />
@@ -170,7 +373,9 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
               <div className="relative">
                 <button
                   ref={buttonRef}
-                  id={`comment-menu-${comment.id}`}
+                  type="button"
+                  title="Open comment actions"
+                  aria-label="Open comment actions"
                   onClick={() => setMenuOpen((v) => !v)}
                   className={cn(
                     "text-muted-foreground hover:text-foreground transition-all p-1 rounded-md hover:bg-muted",
@@ -188,10 +393,10 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.92, y: -4 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-8 z-50 min-w-[130px] bg-popover border border-border rounded-xl shadow-xl overflow-hidden"
+                      className="absolute right-0 top-8 z-50 min-w-32.5 overflow-hidden rounded-xl border border-border bg-popover shadow-xl"
                     >
                       <button
-                        id={`edit-comment-${comment.id}`}
+                        type="button"
                         onClick={() => {
                           setIsEditing(true);
                           setEditText(comment.content);
@@ -205,7 +410,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                       </button>
                       <div className="h-px bg-border" />
                       <button
-                        id={`delete-comment-${comment.id}`}
+                        type="button"
                         onClick={() => {
                           setShowDeleteConfirm(true);
                           setMenuOpen(false);
@@ -236,10 +441,12 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                   <p className="text-sm text-red-700 dark:text-red-400 font-medium">
                     Delete this comment permanently?
                   </p>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     <button
-                      id={`confirm-delete-${comment.id}`}
-                      onClick={() => onDelete(comment.id)}
+                      type="button"
+                      onClick={() => {
+                        void onDelete(comment.id);
+                      }}
                       className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                     >
                       <Trash2 size={12} />
@@ -270,7 +477,9 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                 className="mb-3"
               >
                 <textarea
-                  id={`edit-textarea-${comment.id}`}
+                  title="Edit comment text"
+                  aria-label="Edit comment text"
+                  placeholder="Edit your comment"
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
                   onKeyDown={(e) => {
@@ -283,7 +492,6 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                 />
                 <div className="flex items-center gap-2 mt-2">
                   <button
-                    id={`save-edit-${comment.id}`}
                     onClick={handleEditSave}
                     className="flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                   >
@@ -310,7 +518,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
                 className={cn(
-                  "text-sm prose prose-sm dark:prose-invert max-w-none mb-3 break-words rounded-xl p-3.5 transition-colors",
+                  "text-sm prose prose-sm dark:prose-invert max-w-none mb-3 wrap-break-word rounded-xl p-3.5 transition-colors",
                   comment.isAcceptedAnswer
                     ? "bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50"
                     : "bg-muted/30 border border-transparent hover:border-border"
@@ -320,6 +528,28 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
               </motion.div>
             )}
           </AnimatePresence>
+
+          {comment.attachments && comment.attachments.length > 0 ? (
+            <div className="mb-3 grid grid-cols-1 gap-2">
+              {comment.attachments.map((attachment) => (
+                <div key={attachment.id} className="rounded-xl border border-border bg-background p-2">
+                  {attachment.kind === "video" ? (
+                    <video src={attachment.url} controls className="w-full rounded-md" />
+                  ) : (
+                    <img src={attachment.url} alt={attachment.name} className="w-full rounded-md object-cover" loading="lazy" />
+                  )}
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block text-xs text-primary hover:underline"
+                  >
+                    {attachment.name} ({formatBytes(attachment.size)})
+                  </a>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           {/* Action Row */}
           <div className="flex items-center gap-5 text-muted-foreground">
@@ -348,17 +578,71 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="flex gap-2 mt-3">
+                <div className="mt-3 space-y-2">
                   <input
                     type="text"
                     value={replyText}
                     onChange={e => setReplyText(e.target.value)}
                     placeholder={`Reply to ${comment.author}...`}
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
-                  <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors flex-shrink-0">
-                    Post
-                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept={THREAD_MEDIA_ACCEPT}
+                    title="Attach media files"
+                    className="hidden"
+                    onChange={(e) => {
+                      handleReplyFilesChosen(e.target.files);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted"
+                    >
+                      <Paperclip size={13} />
+                      Attach media
+                    </button>
+                    <span className="text-[11px] text-muted-foreground">
+                      Image/GIF/Video, max {formatBytes(SUPABASE_MAX_UPLOAD_BYTES)} each
+                    </span>
+                  </div>
+
+                  {replyFiles.length > 0 ? (
+                    <div className="space-y-1">
+                      {replyFiles.map((file, idx) => (
+                        <div key={`${file.name}_${idx}`} className="flex items-center justify-between rounded-md border border-border bg-background px-2 py-1.5 text-xs">
+                          <span className="truncate max-w-[75%]">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveReplyFile(idx)}
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={`Remove ${file.name}`}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void handlePostReply()}
+                      disabled={uploadingReply || (!replyText.trim() && replyFiles.length === 0)}
+                      className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {uploadingReply ? <Loader2 size={14} className="animate-spin" /> : null}
+                      Post
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -378,6 +662,7 @@ function CommentItem({ comment, isLast, depth, onDelete, onEdit }: CommentItemPr
                 depth={depth + 1}
                 onDelete={onDelete}
                 onEdit={onEdit}
+                onReply={onReply}
               />
             ))}
           </div>

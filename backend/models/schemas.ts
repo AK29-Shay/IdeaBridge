@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 export const profileSchema = z.object({
-  user_id: z.string().optional(),
+  id: z.string().uuid().optional(),
   full_name: z.string().min(1),
   bio: z.string().max(1000).optional(),
   skills: z.array(z.string()).optional(),
   availability: z.string().optional(),
-  role: z.enum(['student', 'mentor', 'admin']).optional(),
+  role: z.enum(['student', 'mentor', 'admin', 'Student', 'Mentor', 'Admin']).optional(),
 })
 
 export const mentorApplicationSchema = z.object({
