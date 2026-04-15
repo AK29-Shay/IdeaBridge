@@ -1,17 +1,8 @@
-/**
- * POST /api/requests/create  → student creates a help request
- * GET  /api/requests/my      → student views their own requests
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '../../../backend/middleware/auth'
-import { getProfileByUserId } from '../../../backend/services/profileService'
-import {
-  submitRequest,
-  getStudentRequests,
-} from '../../../backend/controllers/requestController'
-import { handleError } from '../../../backend/utils/helpers'
+﻿import { NextResponse } from 'next/server'
+import { submitRequest } from '@/backend/modules/request'
+import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
 
-/** POST /api/requests/create — students only */
+/** POST /api/requests/create â€” students only */
 export const POST = withAuth(async (req: NextRequest, user) => {
   try {
     const profile = await getProfileByUserId(user.id)
@@ -27,7 +18,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 })
 
-/** GET /api/requests/my — student views their own requests */
+/** GET /api/requests/my â€” student views their own requests */
 export const GET = withAuth(async (_req: NextRequest, user) => {
   try {
     const requests = await getStudentRequests(user.id)

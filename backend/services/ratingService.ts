@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ratingService.ts
  * Database operations for ratings.
  * After insert, the DB trigger automatically updates mentor reputation on profiles.
@@ -6,7 +6,7 @@
 import supabaseServer from '../config/supabaseServer'
 import type { DbRating } from '../models/types'
 
-// ─── Create rating ────────────────────────────────────────────
+// â”€â”€â”€ Create rating â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface CreateRatingPayload {
   request_id: string
@@ -16,21 +16,11 @@ export interface CreateRatingPayload {
   review?:    string
 }
 
-/**
- * Submits a new rating.
- * Guards against duplicate ratings for the same request (DB UNIQUE constraint).
- * The DB trigger 'after_rating_insert' updates mentor reputation automatically.
- */
-export async function addRating(payload: CreateRatingPayload): Promise<DbRating> {
-  const { data, error } = await supabaseServer
-    .from('ratings')
-    .insert(payload)
-    .select()
-    .single()
-
-  if (error) {
-    if (error.code === '23505') {
-      throw new Error('You have already rated this request')
+    // compute average
+    if (agg) {
+      const ratings = agg.map((r: any) => r.rating)
+      const avg = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length
+      await supabaseServer.from('profiles').update({ reputation: avg }).eq('id', payload.mentor_id)
     }
     throw new Error(error.message)
   }
@@ -38,7 +28,7 @@ export async function addRating(payload: CreateRatingPayload): Promise<DbRating>
   return data
 }
 
-// ─── Read ratings ─────────────────────────────────────────────
+// â”€â”€â”€ Read ratings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface RatingWithDetails extends DbRating {
   profiles?: { full_name: string } | null

@@ -1,18 +1,7 @@
-/**
- * PATCH /api/mentor-application/approve
- * Approves a pending mentor application (admin/internal use only).
- * This endpoint is intentionally restricted — in production gate it
- * behind a separate admin secret header or Supabase admin dashboard.
- *
- * Body: { application_id: string }
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '../../../../backend/middleware/auth'
-import {
-  approveApplication,
-  rejectApplication,
-} from '../../../../backend/controllers/mentorApplicationController'
-import { handleError } from '../../../../backend/utils/helpers'
+﻿import { NextResponse } from 'next/server'
+import { approveApplication } from '@/backend/modules/mentor-application'
+import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
+import { getProfileByUserId } from '@/backend/modules/profile'
 
 /**
  * PATCH /api/mentor-application/approve
@@ -28,11 +17,9 @@ export const PATCH = withAuth(async (req: NextRequest, _user) => {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const body = await req.json()
-    const { application_id, action } = body as {
-      application_id: string
-      action: 'approve' | 'reject'
-    }
+    const profile = await getProfileByUserId(user.user.id)
+    const role = typeof profile?.role === 'string' ? profile.role.toLowerCase() : ''
+    if (!profile || role !== 'admin') return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
 
     if (!application_id || !action) {
       return NextResponse.json(

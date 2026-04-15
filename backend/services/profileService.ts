@@ -1,44 +1,53 @@
-/**
+﻿/**
  * profileService.ts
  * Database operations for profiles (student & mentor).
  */
 import supabaseServer from '../config/supabaseServer'
 import type { DbProfile } from '../models/types'
 
-// ─── Upsert / create ──────────────────────────────────────────
+function normalizeRole(role?: string) {
+  if (!role) return role
+  const lower = role.toLowerCase()
+  if (lower === 'student') return 'Student'
+  if (lower === 'mentor') return 'Mentor'
+  if (lower === 'admin') return 'Admin'
+  return role
+}
 
-/**
- * Creates or updates a user's profile.
- * Uses user_id as the conflict target (each user has one profile).
- */
-export async function upsertProfile(
-  profile: Partial<DbProfile> & { user_id: string }
-): Promise<DbProfile> {
+export async function upsertProfile(profile: Partial<Profile>) {
+  const payload = {
+    ...profile,
+    role: normalizeRole(profile.role),
+  }
+
   const { data, error } = await supabaseServer
     .from('profiles')
-    .upsert(profile, { onConflict: 'user_id' })
+    .upsert(payload, { onConflict: 'id' })
     .select()
     .single()
 
-  if (error) throw new Error(error.message)
+export async function getProfileByUserId(user_id: string) {
+  const { data, error } = await supabaseServer.from('profiles').select('*').eq('id', user_id).maybeSingle()
+  if (error) throw error
   return data
 }
 
-// ─── Read ─────────────────────────────────────────────────────
+// â”€â”€â”€ Read â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Fetch a user's own profile by their auth user_id */
 export async function getProfileByUserId(user_id: string): Promise<DbProfile | null> {
   const { data, error } = await supabaseServer
     .from('profiles')
     .select('*')
-    .eq('user_id', user_id)
-    .maybeSingle()
+    .contains('skills', [skill])
+    .in('role', ['Mentor', 'mentor'])
+    .limit(limit)
 
   if (error) throw new Error(error.message)
   return data
 }
 
-// ─── Mentor search ────────────────────────────────────────────
+// â”€â”€â”€ Mentor search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface MentorSearchOptions {
   skills?: string[]           // filter mentors who have ALL listed skills
@@ -70,7 +79,7 @@ export async function searchMentors(options: MentorSearchOptions): Promise<DbPro
     .range(offset, offset + limit - 1)
 
   if (skills && skills.length > 0) {
-    // overlaps — mentor has at least one of the requested skills
+    // overlaps â€” mentor has at least one of the requested skills
     query = query.overlaps('skills', skills)
   }
 

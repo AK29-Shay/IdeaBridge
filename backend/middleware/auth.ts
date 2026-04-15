@@ -1,16 +1,16 @@
-/**
- * auth.ts – Auth middleware
+﻿/**
+ * auth.ts â€“ Auth middleware
  *
- * getUserFromRequest()   – validate Bearer token, return Supabase User or null
- * getUserFromAuthHeader() – legacy helper (kept for backward compat)
- * requireRole()          – check profile role against an allowed list
- * withAuth()             – HOF wrapper: handles 401 automatically, forwards route ctx
+ * getUserFromRequest()   â€“ validate Bearer token, return Supabase User or null
+ * getUserFromAuthHeader() â€“ legacy helper (kept for backward compat)
+ * requireRole()          â€“ check profile role against an allowed list
+ * withAuth()             â€“ HOF wrapper: handles 401 automatically, forwards route ctx
  */
 import { NextRequest, NextResponse } from 'next/server'
 import supabaseServer from '../config/supabaseServer'
 import type { User } from '@supabase/supabase-js'
 
-// ─── Types ────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type RouteContext = { params: Promise<Record<string, string>> }
 
@@ -20,7 +20,7 @@ type AuthedHandler = (
   ctx?: RouteContext
 ) => Promise<NextResponse>
 
-// ─── Token helpers ────────────────────────────────────────────
+// â”€â”€â”€ Token helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function extractToken(authorization: string | null): string | null {
   if (!authorization) return null
@@ -32,45 +32,36 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split('.')
     if (parts.length < 2) return null
-    return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
-  } catch {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+    const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'))
+    return payload
+  } catch (e) {
     return null
   }
 }
 
-function isTokenExpired(payload: Record<string, unknown>): boolean {
-  const exp = payload.exp
-  if (typeof exp !== 'number') return false
-  return exp < Math.floor(Date.now() / 1000)
-}
-
-// ─── Core auth resolution ─────────────────────────────────────
-
-/**
- * Resolves a Supabase User from a Next.js request's Authorization header.
- * Returns null if the token is missing, malformed, expired, or invalid.
- */
-export async function getUserFromRequest(req: NextRequest | Request): Promise<User | null> {
-  const authorization = req.headers.get('authorization')
-  const token = extractToken(authorization)
+export async function getUserFromAuthHeader(authorization?: string | null) {
+  if (!authorization) return null
+  const match = authorization.match(/Bearer\s+(.+)/i)
+  const token = match ? match[1] : authorization.trim()
   if (!token) return null
-
   const payload = decodeJwtPayload(token)
   if (!payload || !payload.sub) return null
   if (isTokenExpired(payload)) return null
 
   try {
-    // @ts-expect-error – admin is available when using service role key
-    const { data, error } = await supabaseServer.auth.admin.getUserById(payload.sub as string)
+    // @ts-ignore - admin namespace used with service role
+    const { data, error } = await supabaseServer.auth.admin.getUserById(payload.sub)
     if (error || !data?.user) return null
-    return data.user
-  } catch {
+    return { user: data.user as User, token }
+  } catch (e) {
     return null
   }
 }
 
 /**
- * Legacy helper – accepts a raw authorization string.
+ * Legacy helper â€“ accepts a raw authorization string.
  * Kept for backward compatibility with existing route files.
  */
 export async function getUserFromAuthHeader(
@@ -84,7 +75,7 @@ export async function getUserFromAuthHeader(
   if (isTokenExpired(payload)) return null
 
   try {
-    // @ts-expect-error – admin namespace requires service role key
+    // @ts-expect-error â€“ admin namespace requires service role key
     const { data, error } = await supabaseServer.auth.admin.getUserById(payload.sub as string)
     if (error || !data?.user) return null
     return { user: data.user, token }
@@ -93,7 +84,7 @@ export async function getUserFromAuthHeader(
   }
 }
 
-// ─── Role guard ───────────────────────────────────────────────
+// â”€â”€â”€ Role guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Returns true if the given DB profile's role is in the allowed list.
@@ -103,7 +94,7 @@ export function requireRole(profile: { role: string } | null, allowed: string[])
   return allowed.includes(profile.role)
 }
 
-// ─── withAuth wrapper ─────────────────────────────────────────
+// â”€â”€â”€ withAuth wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Wraps a Next.js API route handler with authentication.

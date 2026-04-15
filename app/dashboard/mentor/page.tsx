@@ -20,7 +20,7 @@ import { RequireRoleAuth } from "@/components/auth/RequireRole";
 import { DashboardSection } from "@/components/mentor/DashboardSection";
 import { BlogSection } from "@/components/mentor/BlogSection";
 import { ProfileSection } from "@/components/mentor/ProfileSection";
-import RequestsPage from "./requests/page";
+import { RequestsSection } from "@/components/mentor/RequestsSection";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Tab = "dashboard" | "requests" | "blog" | "profile";
@@ -228,7 +228,9 @@ function MentorDashboard() {
               onTabChange={handleTabChange}
             />
           )}
-          {activeTab === "requests" && <RequestsPage />}
+          {activeTab === "requests" && (
+            <RequestsSection requests={requests} onUpdateRequest={handleUpdateRequest} />
+          )}
           {activeTab === "blog"    && <BlogSection />}
           {activeTab === "profile" && <ProfileSection />}
         </main>

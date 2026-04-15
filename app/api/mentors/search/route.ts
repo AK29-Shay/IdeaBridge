@@ -1,19 +1,6 @@
-/**
- * GET /api/mentors/search
- *
- * Query params (all optional):
- *   skills              comma-separated, e.g. "React,TypeScript"
- *   availability        Full-time | Part-time | Evenings
- *   availability_status Available Now | Available in 1-2 days | Busy | On Leave
- *   min_rating          0–5
- *   limit               default 20, max 50
- *   offset              default 0
- *
- * Public — no auth required so students can browse before signing in.
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { handleMentorSearch } from '../../../../backend/controllers/mentorController'
-import { handleError } from '../../../../backend/utils/helpers'
+﻿import { NextResponse } from 'next/server'
+import { searchMentors } from '@/backend/modules/mentor'
+import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 
 export async function GET(req: NextRequest) {
   try {

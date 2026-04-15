@@ -1,80 +1,83 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import { useForm, Controller } from "react-hook-form";
-import { toast } from "sonner";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
 import { useAuth } from "@/context/AuthContext";
 import { ALL_SKILLS } from "@/lib/constants";
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { SkillMultiSelect } from "@/components/forms/SkillMultiSelect";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SkillMultiSelect } from "@/components/forms/SkillMultiSelect";
+import { Textarea } from "@/components/ui/textarea";
 
 const mentorProfileSchema = z.object({
   fullName: z.string().min(2, "Name is required"),
   bio: z.string().min(10, "Bio must be at least 10 characters"),
   availability: z.enum(["Full-time", "Part-time", "Evenings"]),
-  yearsExperience: z.preprocess((v) => Number(v), z.number().min(0, "Minimum 0")),
+  yearsExperience: z.preprocess((value) => Number(value), z.number().min(0, "Minimum 0")),
   skills: z.array(z.string()).min(1, "Add at least one skill"),
   avatarUrl: z.string().optional(),
 });
 
 type MentorProfileInput = z.infer<typeof mentorProfileSchema>;
+type MentorProfileFormValues = z.input<typeof mentorProfileSchema>;
+type MentorProfileSubmitValues = z.output<typeof mentorProfileSchema>;
 
 export function MentorProfileSection() {
   const { user, updateMentorProfile } = useAuth();
+  const [isSaving, setIsSaving] = React.useState(false);
 
-  const form = useForm<MentorProfileInput>({
-    resolver: zodResolver(mentorProfileSchema) as any,
-    mode: "onChange",
-    defaultValues: {
+  const defaultValues = React.useMemo<MentorProfileFormValues>(
+    () => ({
       fullName: user?.fullName ?? "",
       bio: user?.mentorProfile?.bio ?? "",
       availability: user?.mentorProfile?.availability ?? "Part-time",
       yearsExperience: user?.mentorProfile?.yearsExperience ?? 0,
       skills: user?.mentorProfile?.skills ?? [],
       avatarUrl: user?.mentorProfile?.avatarUrl ?? "",
-    },
+    }),
+    [user]
+  );
+
+  const form = useForm<MentorProfileFormValues, unknown, MentorProfileSubmitValues>({
+    resolver: zodResolver(mentorProfileSchema),
+    mode: "onChange",
+    defaultValues,
   });
 
   React.useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
+
+  async function onSubmit(values: MentorProfileSubmitValues) {
     if (!user) return;
 
-    form.reset({
-      fullName: user.fullName ?? "",
-      bio: user.mentorProfile?.bio ?? "",
-      availability: user.mentorProfile?.availability ?? "Part-time",
-      yearsExperience: user.mentorProfile?.yearsExperience ?? 0,
-      skills: user.mentorProfile?.skills ?? [],
-      avatarUrl: user.mentorProfile?.avatarUrl ?? "",
-    });
-  }, [user, form]);
-
-  function onSubmit(values: MentorProfileInput) {
-    if (!user) return;
-
-    updateMentorProfile({
-      fullName: values.fullName,
-      bio: values.bio,
-      skills: values.skills,
-      availability: values.availability,
-      yearsExperience: values.yearsExperience,
-      avatarUrl: values.avatarUrl || undefined,
-      availabilityStatus: "Available Now",
-    });
-
-    toast.success("Mentor profile updated successfully");
+    setIsSaving(true);
+    try {
+      await updateMentorProfile({
+        ...values,
+        fullName: values.fullName,
+        availabilityStatus: user.availabilityStatus ?? "Available in 1-2 days",
+      });
+      toast.success("Mentor profile updated successfully");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update mentor profile.";
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   if (!user) return null;
+
+  const { errors } = form.formState;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -85,7 +88,7 @@ export function MentorProfileSection() {
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
                 <AvatarFallback className="text-lg font-semibold">
@@ -95,42 +98,21 @@ export function MentorProfileSection() {
 
               <div className="flex-1 space-y-2">
                 <Label htmlFor="avatarUrl">Profile Photo URL</Label>
-                <Input
-                  id="avatarUrl"
-                  placeholder="https://example.com/avatar.jpg"
-                  {...form.register("avatarUrl")}
-                />
-                {form.formState.errors.avatarUrl && (
-                  <p className="text-sm text-destructive">
-                    {String((form.formState.errors.avatarUrl as any)?.message)}
-                  </p>
-                )}
+                <Input id="avatarUrl" placeholder="https://example.com/avatar.jpg" {...form.register("avatarUrl")} />
+                {errors.avatarUrl && <p className="text-sm text-destructive">{String(errors.avatarUrl.message)}</p>}
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="fullName">Name</Label>
               <Input id="fullName" {...form.register("fullName")} />
-              {form.formState.errors.fullName && (
-                <p className="text-sm text-destructive">
-                  {String((form.formState.errors.fullName as any)?.message)}
-                </p>
-              )}
+              {errors.fullName && <p className="text-sm text-destructive">{String(errors.fullName.message)}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                rows={4}
-                placeholder="Write a short mentor bio..."
-                {...form.register("bio")}
-              />
-              {form.formState.errors.bio && (
-                <p className="text-sm text-destructive">
-                  {String((form.formState.errors.bio as any)?.message)}
-                </p>
-              )}
+              <Textarea id="bio" rows={4} placeholder="Write a short mentor bio..." {...form.register("bio")} />
+              {errors.bio && <p className="text-sm text-destructive">{String(errors.bio.message)}</p>}
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -152,26 +134,13 @@ export function MentorProfileSection() {
                     </Select>
                   )}
                 />
-                {form.formState.errors.availability && (
-                  <p className="text-sm text-destructive">
-                    {String((form.formState.errors.availability as any)?.message)}
-                  </p>
-                )}
+                {errors.availability && <p className="text-sm text-destructive">{String(errors.availability.message)}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="yearsExperience">Years of Experience</Label>
-                <Input
-                  id="yearsExperience"
-                  type="number"
-                  min={0}
-                  {...form.register("yearsExperience", { valueAsNumber: true })}
-                />
-                {form.formState.errors.yearsExperience && (
-                  <p className="text-sm text-destructive">
-                    {String((form.formState.errors.yearsExperience as any)?.message)}
-                  </p>
-                )}
+                <Input id="yearsExperience" type="number" min={0} {...form.register("yearsExperience", { valueAsNumber: true })} />
+                {errors.yearsExperience && <p className="text-sm text-destructive">{String(errors.yearsExperience.message)}</p>}
               </div>
             </div>
 
@@ -181,23 +150,17 @@ export function MentorProfileSection() {
                 control={form.control}
                 name="skills"
                 render={({ field }) => (
-                  <SkillMultiSelect
-                    value={field.value ?? []}
-                    onChange={field.onChange}
-                    options={ALL_SKILLS}
-                  />
+                  <SkillMultiSelect value={field.value ?? []} onChange={field.onChange} options={ALL_SKILLS} />
                 )}
               />
-              {form.formState.errors.skills && (
-                <p className="text-sm text-destructive">
-                  {String((form.formState.errors.skills as any)?.message)}
-                </p>
-              )}
+              {errors.skills && <p className="text-sm text-destructive">{String(errors.skills.message)}</p>}
             </div>
 
             <div className="flex gap-3">
-              <Button type="submit">Save Profile</Button>
-              <Button type="button" variant="outline" onClick={() => form.reset()}>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Profile"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => form.reset(defaultValues)} disabled={isSaving}>
                 Cancel
               </Button>
             </div>
@@ -208,5 +171,4 @@ export function MentorProfileSection() {
   );
 }
 
-// Provide a compatible named export `ProfileSection` for existing imports.
 export const ProfileSection = MentorProfileSection;

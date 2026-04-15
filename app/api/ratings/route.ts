@@ -1,17 +1,8 @@
-/**
- * POST /api/ratings          → student submits a rating for a completed request
- * GET  /api/ratings?mentor_id → fetch all ratings for a given mentor (public)
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '../../../backend/middleware/auth'
-import { getProfileByUserId } from '../../../backend/services/profileService'
-import {
-  submitRating,
-  fetchMentorRatings,
-} from '../../../backend/controllers/ratingController'
-import { handleError } from '../../../backend/utils/helpers'
+﻿import { NextResponse } from 'next/server'
+import { submitRating } from '@/backend/modules/rating'
+import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
 
-/** POST /api/ratings — students only */
+/** POST /api/ratings â€” students only */
 export const POST = withAuth(async (req: NextRequest, user) => {
   try {
     const profile = await getProfileByUserId(user.id)
@@ -23,7 +14,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
     }
 
     const body = await req.json()
-    // student_id is always injected from auth — never trusted from body
+    // student_id is always injected from auth â€” never trusted from body
     const rating = await submitRating(user.id, body)
     return NextResponse.json({ data: rating }, { status: 201 })
   } catch (e) {
@@ -31,7 +22,7 @@ export const POST = withAuth(async (req: NextRequest, user) => {
   }
 })
 
-/** GET /api/ratings?mentor_id=<uuid> — public: anyone can read ratings */
+/** GET /api/ratings?mentor_id=<uuid> â€” public: anyone can read ratings */
 export async function GET(req: NextRequest) {
   try {
     const mentor_id = req.nextUrl.searchParams.get('mentor_id')

@@ -265,7 +265,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/login")}
-                  className="text-[#F5A97F] hover:text-[#0F0F0F] font-medium transition-colors"
+                  className="text-[#C7792F] hover:text-[#0F0F0F] font-medium transition-colors"
                 >
                   ← Back to login
                 </button>

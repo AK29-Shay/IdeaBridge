@@ -1,28 +1,17 @@
-/**
+﻿/**
  * schemas.ts
  * Central Zod validation schemas for all IdeaBridge domain objects.
  * Controllers call .parse() to validate incoming payloads before hitting the DB.
  */
 import { z } from 'zod'
 
-// ─── SHARED ───────────────────────────────────────────────────
-
-const urlOrEmpty = z.union([z.string().url(), z.literal('')]).optional()
-
-// ─── PROFILE ──────────────────────────────────────────────────
-
-export const studentProfileSchema = z.object({
-  user_id:        z.string().uuid().optional(),
-  role:           z.literal('student'),
-  full_name:      z.string().min(1, 'Full name is required'),
-  bio:            z.string().max(1000).optional(),
-  skills:         z.array(z.string()).default([]),
-  study_year:     z.string().optional(),
-  faculty:        z.string().optional(),
-  specialization: z.string().optional(),
-  github:         urlOrEmpty,
-  linkedin:       urlOrEmpty,
-  profile_image:  urlOrEmpty,
+export const profileSchema = z.object({
+  id: z.string().uuid().optional(),
+  full_name: z.string().min(1),
+  bio: z.string().max(1000).optional(),
+  skills: z.array(z.string()).optional(),
+  availability: z.string().optional(),
+  role: z.enum(['student', 'mentor', 'admin', 'Student', 'Mentor', 'Admin']).optional(),
 })
 
 export const mentorProfileSchema = z.object({
@@ -45,13 +34,13 @@ export const mentorProfileSchema = z.object({
   profile_image:              urlOrEmpty,
 })
 
-/** Union schema — role discriminates student vs mentor */
+/** Union schema â€” role discriminates student vs mentor */
 export const profileSchema = z.discriminatedUnion('role', [
   studentProfileSchema,
   mentorProfileSchema,
 ])
 
-// ─── HELP REQUESTS ────────────────────────────────────────────
+// â”€â”€â”€ HELP REQUESTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const REQUEST_STATUSES = [
   'open',
@@ -64,7 +53,7 @@ export const REQUEST_STATUSES = [
 
 export type RequestStatus = (typeof REQUEST_STATUSES)[number]
 
-/** Valid status transitions: key → allowed next states */
+/** Valid status transitions: key â†’ allowed next states */
 export const STATUS_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
   open:        ['accepted', 'rejected', 'closed'],
   accepted:    ['in_progress', 'rejected', 'closed'],
@@ -88,7 +77,7 @@ export const updateStatusSchema = z.object({
   status:     z.enum(REQUEST_STATUSES),
 })
 
-// ─── RATINGS ──────────────────────────────────────────────────
+// â”€â”€â”€ RATINGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const createRatingSchema = z.object({
   request_id: z.string().uuid(),
@@ -98,7 +87,7 @@ export const createRatingSchema = z.object({
   // student_id injected from auth
 })
 
-// ─── BLOGS ────────────────────────────────────────────────────
+// â”€â”€â”€ BLOGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const createBlogSchema = z.object({
   title:   z.string().min(3, 'Title must be at least 3 characters'),
@@ -109,7 +98,7 @@ export const createBlogSchema = z.object({
 
 export const updateBlogSchema = createBlogSchema.partial()
 
-// ─── NOTIFICATIONS ────────────────────────────────────────────
+// â”€â”€â”€ NOTIFICATIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const createNotificationSchema = z.object({
   user_id: z.string().uuid(),
@@ -119,7 +108,7 @@ export const createNotificationSchema = z.object({
   payload: z.record(z.unknown()).optional(),
 })
 
-// ─── OTP / 2FA ────────────────────────────────────────────────
+// â”€â”€â”€ OTP / 2FA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const sendOtpSchema = z.object({
   user_id: z.string().uuid(),
@@ -130,7 +119,7 @@ export const verifyOtpSchema = z.object({
   otp:     z.string().length(6, 'OTP must be 6 digits'),
 })
 
-// ─── MENTOR SEARCH ────────────────────────────────────────────
+// â”€â”€â”€ MENTOR SEARCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const mentorSearchSchema = z.object({
   skills:              z.string().optional(), // comma-separated
@@ -143,7 +132,7 @@ export const mentorSearchSchema = z.object({
   offset:     z.coerce.number().int().min(0).default(0),
 })
 
-// ─── MENTOR AVAILABILITY ──────────────────────────────────────
+// â”€â”€â”€ MENTOR AVAILABILITY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const updateAvailabilitySchema = z.object({
   availability:               z.enum(['Full-time', 'Part-time', 'Evenings']).optional(),
@@ -153,7 +142,7 @@ export const updateAvailabilitySchema = z.object({
   availability_calendar_note: z.string().max(500).optional(),
 })
 
-// ─── MENTOR APPLICATION ───────────────────────────────────────
+// â”€â”€â”€ MENTOR APPLICATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const mentorApplicationSchema = z.object({
   user_id:       z.string().uuid(),

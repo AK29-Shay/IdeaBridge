@@ -1,27 +1,24 @@
-/**
- * PATCH /api/requests/status
- *
- * Updates the status of a help request.
- * - Mentors can update status for their assigned request
- * - Students can only close their own request
- *
- * Body: { request_id: string, status: RequestStatus }
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '../../../../backend/middleware/auth'
-import { getProfileByUserId } from '../../../../backend/services/profileService'
-import { changeRequestStatus } from '../../../../backend/controllers/requestController'
-import type { RequestStatus } from '../../../../backend/models/schemas'
-import { handleError } from '../../../../backend/utils/helpers'
+﻿import { NextResponse } from 'next/server'
+import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
+import { getRequestById, updateRequestStatus } from '@/backend/modules/request'
+import { getProfileByUserId } from '@/backend/modules/profile'
 
 export const PATCH = withAuth(async (req: NextRequest, user) => {
   try {
-    const profile = await getProfileByUserId(user.id)
-    if (!profile) {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-    }
-    if (profile.role !== 'mentor' && profile.role !== 'student') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const authorization = request.headers.get('authorization')
+    const user = await getUserFromAuthHeader(authorization)
+    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+    const body = await request.json()
+    const { request_id, status } = body
+    const reqRecord = await getRequestById(request_id)
+    if (!reqRecord) return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404 })
+
+    const profile = await getProfileByUserId(user.user.id)
+    const role = typeof profile?.role === 'string' ? profile.role.toLowerCase() : ''
+    // only assigned mentor or admin may update
+    if (!(profile && (role === 'admin' || String(reqRecord.assigned_mentor) === String(user.user.id)))) {
+      return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
     }
 
     const body = await req.json()

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -17,10 +17,6 @@ import { Label } from "@/components/ui/label";
 
 type LoginInput = z.infer<typeof loginSchema>;
 
-
-
-
-
 function ErrorMsg({ msg }: { msg?: string }) {
   if (!msg) return null;
   return (
@@ -33,7 +29,7 @@ function ErrorMsg({ msg }: { msg?: string }) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -51,34 +47,24 @@ export default function LoginPage() {
   async function handleSubmit(values: LoginInput) {
     setIsLoading(true);
     try {
-      // Use AuthContext login (which sets user)
-      await login({ email: values.email, password: values.password });
-      // Get session
-      const { data, error } = await supabaseClient.auth.getSession();
-      console.log("[Login] Session result:", { data, error });
-      if (error || !data.session) {
-        throw new Error(error?.message || "Login failed: No session");
-      }
-      // Fetch profile to get role
-      const { data: profile, error: profileError } = await supabaseClient
-        .from("profiles")
-        .select("role")
-        .eq("user_id", data.session.user.id)
-        .single();
-      console.log("[Login] Profile fetch result:", profile);
-      console.log("[Login] Profile fetch error:", profileError);
-      if (profileError || !profile) {
-        toast.error("Could not fetch user profile/role.");
+      const signedInUser = await login({ email: values.email, password: values.password });
+
+      const redirectTo =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("next") ?? ""
+          : "";
+
+      const nextRole = signedInUser.role;
+      if (!nextRole) throw new Error("Unable to determine your role.");
+
+      toast.success("Welcome back to IdeaBridge! ðŸš€");
+      if (redirectTo) {
+        router.push(redirectTo);
         return;
       }
-      console.log("[Login] Profile role:", profile.role);
-      let redirectPath = "/dashboard/student";
-      if (profile.role === "mentor") {
-        redirectPath = "/dashboard/mentor";
-      }
-      console.log("[Login] Redirecting to:", redirectPath);
-      router.push(redirectPath);
-      toast.success("Welcome back to IdeaBridge! 🚀");
+
+      const roleHome = nextRole === "mentor" ? "/dashboard/mentor" : "/dashboard/student";
+      router.push(roleHome);
     } catch (rawError: unknown) {
       const message =
         rawError instanceof Error ? rawError.message : "Login failed.";
@@ -103,7 +89,7 @@ export default function LoginPage() {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#FFCBA4] shadow-md mb-4">
-            <span className="text-[#0F0F0F] font-bold text-lg" style={{ fontFamily: "'Poppins', sans-serif" }}>IB</span>
+            <span className="text-[#0F0F0F] font-bold text-lg">IB</span>
           </div>
           <h1 className="text-3xl font-bold text-[#0F0F0F] tracking-tight">
             Welcome back
@@ -152,7 +138,7 @@ export default function LoginPage() {
                 </Label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-[#F5A97F] hover:text-[#0F0F0F] transition-colors"
+                  className="text-xs text-[#C7792F] hover:text-[#0F0F0F] transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -207,20 +193,26 @@ export default function LoginPage() {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  Signing in…
+                  Signing inâ€¦
                 </span>
               ) : (
-                "Sign In →"
+                "Sign In â†’"
               )}
             </button>
           </form>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-[#FFCBA4]/40 bg-[#FFF4EA] p-3 text-xs text-[#0F0F0F]/70">
+          <p className="font-semibold text-[#8A4E2A]">Demo accounts</p>
+          <p className="mt-1">Student: student.demo@ideabridge.dev / Demo@123</p>
+          <p>Mentor: mentor.demo@ideabridge.dev / Demo@123</p>
         </div>
 
         <p className="mt-5 text-center text-sm text-[#0F0F0F]/50">
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="text-[#F5A97F] hover:text-[#0F0F0F] font-medium transition-colors"
+            className="text-[#C7792F] hover:text-[#0F0F0F] font-medium transition-colors"
           >
             Create one free
           </Link>

@@ -47,15 +47,36 @@ export function ProjectCard({
   project,
   mentorName,
   onUpdate,
+  onOpenDetails,
+  isSelected,
 }: {
   project: StudentProject;
   mentorName?: string;
   onUpdate: () => void;
+  onOpenDetails?: () => void;
+  isSelected?: boolean;
 }) {
   const cfg = statusConfig(project.status);
 
   return (
-    <Card className="group relative overflow-hidden border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 rounded-2xl">
+    <Card
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      onClick={onOpenDetails}
+      onKeyDown={(event) => {
+        if (!onOpenDetails) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenDetails();
+        }
+      }}
+      className={cn(
+        "group relative overflow-hidden border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 rounded-2xl",
+        onOpenDetails ? "cursor-pointer" : "",
+        isSelected ? "ring-2 ring-[#FFCBA4] ring-offset-2" : ""
+      )}
+    >
       {/* Top accent strip */}
       <div className={cn("h-1 w-full", cfg.bar)} />
 
@@ -115,7 +136,10 @@ export function ProjectCard({
         {/* Update button */}
         <button
           type="button"
-          onClick={onUpdate}
+          onClick={(event) => {
+            event.stopPropagation();
+            onUpdate();
+          }}
           className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#0F0F0F] py-2.5 text-xs font-semibold text-[#FFCBA4] shadow-sm hover:brightness-125 hover:-translate-y-0.5 transition-all duration-200"
         >
           <ArrowUpRight className="h-3.5 w-3.5" />

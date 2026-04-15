@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { toast } from "sonner";
@@ -92,9 +92,9 @@ export function ProfileSection() {
     fullName: user?.fullName ?? "",
     bio: user?.studentProfile?.bio ?? "",
     skills: user?.studentProfile?.skills ?? [],
-    studyYear: "",
-    faculty: "",
-    specialization: "",
+    studyYear: user?.studentProfile?.studyYear ?? "",
+    faculty: user?.studentProfile?.faculty ?? "",
+    specialization: user?.studentProfile?.specialization ?? "",
     github: user?.studentProfile?.portfolioLinks?.[0] ?? "",
     linkedin: user?.studentProfile?.portfolioLinks?.[1] ?? "",
     website: user?.studentProfile?.portfolioLinks?.[2] ?? "",
@@ -107,9 +107,9 @@ export function ProfileSection() {
       fullName: user?.fullName ?? "",
       bio: user?.studentProfile?.bio ?? "",
       skills: user?.studentProfile?.skills ?? [],
-      studyYear: "",
-      faculty: "",
-      specialization: "",
+      studyYear: user?.studentProfile?.studyYear ?? "",
+      faculty: user?.studentProfile?.faculty ?? "",
+      specialization: user?.studentProfile?.specialization ?? "",
       github: user?.studentProfile?.portfolioLinks?.[0] ?? "",
       linkedin: user?.studentProfile?.portfolioLinks?.[1] ?? "",
       website: user?.studentProfile?.portfolioLinks?.[2] ?? "",
@@ -153,12 +153,15 @@ export function ProfileSection() {
     const profile: StudentProfile = {
       bio: form.bio,
       skills: form.skills,
+      studyYear: form.studyYear || undefined,
+      faculty: form.faculty || undefined,
+      specialization: form.specialization || undefined,
       portfolioLinks: [form.github, form.linkedin, form.website].filter(Boolean),
       avatarUrl: form.avatarUrl || undefined,
     };
     updateStudentProfile(profile);
     setEditing(false);
-    toast.success("Profile saved successfully! ✨");
+    toast.success("Profile saved successfully! âœ¨");
   }
 
   function handleCancel() {
@@ -167,9 +170,9 @@ export function ProfileSection() {
       fullName: user?.fullName ?? "",
       bio: user?.studentProfile?.bio ?? "",
       skills: user?.studentProfile?.skills ?? [],
-      studyYear: "",
-      faculty: "",
-      specialization: "",
+      studyYear: user?.studentProfile?.studyYear ?? "",
+      faculty: user?.studentProfile?.faculty ?? "",
+      specialization: user?.studentProfile?.specialization ?? "",
       github: user?.studentProfile?.portfolioLinks?.[0] ?? "",
       linkedin: user?.studentProfile?.portfolioLinks?.[1] ?? "",
       website: user?.studentProfile?.portfolioLinks?.[2] ?? "",
@@ -238,7 +241,7 @@ export function ProfileSection() {
             </div>
             <div className="mb-2">
               <div className="text-xl font-bold text-slate-800">{form.fullName}</div>
-              <div className="text-sm text-slate-500">{form.faculty || "Faculty not set"} · {form.studyYear || "Year not set"}</div>
+              <div className="text-sm text-slate-500">{form.faculty || "Faculty not set"} Â· {form.studyYear || "Year not set"}</div>
             </div>
           </div>
 

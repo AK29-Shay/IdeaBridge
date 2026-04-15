@@ -1,12 +1,6 @@
-/**
- * POST /api/otp/send
- * Generates a 6-digit OTP for the authenticated user and stores it.
- * In production the OTP is stripped from the response.
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '../../../../backend/middleware/auth'
-import { handleSendOtp } from '../../../../backend/controllers/otpController'
-import { handleError } from '../../../../backend/utils/helpers'
+﻿import { NextResponse } from 'next/server'
+import { sendOtp } from '@/backend/modules/otp'
+import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 
 export const POST = withAuth(async (_req: NextRequest, user) => {
   try {

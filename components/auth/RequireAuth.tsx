@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabaseClient } from "@/backend/config/supabaseClient";
-
-
 
 export function RequireAuth({
   children,
@@ -16,28 +13,17 @@ export function RequireAuth({
   children: React.ReactNode;
   redirectTo?: string;
 }) {
-  const [sessionChecked, setSessionChecked] = React.useState(false);
-  const [session, setSession] = React.useState<any>(null);
+  const { user, isReady } = useAuth();
   const router = useRouter();
 
   React.useEffect(() => {
-    async function checkSession() {
-      const { data, error } = await supabaseClient.auth.getSession();
-      console.log("[RequireAuth] supabase.auth.getSession() response:", { data, error });
-      setSession(data?.session ?? null);
-      setSessionChecked(true);
-    }
-    checkSession();
-  }, []);
-
-  React.useEffect(() => {
-    if (!sessionChecked) return;
-    if (!session) {
+    if (!isReady) return;
+    if (!user) {
       router.push(redirectTo);
     }
-  }, [sessionChecked, session, router, redirectTo]);
+  }, [isReady, user, router, redirectTo]);
 
-  if (!sessionChecked) {
+  if (!isReady) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-10">
         <Skeleton className="h-8 w-48" />
@@ -49,7 +35,7 @@ export function RequireAuth({
     );
   }
 
-  if (!session) return null;
+  if (!user) return null;
   return <>{children}</>;
 }
 

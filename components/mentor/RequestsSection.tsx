@@ -28,9 +28,11 @@ interface RequestsSectionProps {
 }
 
 export function RequestsSection({ requests, onUpdateRequest }: RequestsSectionProps) {
+  const [filter, setFilter] = React.useState<"All" | RequestStatus>("All");
   const pending  = requests.filter(r => r.status === "Pending").length;
   const accepted = requests.filter(r => r.status === "Accepted").length;
   const rejected = requests.filter(r => r.status === "Rejected").length;
+  const filteredRequests = filter === "All" ? requests : requests.filter((r) => r.status === filter);
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -46,23 +48,49 @@ export function RequestsSection({ requests, onUpdateRequest }: RequestsSectionPr
           { label: "Accepted", value: accepted, gradient: "from-emerald-400 to-teal-500",  light: "from-emerald-50 to-teal-50",  border: "border-emerald-200",text: "text-emerald-700"},
           { label: "Rejected", value: rejected, gradient: "from-red-400 to-rose-500",      light: "from-red-50 to-rose-50",      border: "border-red-200",    text: "text-red-700"    },
         ].map(s => (
-          <div key={s.label} className={`rounded-2xl border ${s.border} bg-gradient-to-br ${s.light} p-5 shadow-sm`}>
+          <button
+            key={s.label}
+            onClick={() => setFilter(s.label as RequestStatus)}
+            className={`rounded-2xl border ${s.border} bg-gradient-to-br ${s.light} p-5 shadow-sm text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
+              filter === s.label ? "ring-2 ring-[#F5A97F]/50" : ""
+            }`}
+            title={`Show ${s.label.toLowerCase()} requests`}
+          >
             <div className={`text-3xl font-bold ${s.text}`}>{s.value}</div>
             <div className="text-sm text-slate-600 mt-0.5">{s.label}</div>
-          </div>
+          </button>
         ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setFilter("All")}
+          className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+            filter === "All"
+              ? "border-[#FFCBA4] bg-[#FFCBA4]/20 text-[#0F0F0F]"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          All
+        </button>
+        <span className="text-xs text-slate-500">
+          Showing: <span className="font-semibold">{filter === "All" ? "All requests" : `${filter} requests`}</span>
+        </span>
       </div>
 
       {/* List */}
       <div className="space-y-4">
-        {requests.length === 0 && (
+        {filteredRequests.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#FFCBA4]/30 bg-[#FFCBA4]/5 py-16 text-center">
             <Users className="h-10 w-10 text-[#F5A97F] mb-3" />
-            <p className="text-slate-600 font-medium">No requests yet</p>
-            <p className="text-sm text-slate-400 mt-1">Students will send you mentorship requests here</p>
+            <p className="text-slate-600 font-medium">
+              {filter === "All" ? "No requests yet" : `No ${filter.toLowerCase()} requests`}
+            </p>
+            <p className="text-sm text-slate-400 mt-1">
+              {filter === "All" ? "Students will send you mentorship requests here" : "Try switching to another filter"}
+            </p>
           </div>
         )}
-        {requests.map(r => {
+        {filteredRequests.map(r => {
           const cfg = statusCfg(r.status);
           return (
             <div key={r.id} className="rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 p-5">

@@ -112,7 +112,7 @@ export default function ForgotPasswordPage() {
                 Remembered it?{" "}
                 <Link
                   href="/login"
-                  className="text-[#F5A97F] hover:text-[#0F0F0F] font-medium transition-colors"
+                  className="text-[#C7792F] hover:text-[#0F0F0F] font-medium transition-colors"
                 >
                   Back to login
                 </Link>
@@ -148,7 +148,7 @@ export default function ForgotPasswordPage() {
                 <p className="mt-2 text-[#0F0F0F]/60 text-sm leading-relaxed">
                   Password reset link sent to
                 </p>
-                <p className="mt-1 text-[#F5A97F] font-semibold text-sm break-all">
+                <p className="mt-1 text-[#C7792F] font-semibold text-sm break-all">
                   {sentEmail}
                 </p>
               </div>
@@ -162,7 +162,7 @@ export default function ForgotPasswordPage() {
                     "Create your new strong password",
                   ].map((step, i) => (
                     <li key={i} className="flex items-center gap-2 text-xs text-[#0F0F0F]/50">
-                      <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-[#FFCBA4]/20 text-[#F5A97F] font-bold text-[9px]">
+                      <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-[#FFCBA4]/20 text-[#C7792F] font-bold text-[9px]">
                         {i + 1}
                       </span>
                       {step}

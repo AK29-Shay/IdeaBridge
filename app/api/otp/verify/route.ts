@@ -1,12 +1,6 @@
-/**
- * POST /api/otp/verify
- * Verifies the 6-digit OTP submitted by the authenticated user.
- * Body: { otp: string }
- */
-import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '../../../../backend/middleware/auth'
-import { handleVerifyOtp } from '../../../../backend/controllers/otpController'
-import { handleError } from '../../../../backend/utils/helpers'
+﻿import { NextResponse } from 'next/server'
+import { verifyUserOtp } from '@/backend/modules/otp'
+import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 
 export const POST = withAuth(async (req: NextRequest, user) => {
   try {
