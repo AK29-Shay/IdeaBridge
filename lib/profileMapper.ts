@@ -11,18 +11,58 @@ export type ProfileRow = {
   skills: string[] | null;
   availability: string | null;
   role: string | null;
-  study_year: string | null;
-  faculty: string | null;
-  specialization: string | null;
-  portfolio_links: string[] | null;
-  availability_status: string | null;
-  years_experience: number | null;
-  linked_in: string | null;
-  github_url: string | null;
-  availability_calendar_note: string | null;
+  study_year?: string | null;
+  faculty?: string | null;
+  specialization?: string | null;
+  portfolio_links?: string[] | null;
+  availability_status?: string | null;
+  years_experience?: number | null;
+  linked_in?: string | null;
+  github_url?: string | null;
+  availability_calendar_note?: string | null;
 };
 
 const DEFAULT_AVAILABILITY_STATUS: AvailabilityStatus = "Available in 1-2 days";
+const LEGACY_SCHEMA_FIELDS = [
+  "study_year",
+  "faculty",
+  "specialization",
+  "portfolio_links",
+  "availability_status",
+  "years_experience",
+  "linked_in",
+  "github_url",
+  "availability_calendar_note",
+] as const;
+
+export const FULL_PROFILE_SELECT = [
+  "id",
+  "full_name",
+  "avatar_url",
+  "bio",
+  "skills",
+  "availability",
+  "role",
+  "study_year",
+  "faculty",
+  "specialization",
+  "portfolio_links",
+  "availability_status",
+  "years_experience",
+  "linked_in",
+  "github_url",
+  "availability_calendar_note",
+].join(",");
+
+export const LEGACY_PROFILE_SELECT = [
+  "id",
+  "full_name",
+  "avatar_url",
+  "bio",
+  "skills",
+  "availability",
+  "role",
+].join(",");
 
 export function normalizeRole(value: unknown): UserRole {
   const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -40,6 +80,36 @@ export function normalizeAvailabilityStatus(value: unknown): AvailabilityStatus 
   }
 
   return DEFAULT_AVAILABILITY_STATUS;
+}
+
+export function isLegacyProfilesSchemaError(message: unknown) {
+  if (typeof message !== "string") return false;
+
+  const lower = message.toLowerCase();
+  if (!lower.includes("profile")) return false;
+
+  return LEGACY_SCHEMA_FIELDS.some((field) => lower.includes(field));
+}
+
+export function normalizeProfileRow(profile: Partial<ProfileRow> & Pick<ProfileRow, "id">): ProfileRow {
+  return {
+    id: profile.id,
+    full_name: profile.full_name ?? null,
+    avatar_url: profile.avatar_url ?? null,
+    bio: profile.bio ?? null,
+    skills: profile.skills ?? [],
+    availability: profile.availability ?? null,
+    role: profile.role ?? null,
+    study_year: profile.study_year ?? null,
+    faculty: profile.faculty ?? null,
+    specialization: profile.specialization ?? null,
+    portfolio_links: profile.portfolio_links ?? [],
+    availability_status: profile.availability_status ?? null,
+    years_experience: profile.years_experience ?? null,
+    linked_in: profile.linked_in ?? null,
+    github_url: profile.github_url ?? null,
+    availability_calendar_note: profile.availability_calendar_note ?? null,
+  };
 }
 
 export function buildStudentProfile(profile: ProfileRow): StudentProfile {
@@ -122,5 +192,19 @@ export function buildProfileUpsertPayload(params: {
     availability_calendar_note: isMentor
       ? params.mentorProfile?.availabilityCalendarNote ?? null
       : null,
+  };
+}
+
+export function buildLegacyProfileUpsertPayload(
+  payload: ReturnType<typeof buildProfileUpsertPayload>
+) {
+  return {
+    id: payload.id,
+    full_name: payload.full_name,
+    avatar_url: payload.avatar_url,
+    bio: payload.bio,
+    skills: payload.skills,
+    availability: payload.availability,
+    role: payload.role,
   };
 }

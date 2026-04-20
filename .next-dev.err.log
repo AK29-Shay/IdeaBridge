@@ -6,3 +6,69 @@
 ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
 ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
 ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+[browser] ⨯ unhandledRejection: Error: column profiles.study_year does not exist
+    at selectProfile (context\AuthContext.tsx:65:11)
+    at async loadAuthUserFromSession (context\AuthContext.tsx:107:20)
+    at async AuthProvider.useCallback[loadSessionUser] (context\AuthContext.tsx:138:22)
+  63 |
+  64 |   if (error) {
+> 65 |     throw new Error(error.message || "Failed to load your profile.");
+     |           ^
+  66 |   }
+  67 |
+  68 |   return (data as ProfileRow | null) ?? null;
+[browser] ⨯ unhandledRejection: Error: column profiles.study_year does not exist
+    at selectProfile (context\AuthContext.tsx:65:11)
+    at async loadAuthUserFromSession (context\AuthContext.tsx:107:20)
+    at async AuthProvider.useCallback[loadSessionUser] (context\AuthContext.tsx:138:22)
+  63 |
+  64 |   if (error) {
+> 65 |     throw new Error(error.message || "Failed to load your profile.");
+     |           ^
+  66 |   }
+  67 |
+  68 |   return (data as ProfileRow | null) ?? null;
+[browser] ⨯ unhandledRejection: Error: column profiles.study_year does not exist
+    at selectProfile (context\AuthContext.tsx:65:11)
+    at async loadAuthUserFromSession (context\AuthContext.tsx:107:20)
+    at async AuthProvider.useCallback[loadSessionUser] (context\AuthContext.tsx:138:22)
+  63 |
+  64 |   if (error) {
+> 65 |     throw new Error(error.message || "Failed to load your profile.");
+     |           ^
+  66 |   }
+  67 |
+  68 |   return (data as ProfileRow | null) ?? null;
+[browser] ⨯ unhandledRejection: Error: column profiles.study_year does not exist
+    at selectProfile (context\AuthContext.tsx:65:11)
+    at async loadAuthUserFromSession (context\AuthContext.tsx:107:20)
+    at async AuthProvider.useCallback[loadSessionUser] (context\AuthContext.tsx:138:22)
+  63 |
+  64 |   if (error) {
+> 65 |     throw new Error(error.message || "Failed to load your profile.");
+     |           ^
+  66 |   }
+  67 |
+  68 |   return (data as ProfileRow | null) ?? null;
+[browser] ⨯ unhandledRejection: Error: column profiles.study_year does not exist
+    at selectProfile (context\AuthContext.tsx:65:11)
+    at async loadAuthUserFromSession (context\AuthContext.tsx:107:20)
+    at async AuthProvider.useCallback[loadSessionUser] (context\AuthContext.tsx:138:22)
+  63 |
+  64 |   if (error) {
+> 65 |     throw new Error(error.message || "Failed to load your profile.");
+     |           ^
+  66 |   }
+  67 |
+  68 |   return (data as ProfileRow | null) ?? null;
+[browser] ⨯ unhandledRejection: Error: column profiles.study_year does not exist
+    at selectProfile (context\AuthContext.tsx:65:11)
+    at async loadAuthUserFromSession (context\AuthContext.tsx:107:20)
+    at async AuthProvider.useCallback[loadSessionUser] (context\AuthContext.tsx:138:22)
+  63 |
+  64 |   if (error) {
+> 65 |     throw new Error(error.message || "Failed to load your profile.");
+     |           ^
+  66 |   }
+  67 |
+  68 |   return (data as ProfileRow | null) ?? null;

@@ -1,5 +1,6 @@
 import supabaseServer from '../config/supabaseServer'
 import { Profile } from '../models/schemas'
+import { isLegacyProfilesSchemaError } from '@/lib/profileMapper'
 
 const FULL_MENTOR_SELECT =
   'id,full_name,avatar_url,bio,skills,availability,availability_status,years_experience,linked_in,github_url,portfolio_links,availability_calendar_note,reputation,role'
@@ -42,8 +43,27 @@ export async function upsertProfile(profile: Partial<Profile>) {
     .from('profiles')
     .upsert(payload, { onConflict: 'id' })
     .select()
-  if (error) throw error
-  return data?.[0] ?? null
+  if (!error) return data?.[0] ?? null
+
+  if (!isLegacyProfilesSchemaError(error.message)) throw error
+
+  const legacyPayload = {
+    id: payload.id,
+    full_name: payload.full_name,
+    avatar_url: payload.avatar_url,
+    bio: payload.bio,
+    skills: payload.skills,
+    availability: payload.availability,
+    role: payload.role,
+  }
+
+  const { data: legacyData, error: legacyError } = await supabaseServer
+    .from('profiles')
+    .upsert(legacyPayload, { onConflict: 'id' })
+    .select()
+
+  if (legacyError) throw legacyError
+  return legacyData?.[0] ?? null
 }
 
 export async function getProfileByUserId(user_id: string) {

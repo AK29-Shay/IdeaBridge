@@ -8,9 +8,14 @@ import type { MentorProfile } from "@/types/mentor";
 import type { StudentProfile } from "@/types/student";
 import type { AuthUser } from "@/types/user";
 import {
+  buildLegacyProfileUpsertPayload,
   buildProfileUpsertPayload,
+  FULL_PROFILE_SELECT,
+  isLegacyProfilesSchemaError,
+  LEGACY_PROFILE_SELECT,
   mapProfileRowToAuthUser,
   normalizeRole,
+  normalizeProfileRow,
   type ProfileRow,
 } from "@/lib/profileMapper";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -38,34 +43,33 @@ type AuthContextValue = {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
-const PROFILE_SELECT = [
-  "id",
-  "full_name",
-  "avatar_url",
-  "bio",
-  "skills",
-  "availability",
-  "role",
-  "study_year",
-  "faculty",
-  "specialization",
-  "portfolio_links",
-  "availability_status",
-  "years_experience",
-  "linked_in",
-  "github_url",
-  "availability_calendar_note",
-].join(",");
-
 async function selectProfile(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.from("profiles").select(PROFILE_SELECT).eq("id", userId).maybeSingle();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(FULL_PROFILE_SELECT)
+    .eq("id", userId)
+    .maybeSingle();
 
-  if (error) {
+  if (!error) {
+    return data ? normalizeProfileRow(data as ProfileRow) : null;
+  }
+
+  if (!isLegacyProfilesSchemaError(error.message)) {
     throw new Error(error.message || "Failed to load your profile.");
   }
 
-  return (data as ProfileRow | null) ?? null;
+  const { data: legacyData, error: legacyError } = await supabase
+    .from("profiles")
+    .select(LEGACY_PROFILE_SELECT)
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (legacyError) {
+    throw new Error(legacyError.message || "Failed to load your profile.");
+  }
+
+  return legacyData ? normalizeProfileRow(legacyData as ProfileRow) : null;
 }
 
 async function upsertProfile(params: {
@@ -81,15 +85,35 @@ async function upsertProfile(params: {
   const { data, error } = await supabase
     .from("profiles")
     .upsert(payload as never, { onConflict: "id" })
-    .select(PROFILE_SELECT)
+    .select(FULL_PROFILE_SELECT)
     .single();
 
-  if (error) {
+  if (!error) {
+    return mapProfileRowToAuthUser({
+      profile: normalizeProfileRow(data as ProfileRow),
+      email: params.email,
+      fallbackFullName: params.fullName,
+      fallbackRole: params.role,
+    });
+  }
+
+  if (!isLegacyProfilesSchemaError(error.message)) {
     throw new Error(error.message || "Failed to save your profile.");
   }
 
+  const legacyPayload = buildLegacyProfileUpsertPayload(payload);
+  const { data: legacyData, error: legacyError } = await supabase
+    .from("profiles")
+    .upsert(legacyPayload as never, { onConflict: "id" })
+    .select(LEGACY_PROFILE_SELECT)
+    .single();
+
+  if (legacyError) {
+    throw new Error(legacyError.message || "Failed to save your profile.");
+  }
+
   return mapProfileRowToAuthUser({
-    profile: data as ProfileRow,
+    profile: normalizeProfileRow(legacyData as ProfileRow),
     email: params.email,
     fallbackFullName: params.fullName,
     fallbackRole: params.role,
