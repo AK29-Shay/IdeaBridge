@@ -41,3 +41,49 @@ export async function searchMentorsBySkill(skill: string, limit = 20) {
   if (error) throw error
   return data
 }
+
+export async function listMentorProfiles(options?: {
+  search?: string
+  skill?: string
+  availability?: string
+  limit?: number
+}) {
+  const limit = options?.limit && options.limit > 0 ? Math.min(options.limit, 50) : 24
+  let query = supabaseServer
+    .from('profiles')
+    .select(
+      'id,full_name,avatar_url,bio,skills,availability,availability_status,years_experience,linked_in,github_url,portfolio_links,availability_calendar_note,reputation,role'
+    )
+    .in('role', ['Mentor', 'mentor'])
+    .limit(limit)
+
+  if (options?.skill) {
+    query = query.contains('skills', [options.skill])
+  }
+
+  if (options?.availability) {
+    query = query.eq('availability_status', options.availability)
+  }
+
+  if (options?.search) {
+    query = query.or(`full_name.ilike.%${options.search}%,bio.ilike.%${options.search}%`)
+  }
+
+  const { data, error } = await query.order('reputation', { ascending: false })
+  if (error) throw error
+  return data ?? []
+}
+
+export async function getMentorProfileById(mentorId: string) {
+  const { data, error } = await supabaseServer
+    .from('profiles')
+    .select(
+      'id,full_name,avatar_url,bio,skills,availability,availability_status,years_experience,linked_in,github_url,portfolio_links,availability_calendar_note,reputation,role'
+    )
+    .eq('id', mentorId)
+    .in('role', ['Mentor', 'mentor'])
+    .maybeSingle()
+
+  if (error) throw error
+  return data
+}

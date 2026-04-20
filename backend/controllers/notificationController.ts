@@ -1,6 +1,13 @@
 import { createNotification, markNotificationRead } from '../services/notificationService'
 
-export async function notify(payload: any) {
+type NotificationInput = {
+  user_id: string
+  type: string
+  payload?: Record<string, unknown>
+  read?: boolean
+}
+
+export async function notify(payload: NotificationInput) {
   return createNotification(payload)
 }
 

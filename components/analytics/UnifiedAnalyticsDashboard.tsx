@@ -59,6 +59,11 @@ type Filters = {
   dateTo: string;
 };
 
+type SortConfig = {
+  key: keyof AnalyticsProject;
+  direction: "asc" | "desc";
+};
+
 type ThreadNote = {
   id: string;
   role: "Mentor" | "Student" | "Post Owner";
@@ -72,6 +77,25 @@ type AnalyticsApiPayload = {
   requests?: AnalyticsRequest[];
   threadsByProject?: Record<string, ThreadNote[]>;
 };
+
+type TooltipEntry = {
+  dataKey?: string | number;
+  name?: string | number;
+  value?: string | number;
+  payload?: {
+    name?: string;
+    value?: number;
+  };
+};
+
+type BaseTooltipProps = {
+  active?: boolean;
+  payload?: TooltipEntry[];
+  label?: string | number;
+  valueSuffix?: string;
+};
+
+const DEFAULT_FILTERS: Filters = { category: "All", dateFrom: "", dateTo: "" };
 
 const CONTRIBUTION_DOT_CLASSES = ["bg-[#f5a97f]", "bg-[#1d4ed8]", "bg-[#10b981]"];
 
@@ -175,7 +199,16 @@ function scoreProject(project: AnalyticsProject) {
   return project.likes * 3 + project.responses * 10 + Math.round(project.views / 20);
 }
 
-function BaseTooltip({ active, payload, label, valueSuffix = "" }: any) {
+function renderSortIcon(sortConfig: SortConfig, column: keyof AnalyticsProject) {
+  if (sortConfig.key !== column) return <ArrowUpDown className="h-4 w-4 opacity-30" />;
+  return sortConfig.direction === "asc" ? (
+    <ChevronUp className="h-4 w-4 text-blue-600" />
+  ) : (
+    <ChevronDown className="h-4 w-4 text-blue-600" />
+  );
+}
+
+function BaseTooltip({ active, payload, label, valueSuffix = "" }: BaseTooltipProps) {
   if (!active || !payload?.length) {
     return null;
   }
@@ -184,8 +217,8 @@ function BaseTooltip({ active, payload, label, valueSuffix = "" }: any) {
     <div className="rounded-2xl border border-[#f1dfd1] bg-white/95 px-3 py-2 shadow-xl backdrop-blur">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
       <div className="mt-2 space-y-1.5">
-        {payload.map((entry: any) => (
-          <div key={entry.dataKey} className="flex items-center justify-between gap-4 text-sm">
+        {payload.map((entry) => (
+          <div key={String(entry.dataKey ?? entry.name ?? "tooltip-entry")} className="flex items-center justify-between gap-4 text-sm">
             <span className="flex items-center gap-2 text-slate-500">
               <span className="h-2.5 w-2.5 rounded-full bg-[#f5a97f]" />
               {entry.name}
@@ -201,12 +234,15 @@ function BaseTooltip({ active, payload, label, valueSuffix = "" }: any) {
   );
 }
 
-function PieTooltip({ active, payload }: any) {
+function PieTooltip({ active, payload }: Omit<BaseTooltipProps, "label" | "valueSuffix">) {
   if (!active || !payload?.length) {
     return null;
   }
 
   const point = payload[0].payload;
+  if (!point) {
+    return null;
+  }
 
   return (
     <div className="rounded-2xl border border-[#f1dfd1] bg-white/95 px-3 py-2 shadow-xl backdrop-blur">
@@ -290,12 +326,7 @@ function FilterBar({
   categories: string[];
   onApply: (filters: Filters) => void;
 }) {
-  const defaultFilters = React.useMemo(() => ({ category: "All", dateFrom: "", dateTo: "" }), []);
   const [draftFilters, setDraftFilters] = React.useState<Filters>({ category, dateFrom, dateTo });
-
-  React.useEffect(() => {
-    setDraftFilters({ category, dateFrom, dateTo });
-  }, [category, dateFrom, dateTo]);
 
   const activeFilterCount = React.useMemo(() => {
     let count = 0;
@@ -329,8 +360,8 @@ function FilterBar({
 
   function handleClear() {
     setFormError("");
-    setDraftFilters(defaultFilters);
-    onApply(defaultFilters);
+    setDraftFilters(DEFAULT_FILTERS);
+    onApply(DEFAULT_FILTERS);
   }
 
   return (
@@ -516,7 +547,7 @@ function ProjectsList({
   dateTo: string;
   threadsByProject: Record<string, ThreadNote[]>;
 }) {
-  const [sortConfig, setSortConfig] = React.useState<{ key: keyof AnalyticsProject; direction: "asc" | "desc" }>({
+  const [sortConfig, setSortConfig] = React.useState<SortConfig>({
     key: "createdDate",
     direction: "desc",
   });
@@ -542,20 +573,21 @@ function ProjectsList({
     return sorted;
   }, [projects, sortConfig]);
 
-  React.useEffect(() => {
+  const activeProjectId = React.useMemo(() => {
     if (sortedProjects.length === 0) {
-      setSelectedProjectId(null);
-      return;
+      return null;
     }
 
-    if (!selectedProjectId || !sortedProjects.some((project) => project.id === selectedProjectId)) {
-      setSelectedProjectId(sortedProjects[0].id);
+    if (selectedProjectId && sortedProjects.some((project) => project.id === selectedProjectId)) {
+      return selectedProjectId;
     }
-  }, [sortedProjects, selectedProjectId]);
+
+    return sortedProjects[0]?.id ?? null;
+  }, [selectedProjectId, sortedProjects]);
 
   const selectedProject = React.useMemo(() => {
-    return sortedProjects.find((project) => project.id === selectedProjectId) ?? null;
-  }, [sortedProjects, selectedProjectId]);
+    return sortedProjects.find((project) => project.id === activeProjectId) ?? null;
+  }, [activeProjectId, sortedProjects]);
 
   const selectedProjectThreads = React.useMemo(
     () => getProjectThreads(selectedProject?.id ?? null, threadsByProject),
@@ -567,11 +599,6 @@ function ProjectsList({
       key,
       direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
     }));
-  }
-
-  function SortIcon({ column }: { column: keyof AnalyticsProject }) {
-    if (sortConfig.key !== column) return <ArrowUpDown className="h-4 w-4 opacity-30" />;
-    return sortConfig.direction === "asc" ? <ChevronUp className="h-4 w-4 text-blue-600" /> : <ChevronDown className="h-4 w-4 text-blue-600" />;
   }
 
   return (
@@ -605,7 +632,7 @@ function ProjectsList({
                 >
                   <div className="flex items-center gap-2">
                     Title
-                    <SortIcon column="title" />
+                    {renderSortIcon(sortConfig, "title")}
                   </div>
                 </th>
                 <th
@@ -614,7 +641,7 @@ function ProjectsList({
                 >
                   <div className="flex items-center gap-2">
                     Category
-                    <SortIcon column="category" />
+                    {renderSortIcon(sortConfig, "category")}
                   </div>
                 </th>
                 <th
@@ -623,7 +650,7 @@ function ProjectsList({
                 >
                   <div className="flex items-center gap-2">
                     Created Date
-                    <SortIcon column="createdDate" />
+                    {renderSortIcon(sortConfig, "createdDate")}
                   </div>
                 </th>
                 <th
@@ -632,7 +659,7 @@ function ProjectsList({
                 >
                   <div className="flex items-center justify-end gap-2">
                     Contributions
-                    <SortIcon column="contributions" />
+                    {renderSortIcon(sortConfig, "contributions")}
                   </div>
                 </th>
               </tr>
@@ -650,7 +677,7 @@ function ProjectsList({
                       setSelectedProjectId(project.id);
                     }
                   }}
-                  className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? "bg-amber-50/70" : "hover:bg-slate-50"}`}
+                  className={`cursor-pointer transition-colors ${activeProjectId === project.id ? "bg-amber-50/70" : "hover:bg-slate-50"}`}
                 >
                   <td className="px-4 py-3 text-sm font-medium text-slate-900 sm:px-6">{project.title}</td>
                   <td className="px-4 py-3 text-sm sm:px-6">
@@ -1161,6 +1188,7 @@ export function UnifiedAnalyticsDashboard() {
 
       <div className="mt-6">
         <FilterBar
+          key={`${filters.category}-${filters.dateFrom}-${filters.dateTo}`}
           category={filters.category}
           dateFrom={filters.dateFrom}
           dateTo={filters.dateTo}

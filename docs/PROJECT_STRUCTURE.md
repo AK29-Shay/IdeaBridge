@@ -55,4 +55,4 @@ Avoid importing app routes directly from legacy src paths.
 
 ## Migration note
 
-Legacy folders under src/ may still exist for backward compatibility. New development should use the top-level app/components/lib/backend/modules structure as the source of truth.
+Legacy duplicate folders have been removed. New development should continue using the top-level `app/`, `components/`, `backend/`, `lib/`, `types/`, `docs/`, and `supabase/` directories as the source of truth.

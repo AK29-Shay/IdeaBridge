@@ -32,8 +32,8 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
   return (
     <div className="space-y-6 animate-fade-up">
       <div>
-        <h2 className="text-2xl font-bold text-slate-800">My Projects</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Track your mentees' project progress</p>
+        <h2 className="text-2xl font-bold text-slate-800">Mentored Projects</h2>
+        <p className="text-sm text-slate-500 mt-0.5">Monitor accepted requests and active project outcomes.</p>
       </div>
 
       {/* Summary */}
@@ -54,7 +54,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
       {projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#FFCBA4]/30 bg-[#FFCBA4]/5 py-16 text-center">
           <FolderKanban className="h-10 w-10 text-[#F5A97F] mb-3" />
-          <p className="text-slate-600 font-medium">No projects assigned yet</p>
+          <p className="text-slate-600 font-medium">No active mentored projects yet</p>
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">

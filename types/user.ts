@@ -7,10 +7,8 @@ export interface AuthUser {
   role: UserRole;
   fullName: string;
   email: string;
-  password: string; // dummy-only: stored in localStorage for simulation
   studentProfile?: StudentProfile;
   mentorProfile?: MentorProfile;
-  // Mentor profile fields are stored in mentorProfile for mentor accounts
-  availabilityStatus?: AvailabilityStatus; // kept for quick access when needed
+  availabilityStatus?: AvailabilityStatus;
 }
 

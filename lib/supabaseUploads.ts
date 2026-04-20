@@ -80,6 +80,17 @@ export function validateDynamicFormFile(file: File) {
   return validateSupabaseFileSize(file);
 }
 
+function getUploadedField<T extends keyof UploadedSupabaseFile>(
+  payload: Partial<UploadedSupabaseFile> | { error?: unknown } | null,
+  key: T
+) {
+  if (!payload || typeof payload !== "object" || !(key in payload)) {
+    return undefined;
+  }
+
+  return (payload as Partial<UploadedSupabaseFile>)[key];
+}
+
 async function uploadFileToBucket(params: {
   bucket: string;
   folder: string;
@@ -116,14 +127,25 @@ async function uploadFileToBucket(params: {
     throw new Error(message);
   }
 
+  const uploadedName = getUploadedField(payload, "name");
+  const uploadedUrl = getUploadedField(payload, "url");
+  const uploadedPath = getUploadedField(payload, "path");
+  const uploadedMimeType = getUploadedField(payload, "mimeType");
+  const uploadedSize = getUploadedField(payload, "size");
+  const uploadedKind = getUploadedField(payload, "kind");
+
   return {
-    name: typeof payload?.name === "string" ? payload.name : file.name,
-    url: typeof payload?.url === "string" ? payload.url : "",
-    path: typeof payload?.path === "string" ? payload.path : desiredPath,
-    mimeType: typeof payload?.mimeType === "string" ? payload.mimeType : file.type || "application/octet-stream",
-    size: typeof payload?.size === "number" ? payload.size : file.size,
-    kind: payload?.kind === "image" || payload?.kind === "gif" || payload?.kind === "video" || payload?.kind === "file"
-      ? payload.kind
+    name: typeof uploadedName === "string" ? uploadedName : file.name,
+    url: typeof uploadedUrl === "string" ? uploadedUrl : "",
+    path: typeof uploadedPath === "string" ? uploadedPath : desiredPath,
+    mimeType: typeof uploadedMimeType === "string" ? uploadedMimeType : file.type || "application/octet-stream",
+    size: typeof uploadedSize === "number" ? uploadedSize : file.size,
+    kind:
+      uploadedKind === "image" ||
+      uploadedKind === "gif" ||
+      uploadedKind === "video" ||
+      uploadedKind === "file"
+        ? uploadedKind
       : detectKind(file),
   };
 }

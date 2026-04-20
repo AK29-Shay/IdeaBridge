@@ -1,6 +1,17 @@
 import supabaseServer from '../config/supabaseServer'
 
-export async function createMentorApplication(payload: any) {
+type MentorApplicationPayload = {
+  user_id: string
+  cv_url?: string
+  expertise: string[]
+  statement?: string
+}
+
+class DuplicateApplicationError extends Error {
+  code = 'DUPLICATE'
+}
+
+export async function createMentorApplication(payload: MentorApplicationPayload) {
   // prevent duplicates
   const { data: existing } = await supabaseServer
     .from('mentor_applications')
@@ -9,9 +20,7 @@ export async function createMentorApplication(payload: any) {
     .maybeSingle()
 
   if (existing) {
-    const err: any = new Error('Application already exists')
-    err.code = 'DUPLICATE'
-    throw err
+    throw new DuplicateApplicationError('Application already exists')
   }
 
   const { data, error } = await supabaseServer.from('mentor_applications').insert(payload).select()

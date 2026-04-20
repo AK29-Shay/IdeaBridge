@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createOrUpdateProfile, fetchProfile } from '@/backend/modules/profile'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
+import { getErrorMessage } from '@/lib/errorMessage'
 
 export async function POST(request: Request) {
   try {
@@ -12,8 +13,8 @@ export async function POST(request: Request) {
     body.id = user.user.id
     const data = await createOrUpdateProfile(body)
     return NextResponse.json(data)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to save profile.') }), { status: 400 })
   }
 }
 
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
 
     const data = await fetchProfile(user.user.id)
     return NextResponse.json(data)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to load profile.') }), { status: 400 })
   }
 }

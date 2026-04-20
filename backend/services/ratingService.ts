@@ -1,6 +1,17 @@
 import supabaseServer from '../config/supabaseServer'
 
-export async function addRating(payload: any) {
+type RatingPayload = {
+  mentor_id: string
+  rating: number
+  [key: string]: unknown
+}
+
+type RatingRow = {
+  mentor_id: string
+  rating: number
+}
+
+export async function addRating(payload: RatingPayload) {
   const { data, error } = await supabaseServer.from('ratings').insert(payload).select()
   if (error) throw error
 
@@ -13,11 +24,11 @@ export async function addRating(payload: any) {
 
     // compute average
     if (agg) {
-      const ratings = agg.map((r: any) => r.rating)
+      const ratings = (agg as RatingRow[]).map((r) => r.rating)
       const avg = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length
       await supabaseServer.from('profiles').update({ reputation: avg }).eq('id', payload.mentor_id)
     }
-  } catch (e) {
+  } catch {
     // ignore aggregation errors for now
   }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { sendOtp } from '@/backend/modules/otp'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
+import { getErrorMessage } from '@/lib/errorMessage'
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
     const result = await sendOtp(user.user.id)
     // In production do NOT return OTP in response. This is for development convenience.
     return NextResponse.json({ ok: true, otp: result.otp })
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to send OTP.') }), { status: 400 })
   }
 }

@@ -1,202 +1,441 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Send, Clock, CheckCircle2, XCircle, UserSearch, Users } from "lucide-react";
+import {
+  CalendarDays,
+  Clock3,
+  FileSearch,
+  Search,
+  Send,
+  Sparkles,
+  Users,
+} from "lucide-react";
 
-type RequestStatus = "Pending" | "Accepted" | "Rejected";
+import { getRequestStatusLabel, getRequestStatusTone, isActiveRequest, isClosedRequest, isPendingRequest } from "@/lib/requestStatus";
+import { useMentorshipRequests } from "@/lib/useMentorshipRequests";
+import type { Mentor } from "@/types/mentor";
 
-interface MentorRequest {
-  id: string;
-  mentorName: string;
-  status: RequestStatus;
-  sentAt: string;
-}
+type RequestFormState = {
+  title: string;
+  domain: string;
+  description: string;
+  type: "full_project" | "specific_idea";
+  deadline: string;
+  assignedMentorId: string;
+};
 
-const INITIAL_REQUESTS: MentorRequest[] = [
-  { id: "r1", mentorName: "Dr. Aria Chen", status: "Pending", sentAt: "2026-03-25" },
-  { id: "r2", mentorName: "Prof. Malik Johnson", status: "Accepted", sentAt: "2026-03-20" },
-  { id: "r3", mentorName: "Ms. Priya Nair", status: "Rejected", sentAt: "2026-03-15" },
-];
-
-const SUGGESTED_MENTORS = [
-  "Dr. Ahmed Hassan",
-  "Prof. Sarah Kim",
-  "Dr. Ravi Shankar",
-  "Ms. Emily Zhou",
-  "Prof. Lucas Mendes",
-];
-
-function statusConfig(status: RequestStatus) {
-  switch (status) {
-    case "Pending":
-      return {
-        bg: "bg-amber-50 text-amber-700 border-amber-200",
-        dot: "bg-amber-400",
-        icon: Clock,
-      };
-    case "Accepted":
-      return {
-        bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
-        dot: "bg-emerald-500",
-        icon: CheckCircle2,
-      };
-    case "Rejected":
-      return {
-        bg: "bg-red-50 text-red-700 border-red-200",
-        dot: "bg-red-500",
-        icon: XCircle,
-      };
-  }
-}
+const INITIAL_FORM: RequestFormState = {
+  title: "",
+  domain: "",
+  description: "",
+  type: "full_project",
+  deadline: "",
+  assignedMentorId: "",
+};
 
 export function RequestsSection() {
-  const [requests, setRequests] = React.useState<MentorRequest[]>(INITIAL_REQUESTS);
-  const [mentorInput, setMentorInput] = React.useState("");
+  const { requests, createRequest, isLoading } = useMentorshipRequests();
+  const [mentors, setMentors] = React.useState<Mentor[]>([]);
+  const [isLoadingMentors, setIsLoadingMentors] = React.useState(true);
+  const [mentorQuery, setMentorQuery] = React.useState("");
   const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const [form, setForm] = React.useState<RequestFormState>(INITIAL_FORM);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const filtered = SUGGESTED_MENTORS.filter((m) =>
-    m.toLowerCase().includes(mentorInput.toLowerCase()) && mentorInput.length > 0
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadMentors() {
+      setIsLoadingMentors(true);
+
+      try {
+        const response = await fetch("/api/mentors/search?limit=48", { cache: "no-store" });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          const message =
+            payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
+              ? payload.error
+              : "Failed to load mentors.";
+          throw new Error(message);
+        }
+
+        if (!cancelled) {
+          setMentors(Array.isArray(payload) ? (payload as Mentor[]) : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setMentors([]);
+          toast.error(error instanceof Error ? error.message : "Failed to load mentors.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingMentors(false);
+        }
+      }
+    }
+
+    void loadMentors();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedMentor = React.useMemo(
+    () => mentors.find((mentor) => mentor.id === form.assignedMentorId) ?? null,
+    [mentors, form.assignedMentorId]
   );
 
-  function sendRequest(name: string) {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      toast.error("Please enter a mentor name.");
-      return;
-    }
-    const alreadySent = requests.find(
-      (r) => r.mentorName.toLowerCase() === trimmed.toLowerCase()
-    );
-    if (alreadySent) {
-      toast.error(`Request to ${trimmed} was already sent.`);
-      return;
-    }
-    const newReq: MentorRequest = {
-      id: `r_${Date.now()}`,
-      mentorName: trimmed,
-      status: "Pending",
-      sentAt: new Date().toISOString().slice(0, 10),
-    };
-    setRequests([newReq, ...requests]);
-    setMentorInput("");
-    setShowSuggestions(false);
-    toast.success(`Mentorship request sent to ${trimmed}! 🎉`);
+  const filteredMentors = React.useMemo(() => {
+    const query = mentorQuery.trim().toLowerCase();
+    if (!query) return mentors.slice(0, 6);
+
+    return mentors
+      .filter((mentor) => {
+        const haystack = [
+          mentor.fullName,
+          mentor.profile.bio,
+          mentor.profile.skills.join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(query);
+      })
+      .slice(0, 6);
+  }, [mentors, mentorQuery]);
+
+  const pendingCount = requests.filter((request) => isPendingRequest(request.status)).length;
+  const activeCount = requests.filter((request) => isActiveRequest(request.status)).length;
+  const closedCount = requests.filter((request) => isClosedRequest(request.status)).length;
+
+  function updateForm<K extends keyof RequestFormState>(key: K, value: RequestFormState[K]) {
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+    }));
   }
 
-  const pending = requests.filter((r) => r.status === "Pending").length;
-  const accepted = requests.filter((r) => r.status === "Accepted").length;
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!form.assignedMentorId) {
+      toast.error("Please choose a mentor for this request.");
+      return;
+    }
+
+    if (!form.title.trim() || !form.domain.trim() || form.description.trim().length < 10) {
+      toast.error("Add a title, domain, and a clear description before sending the request.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await createRequest({
+        title: form.title.trim(),
+        description: form.description.trim(),
+        domain: form.domain.trim(),
+        deadline: form.deadline || undefined,
+        type: form.type,
+        assigned_mentor: form.assignedMentorId,
+      });
+
+      setForm(INITIAL_FORM);
+      setMentorQuery("");
+      setShowSuggestions(false);
+      toast.success("Mentorship request sent successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to send mentorship request.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-up">
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">Mentorship Requests</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Send requests & track their status</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Mentorship Requests</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Send structured requests to mentors and track each response from one place.
+          </p>
+        </div>
+        <Link
+          href="/mentors"
+          className="inline-flex items-center gap-2 rounded-xl border border-[#FFD4B1] bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-[#FFF0E6]"
+        >
+          <Users className="h-4 w-4 text-[#c97a30]" />
+          Browse Mentors
+        </Link>
       </div>
 
-      {/* Stats row */}
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { label: "Total Requests", value: requests.length, gradient: "from-[#0F0F0F] to-[#1c0f00]", light: "from-white to-white", border: "border-[#FFCBA4]/30", text: "text-[#0F0F0F]" },
-          { label: "Pending", value: pending, gradient: "from-amber-400 to-orange-500", light: "from-amber-50 to-orange-50", border: "border-amber-200", text: "text-amber-700" },
-          { label: "Accepted", value: accepted, gradient: "from-emerald-400 to-teal-500", light: "from-emerald-50 to-teal-50", border: "border-emerald-200", text: "text-emerald-700" },
-        ].map((s) => (
-          <div key={s.label} className={`rounded-2xl border ${s.border} bg-gradient-to-br ${s.light} p-5 shadow-sm`}>
-            <div className={`text-3xl font-bold ${s.text}`}>{s.value}</div>
-            <div className="text-sm text-slate-600 mt-0.5">{s.label}</div>
+          {
+            label: "Awaiting Response",
+            value: pendingCount,
+            border: "border-amber-200",
+            bg: "from-amber-50 to-orange-50",
+            text: "text-amber-700",
+          },
+          {
+            label: "Active Mentorships",
+            value: activeCount,
+            border: "border-emerald-200",
+            bg: "from-emerald-50 to-teal-50",
+            text: "text-emerald-700",
+          },
+          {
+            label: "Closed Requests",
+            value: closedCount,
+            border: "border-slate-200",
+            bg: "from-slate-50 to-white",
+            text: "text-slate-700",
+          },
+        ].map((card) => (
+          <div
+            key={card.label}
+            className={`rounded-2xl border ${card.border} bg-gradient-to-br ${card.bg} p-5 shadow-sm`}
+          >
+            <div className={`text-3xl font-bold ${card.text}`}>{card.value}</div>
+            <div className="mt-0.5 text-sm text-slate-600">{card.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Send Request */}
-      <div className="rounded-2xl border border-[#FFCBA4]/30 bg-white shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-white to-white px-6 py-4 border-b border-[#FFCBA4]/30">
-          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-            <Send className="h-4 w-4 text-[#0F0F0F]" />
-            Send a Mentorship Request
+      <div className="overflow-hidden rounded-2xl border border-[#FFD4B1] bg-white shadow-sm">
+        <div className="border-b border-[#FFD4B1] bg-[#FFF8F3] px-6 py-4">
+          <h3 className="flex items-center gap-2 font-semibold text-slate-800">
+            <Send className="h-4 w-4 text-[#c97a30]" />
+            Create a Mentorship Request
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">Type a mentor name or pick from suggestions</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Pick a mentor, define the project context, and send a complete request in one step.
+          </p>
         </div>
-        <div className="p-6 relative">
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <UserSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Mentor name..."
-                value={mentorInput}
-                onChange={(e) => {
-                  setMentorInput(e.target.value);
-                  setShowSuggestions(true);
-                }}
-                onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] focus:border-transparent transition-all"
-              />
-              {/* Autocomplete */}
-              {showSuggestions && filtered.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-20 mt-1 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
-                  {filtered.map((name) => (
-                    <button
-                      key={name}
-                      type="button"
-                      onMouseDown={() => {
-                        setMentorInput(name);
-                        setShowSuggestions(false);
-                      }}
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-[#FFCBA4]/10 hover:text-[#0F0F0F] transition-colors"
-                    >
-                      {name}
-                    </button>
-                  ))}
+
+        <form onSubmit={handleSubmit} className="space-y-5 p-6">
+          <div className="grid gap-5 lg:grid-cols-[1.1fr,0.9fr]">
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Request Title</label>
+                <input
+                  value={form.title}
+                  onChange={(event) => updateForm("title", event.target.value)}
+                  placeholder="Example: Guidance for AI-powered project collaboration platform"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#FFCBA4]"
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Project Domain</label>
+                  <input
+                    value={form.domain}
+                    onChange={(event) => updateForm("domain", event.target.value)}
+                    placeholder="AI, Web Engineering, Mobile, Cloud..."
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#FFCBA4]"
+                  />
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700">Request Type</label>
+                  <select
+                    value={form.type}
+                    onChange={(event) =>
+                      updateForm("type", event.target.value as RequestFormState["type"])
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#FFCBA4]"
+                  >
+                    <option value="full_project">Full project mentorship</option>
+                    <option value="specific_idea">Specific idea guidance</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Description</label>
+                <textarea
+                  value={form.description}
+                  onChange={(event) => updateForm("description", event.target.value)}
+                  rows={5}
+                  placeholder="Describe the project goal, current challenge, and the kind of guidance you need from the mentor."
+                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#FFCBA4]"
+                />
+              </div>
             </div>
-            <button
-              onClick={() => sendRequest(mentorInput)}
-              className="flex items-center gap-2 rounded-xl bg-[#0F0F0F] px-5 py-3 text-sm font-semibold text-[#FFCBA4] shadow-sm hover:brightness-125 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <Send className="h-4 w-4" />
-              Send
-            </button>
+
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Choose Mentor</label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={mentorQuery}
+                    onChange={(event) => {
+                      setMentorQuery(event.target.value);
+                      updateForm("assignedMentorId", "");
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => {
+                      window.setTimeout(() => setShowSuggestions(false), 150);
+                    }}
+                    placeholder={isLoadingMentors ? "Loading mentors..." : "Search by mentor name or skill"}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#FFCBA4]"
+                  />
+                  {showSuggestions && filteredMentors.length > 0 ? (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                      {filteredMentors.map((mentor) => (
+                        <button
+                          key={mentor.id}
+                          type="button"
+                          onMouseDown={() => {
+                            updateForm("assignedMentorId", mentor.id);
+                            setMentorQuery(mentor.fullName);
+                            setShowSuggestions(false);
+                          }}
+                          className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[#FFF4EB]"
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm font-bold text-[#FFCBA4]">
+                            {mentor.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-800">{mentor.fullName}</div>
+                            <div className="truncate text-xs text-slate-500">
+                              {mentor.profile.skills.slice(0, 3).join(", ") || "General mentorship"}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Preferred Deadline</label>
+                <input
+                  type="date"
+                  value={form.deadline}
+                  onChange={(event) => updateForm("deadline", event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#FFCBA4]"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-[#FFD4B1] bg-[#FFF8F3] p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                  <Sparkles className="h-4 w-4 text-[#c97a30]" />
+                  Selected Mentor
+                </div>
+                {selectedMentor ? (
+                  <div className="mt-3 space-y-2">
+                    <div className="text-base font-bold text-black">{selectedMentor.fullName}</div>
+                    <p className="text-sm leading-relaxed text-slate-600">
+                      {selectedMentor.profile.bio || "Experienced mentor available for project guidance."}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedMentor.profile.skills.slice(0, 4).map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-full border border-[#FFD4B1] bg-white px-3 py-1 text-xs font-semibold text-[#8A4E2A]"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-500">
+                    Search for a mentor and pick one from the suggestions to attach this request.
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Send className="h-4 w-4" />
+                {isSubmitting ? "Sending Request..." : "Send Mentorship Request"}
+              </button>
+            </div>
           </div>
-        </div>
+        </form>
       </div>
 
-      {/* Requests List */}
-      <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-white to-white px-6 py-4 border-b border-slate-100">
-          <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-            <Users className="h-4 w-4 text-[#0F0F0F]" />
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-6 py-4">
+          <h3 className="flex items-center gap-2 font-semibold text-slate-800">
+            <FileSearch className="h-4 w-4 text-[#c97a30]" />
             Request History
           </h3>
         </div>
-        <div className="divide-y divide-slate-50">
-          {requests.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-sm">
-              No requests sent yet. Send your first request above!
+
+        <div className="divide-y divide-slate-100">
+          {isLoading ? (
+            <div className="px-6 py-12 text-center text-sm text-slate-500">Loading your requests...</div>
+          ) : requests.length === 0 ? (
+            <div className="px-6 py-12 text-center text-sm text-slate-500">
+              No requests yet. Use the form above to send your first mentorship request.
             </div>
           ) : (
-            requests.map((req) => {
-              const cfg = statusConfig(req.status);
-              const Icon = cfg.icon;
+            requests.map((request) => {
+              const statusTone = getRequestStatusTone(request.status);
+              const mentorName =
+                request.mentor?.full_name ??
+                mentors.find((mentor) => mentor.id === request.assigned_mentor)?.fullName ??
+                "Mentor not assigned";
+
               return (
-                <div key={req.id} className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#FFCBA4]/20 to-[#FFCBA4]/20 flex items-center justify-center text-[#0F0F0F] font-bold text-sm shadow-inner">
-                      {req.mentorName.charAt(0)}
+                <article
+                  key={request.id}
+                  className="grid gap-4 px-6 py-5 lg:grid-cols-[1fr,auto]"
+                >
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h4 className="text-base font-bold text-slate-800">{request.title}</h4>
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone.badge}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${statusTone.dot}`} />
+                        {getRequestStatusLabel(request.status)}
+                      </span>
                     </div>
-                    <div>
-                      <div className="font-semibold text-slate-800 text-sm">{req.mentorName}</div>
-                      <div className="text-xs text-slate-400">Sent on {req.sentAt}</div>
+
+                    <p className="text-sm leading-relaxed text-slate-600">
+                      {request.description || "No description provided."}
+                    </p>
+
+                    <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                      <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
+                        {request.domain || "General"}
+                      </span>
+                      <span className="rounded-full bg-[#FFF4EB] px-3 py-1 font-semibold text-[#8A4E2A]">
+                        {request.type === "specific_idea" ? "Specific idea" : "Full project"}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5" />
+                        {mentorName}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        Sent {new Date(request.created_at).toLocaleDateString()}
+                      </span>
+                      {request.deadline ? (
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarDays className="h-3.5 w-3.5" />
+                          Due {new Date(request.deadline).toLocaleDateString()}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${cfg.bg}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                    {req.status}
-                  </span>
-                </div>
+                </article>
               );
             })
           )}

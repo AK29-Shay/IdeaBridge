@@ -33,11 +33,30 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   bio               TEXT,
   skills            TEXT[],
   availability      TEXT,
+  study_year        TEXT,
+  faculty           TEXT,
+  specialization    TEXT,
+  portfolio_links   TEXT[],
+  availability_status TEXT,
+  years_experience  INTEGER,
+  linked_in         TEXT,
+  github_url        TEXT,
+  availability_calendar_note TEXT,
   role              TEXT        NOT NULL DEFAULT 'Student' CHECK (role IN ('Student', 'Mentor', 'Admin')),
   reputation        NUMERIC     DEFAULT 0,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS study_year TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS faculty TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS specialization TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS portfolio_links TEXT[];
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS availability_status TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS years_experience INTEGER;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS linked_in TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS github_url TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS availability_calendar_note TEXT;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
