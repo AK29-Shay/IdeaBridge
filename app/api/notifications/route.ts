@@ -1,18 +1,27 @@
+﻿/**
+ * GET  /api/notifications       â†’ fetch all notifications for the logged-in user
+ * PATCH /api/notifications      â†’ mark ALL notifications as read
+ */
 import { NextResponse } from 'next/server'
-import { notify } from '../../backend/controllers/notificationController'
-import { getUserFromAuthHeader } from '../../backend/middleware/auth'
+import { notify } from '@/backend/modules/notification'
+import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
 
-export async function POST(request: Request) {
+/** GET /api/notifications â€” returns the caller's notifications (newest first) */
+export const GET = withAuth(async (_req, user) => {
   try {
-    const authorization = request.headers.get('authorization')
-    const user = await getUserFromAuthHeader(authorization)
-    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
-
-    const body = await request.json()
-    body.actor_id = user.user.id
-    const data = await notify(body)
-    return NextResponse.json(data)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+    const notifications = await fetchNotifications(user.id)
+    return NextResponse.json({ data: notifications })
+  } catch (e) {
+    return handleError(e)
   }
-}
+})
+
+/** PATCH /api/notifications â€” marks ALL unread notifications as read */
+export const PATCH = withAuth(async (_req, user) => {
+  try {
+    await markAllRead(user.id)
+    return NextResponse.json({ message: 'All notifications marked as read' })
+  } catch (e) {
+    return handleError(e)
+  }
+})

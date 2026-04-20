@@ -21,6 +21,15 @@ export default function RequestsPage() {
     { id: "r-2", studentName: "Lina Gomez", projectTitle: "ML Coach Enhancements", message: "Looking for model feedback and evaluation help.", status: "Pending" },
   ]);
 
+  const [filter, setFilter] = React.useState<"all" | "pending" | "rejected">("all");
+
+  const filtered = React.useMemo(() => {
+    if (filter === "all") return requests;
+    if (filter === "pending") return requests.filter(r => r.status === "Pending");
+    if (filter === "rejected") return requests.filter(r => r.status === "Rejected");
+    return requests;
+  }, [requests, filter]);
+
   function updateRequestStatus(id: string, status: RequestItem["status"]) {
     setRequests((s) => s.map((r) => (r.id === id ? { ...r, status } : r)));
     toast.success(`Request ${status.toLowerCase()}.`);
@@ -28,9 +37,16 @@ export default function RequestsPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold">Mentorship Requests</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Mentorship Requests</h2>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setFilter("all")} className={`text-sm px-3 py-1 rounded-full ${filter === "all" ? "bg-primary text-black font-semibold" : "bg-transparent text-slate-600 border border-slate-100"}`}>All</button>
+          <button onClick={() => setFilter("pending")} className={`text-sm px-3 py-1 rounded-full ${filter === "pending" ? "bg-primary text-black font-semibold" : "bg-transparent text-slate-600 border border-slate-100"}`}>Pending</button>
+          <button onClick={() => setFilter("rejected")} className={`text-sm px-3 py-1 rounded-full ${filter === "rejected" ? "bg-primary text-black font-semibold" : "bg-transparent text-slate-600 border border-slate-100"}`}>Rejected</button>
+        </div>
+      </div>
       <div className="mt-4 space-y-3">
-        {requests.map((r) => (
+        {filtered.map((r) => (
           <Card key={r.id} className="p-4 rounded-xl hover:shadow-md transition-shadow">
             <CardContent className="flex items-start justify-between gap-4">
               <div>

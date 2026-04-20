@@ -71,24 +71,25 @@ export function DashboardSection({ mentorName, availabilityStatus, requests, pro
   const active  = projects.filter(p => p.status === "In Progress").length;
   const done    = projects.filter(p => p.status === "Completed").length;
 
+  // Reordered stats to emphasize Pending Requests first
   const stats = [
-    { label: "Total Mentees", value: requests.length + 4, icon: Users,         gradient: "from-[#0F0F0F] to-[#1A1A2E]",  light: "from-white to-white",  border: "border-[#FFCBA4]/30", text: "text-[#0F0F0F]" },
-    { label: "Active Projects",value: active,             icon: FolderKanban,  gradient: "from-amber-400 to-orange-500",   light: "from-amber-50 to-orange-50",   border: "border-amber-200",  text: "text-amber-700"  },
     { label: "Pending Requests",value: pending,           icon: Clock,          gradient: "from-[#FFCBA4] to-[#F5A97F]",      light: "from-white to-white",      border: "border-[#FFCBA4]/30",   text: "text-[#0F0F0F]"   },
+    { label: "Active Projects",value: active,             icon: FolderKanban,  gradient: "from-amber-400 to-orange-500",   light: "from-amber-50 to-orange-50",   border: "border-amber-200",  text: "text-amber-700"  },
+    { label: "Total Mentees", value: requests.length + 4, icon: Users,         gradient: "from-[#0F0F0F] to-[#1A1A2E]",  light: "from-white to-white",  border: "border-[#FFCBA4]/30", text: "text-[#0F0F0F]" },
     { label: "Completed",      value: done,               icon: CheckCircle2,  gradient: "from-emerald-400 to-teal-500",   light: "from-emerald-50 to-teal-50",   border: "border-emerald-200",text: "text-emerald-700"},
   ];
 
   return (
     <div className="space-y-8 animate-fade-up">
       {/* Hero welcome */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F0F0F] via-[#1c0f00] to-[#2a1200] p-8 text-[#FFCBA4] shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F0F0F] via-[#1c0f00] to-[#2a1200] p-6 text-[#FFCBA4] shadow-lg">
         <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-8 left-1/3 h-32 w-32 rounded-full bg-pink-400/20 blur-xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-[#FFCBA4]/70 text-sm font-medium">Welcome back, Mentor 👋</p>
-            <h2 className="text-3xl font-bold tracking-tight mt-0.5">{mentorName}</h2>
-            <p className="text-[#FFCBA4]/60 text-sm mt-1">Here's your mentorship activity at a glance.</p>
+            <p className="text-[#FFCBA4]/70 text-sm font-medium">Welcome back</p>
+            <h2 className="text-2xl font-semibold tracking-tight mt-0.5">{mentorName}</h2>
+            <p className="text-[#FFCBA4]/60 text-sm mt-1">Your mentorship activity at a glance.</p>
           </div>
           <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold backdrop-blur-sm ${avCfg.bg}`}>
             <span className={`h-2 w-2 rounded-full ${avCfg.dot}`} />
@@ -96,29 +97,30 @@ export function DashboardSection({ mentorName, availabilityStatus, requests, pro
           </span>
         </div>
 
-        {/* Quick Actions */}
-        <div className="relative mt-6 flex flex-wrap gap-2">
-          {[
-            { label: "Create Blog", tab: "blog" },
-            { label: "View Requests", tab: "requests" },
-            { label: "View Projects", tab: "projects" },
-          ].map(({ label, tab }) => (
-            <button
-              key={tab}
-              onClick={() => onTabChange(tab)}
-              className="flex items-center gap-1.5 rounded-xl bg-[#FFCBA4]/15 border border-[#FFCBA4]/30 backdrop-blur-sm px-4 py-2 text-sm font-semibold text-[#FFCBA4] hover:bg-[#FFCBA4]/25 transition-all duration-200 hover:-translate-y-0.5"
-            >
-              <Zap className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
+        {/* Quick Actions (reduced to avoid competing CTAs) */}
+        <div className="relative mt-4 flex flex-wrap gap-2 items-center">
+          <button
+            onClick={() => onTabChange("requests")}
+            className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/20 px-4 py-2 text-sm font-semibold text-white/90 hover:bg-white/20 transition"
+          >
+            <Clock className="h-4 w-4" />
+            View Requests
+          </button>
+          <button
+            onClick={() => onTabChange("projects")}
+            className="flex items-center gap-2 rounded-xl bg-transparent border border-white/10 px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/5 transition"
+          >
+            <FolderKanban className="h-4 w-4" />
+            View Projects
+          </button>
+          <div className="ml-auto text-sm text-[#FFCBA4]/80">You have <span className="font-semibold">{pending}</span> pending requests</div>
         </div>
       </div>
 
       {/* Stats grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(s => (
-          <div key={s.label} className={`relative overflow-hidden rounded-2xl border ${s.border} bg-gradient-to-br ${s.light} p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-200`}>
+          <div key={s.label} className={`relative overflow-hidden rounded-2xl border ${s.border} bg-gradient-to-br ${s.light} p-6 shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-200 ${s.label === 'Pending Requests' && pending > 0 ? 'ring-1 ring-[#F5A97F]/30' : ''}`}>
             <div className={`absolute right-3 top-3 rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-md`}>
               <s.icon className="h-5 w-5 text-[#0F0F0F]" />
             </div>

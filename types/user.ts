@@ -3,6 +3,7 @@ import type { MentorProfile } from "./mentor";
 import type { StudentProfile } from "./student";
 
 export interface AuthUser {
+  user_id: string;
   id: string;
   role: UserRole;
   fullName: string;
@@ -12,5 +13,7 @@ export interface AuthUser {
   mentorProfile?: MentorProfile;
   // Mentor profile fields are stored in mentorProfile for mentor accounts
   availabilityStatus?: AvailabilityStatus; // kept for quick access when needed
+  currentYear?: string;
+  studentId?: string;
 }
 

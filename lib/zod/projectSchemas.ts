@@ -3,7 +3,7 @@ import type { ProjectProgressStatus } from "@/types/auth";
 
 export const updateProgressSchema = z.object({
   progressPercent: z.coerce
-    .number({ invalid_type_error: "Progress must be a number." })
+    .number()
     .int({ message: "Progress must be an integer." })
     .min(0, { message: "Progress must be at least 0." })
     .max(100, { message: "Progress cannot exceed 100." }),

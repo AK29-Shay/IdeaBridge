@@ -18,7 +18,9 @@ export function RequireAuth({
 
   React.useEffect(() => {
     if (!isReady) return;
-    if (!user) router.push(redirectTo);
+    if (!user) {
+      router.push(redirectTo);
+    }
   }, [isReady, user, router, redirectTo]);
 
   if (!isReady) {

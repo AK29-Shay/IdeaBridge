@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
-import { getRequestById, updateRequestStatus } from '../../../../backend/services/requestService'
-import { getProfileByUserId } from '../../../../backend/services/profileService'
+import { getRequestById, updateRequestStatus } from '@/backend/modules/request'
+import { getProfileByUserId } from '@/backend/modules/profile'
 
-export async function PATCH(request: Request) {
+export const PATCH = withAuth(async (req: NextRequest, user) => {
   try {
     const authorization = request.headers.get('authorization')
     const user = await getUserFromAuthHeader(authorization)
@@ -15,14 +15,25 @@ export async function PATCH(request: Request) {
     if (!reqRecord) return new NextResponse(JSON.stringify({ error: 'Not found' }), { status: 404 })
 
     const profile = await getProfileByUserId(user.user.id)
+    const role = typeof profile?.role === 'string' ? profile.role.toLowerCase() : ''
     // only assigned mentor or admin may update
-    if (!(profile && (profile.role === 'admin' || String(reqRecord.assigned_mentor) === String(user.user.id)))) {
+    if (!(profile && (role === 'admin' || String(reqRecord.assigned_mentor) === String(user.user.id)))) {
       return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
     }
 
-    const updated = await updateRequestStatus(request_id, status, user.user.id)
-    return NextResponse.json(updated)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+    const body = await req.json()
+    const { request_id, status } = body as { request_id: string; status: RequestStatus }
+
+    if (!request_id || !status) {
+      return NextResponse.json(
+        { error: 'request_id and status are required' },
+        { status: 400 }
+      )
+    }
+
+    const updated = await changeRequestStatus(user.id, profile.role, request_id, status)
+    return NextResponse.json({ data: updated })
+  } catch (e) {
+    return handleError(e)
   }
-}
+})
