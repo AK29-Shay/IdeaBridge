@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { approveApplication } from '@/backend/modules/mentor-application'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 import { getProfileByUserId } from '@/backend/modules/profile'
+import { getErrorMessage } from '@/lib/errorMessage'
 
 export async function PATCH(request: Request) {
   try {
@@ -17,7 +18,7 @@ export async function PATCH(request: Request) {
     const { application_id } = body
     const data = await approveApplication(application_id)
     return NextResponse.json(data)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to approve mentor application.') }), { status: 400 })
   }
 }

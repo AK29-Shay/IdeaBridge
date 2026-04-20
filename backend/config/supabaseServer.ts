@@ -1,12 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+import supabaseAdmin from "@/lib/supabase/admin";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY
+export const supabaseServer = supabaseAdmin;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase server configuration in environment variables')
-}
-
-export const supabaseServer = createClient(supabaseUrl, supabaseServiceKey)
-
-export default supabaseServer
+export default supabaseServer;

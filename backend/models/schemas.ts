@@ -3,9 +3,21 @@ import { z } from 'zod'
 export const profileSchema = z.object({
   id: z.string().uuid().optional(),
   full_name: z.string().min(1),
+  avatar_url: z.string().url().nullable().optional(),
   bio: z.string().max(1000).optional(),
   skills: z.array(z.string()).optional(),
   availability: z.string().optional(),
+  study_year: z.string().optional(),
+  faculty: z.string().optional(),
+  specialization: z.string().optional(),
+  portfolio_links: z.array(z.string().url()).optional(),
+  availability_status: z
+    .enum(["Available Now", "Available in 1-2 days", "Busy", "On Leave"])
+    .optional(),
+  years_experience: z.number().int().min(0).max(60).nullable().optional(),
+  linked_in: z.string().url().nullable().optional(),
+  github_url: z.string().url().nullable().optional(),
+  availability_calendar_note: z.string().max(1000).nullable().optional(),
   role: z.enum(['student', 'mentor', 'admin', 'Student', 'Mentor', 'Admin']).optional(),
 })
 
@@ -23,6 +35,7 @@ export const requestSchema = z.object({
   domain: z.string().min(1),
   deadline: z.string().optional(),
   type: z.enum(['full_project', 'specific_idea']),
+  assigned_mentor: z.string().uuid().optional(),
 })
 
 export const ratingSchema = z.object({

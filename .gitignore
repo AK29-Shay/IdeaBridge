@@ -41,5 +41,9 @@ next-env.d.ts
 # Turbopack
 .turbo
 
+# Playwright
+playwright-report/
+test-results/
+
 # Supabase local temp artifacts
 supabase/.temp/

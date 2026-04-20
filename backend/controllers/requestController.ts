@@ -1,7 +1,7 @@
 import { requestSchema } from '../models/schemas'
 import { createRequest, updateRequestStatus } from '../services/requestService'
 
-export async function submitRequest(payload: any) {
+export async function submitRequest(payload: unknown) {
   const parsed = requestSchema.parse(payload)
   return createRequest(parsed)
 }

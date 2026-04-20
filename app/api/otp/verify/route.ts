@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { verifyUserOtp } from '@/backend/modules/otp'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
+import { getErrorMessage } from '@/lib/errorMessage'
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     const result = await verifyUserOtp(user.user.id, otp)
     if (!result.ok) return new NextResponse(JSON.stringify({ error: result.reason }), { status: 400 })
     return NextResponse.json({ ok: true })
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to verify OTP.') }), { status: 400 })
   }
 }

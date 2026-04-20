@@ -27,7 +27,7 @@ export function getStoredMentors(): Mentor[] {
       id: u.id,
       fullName: u.fullName,
       email: u.email,
-      rating: ("rating" in u ? (u as any).rating : 4.5) as number,
+      rating: 4.5,
       profile: u.mentorProfile!,
     }));
 }

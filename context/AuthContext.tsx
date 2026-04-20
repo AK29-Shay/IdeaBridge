@@ -1,206 +1,342 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { AuthUser } from "@/types/user";
-import type { MentorProfile } from "@/types/mentor";
+import * as React from "react";
+import type { Session, User } from "@supabase/supabase-js";
+
 import type { UserRole } from "@/types/auth";
+import type { MentorProfile } from "@/types/mentor";
 import type { StudentProfile } from "@/types/student";
-import { IDEABRIDGE_STORAGE_KEYS } from "@/lib/constants";
+import type { AuthUser } from "@/types/user";
+import {
+  buildLegacyProfileUpsertPayload,
+  buildProfileUpsertPayload,
+  FULL_PROFILE_SELECT,
+  isLegacyProfilesSchemaError,
+  LEGACY_PROFILE_SELECT,
+  mapProfileRowToAuthUser,
+  normalizeRole,
+  normalizeProfileRow,
+  type ProfileRow,
+} from "@/lib/profileMapper";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
-type StoredUser = AuthUser;
-
-type AuthContextValue = {
-  user: StoredUser | null;
-  isReady: boolean;
-  login: (params: { email: string; password: string }) => Promise<StoredUser>;
-  register: (params: { user: Omit<StoredUser, "id"> & { fullName: string } }) => Promise<void>;
-  logout: () => void;
-  updateStudentProfile: (profile: StudentProfile) => void;
-  updateMentorProfile: (profile: MentorProfile) => void;
+type RegisterUserInput = {
+  role: UserRole;
+  fullName: string;
+  email: string;
+  password: string;
+  studentProfile?: StudentProfile;
+  mentorProfile?: MentorProfile;
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+type AuthContextValue = {
+  user: AuthUser | null;
+  session: Session | null;
+  isReady: boolean;
+  login: (params: { email: string; password: string }) => Promise<AuthUser>;
+  register: (params: { user: RegisterUserInput }) => Promise<AuthUser | null>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<AuthUser | null>;
+  updateStudentProfile: (profile: StudentProfile) => Promise<AuthUser | null>;
+  updateMentorProfile: (profile: MentorProfile) => Promise<AuthUser | null>;
+};
 
-function safeParseJSON<T>(value: string | null): T | null {
-  if (!value) return null;
-  try {
-    return JSON.parse(value) as T;
-  } catch {
-    return null;
+const AuthContext = React.createContext<AuthContextValue | null>(null);
+
+async function selectProfile(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(FULL_PROFILE_SELECT)
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!error) {
+    return data ? normalizeProfileRow(data as ProfileRow) : null;
   }
+
+  if (!isLegacyProfilesSchemaError(error.message)) {
+    throw new Error(error.message || "Failed to load your profile.");
+  }
+
+  const { data: legacyData, error: legacyError } = await supabase
+    .from("profiles")
+    .select(LEGACY_PROFILE_SELECT)
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (legacyError) {
+    throw new Error(legacyError.message || "Failed to load your profile.");
+  }
+
+  return legacyData ? normalizeProfileRow(legacyData as ProfileRow) : null;
 }
 
-function makeId() {
-  // crypto.randomUUID is supported in modern browsers; keep fallback for safety.
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
-  return `id_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+async function upsertProfile(params: {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  studentProfile?: StudentProfile;
+  mentorProfile?: MentorProfile;
+}) {
+  const supabase = getSupabaseBrowserClient();
+  const payload = buildProfileUpsertPayload(params);
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(payload as never, { onConflict: "id" })
+    .select(FULL_PROFILE_SELECT)
+    .single();
+
+  if (!error) {
+    return mapProfileRowToAuthUser({
+      profile: normalizeProfileRow(data as ProfileRow),
+      email: params.email,
+      fallbackFullName: params.fullName,
+      fallbackRole: params.role,
+    });
+  }
+
+  if (!isLegacyProfilesSchemaError(error.message)) {
+    throw new Error(error.message || "Failed to save your profile.");
+  }
+
+  const legacyPayload = buildLegacyProfileUpsertPayload(payload);
+  const { data: legacyData, error: legacyError } = await supabase
+    .from("profiles")
+    .upsert(legacyPayload as never, { onConflict: "id" })
+    .select(LEGACY_PROFILE_SELECT)
+    .single();
+
+  if (legacyError) {
+    throw new Error(legacyError.message || "Failed to save your profile.");
+  }
+
+  return mapProfileRowToAuthUser({
+    profile: normalizeProfileRow(legacyData as ProfileRow),
+    email: params.email,
+    fallbackFullName: params.fullName,
+    fallbackRole: params.role,
+  });
 }
 
-const DEMO_USERS: StoredUser[] = [
-  {
-    id: "demo-student",
-    role: "student",
-    fullName: "Demo Student",
-    email: "student.demo@ideabridge.dev",
-    password: "Demo@123",
-    studentProfile: {
-      bio: "Student demo profile for login and dashboard testing.",
-      skills: ["React", "TypeScript"],
-      studyYear: "3rd Year",
-      faculty: "Computing",
-      specialization: "Software Engineering",
-      portfolioLinks: ["https://example.com/student-demo"],
-      avatarUrl: "",
-    },
-  },
-  {
-    id: "demo-mentor",
-    role: "mentor",
-    fullName: "Demo Mentor",
-    email: "mentor.demo@ideabridge.dev",
-    password: "Demo@123",
-    mentorProfile: {
-      bio: "Mentor demo profile for collaboration and guidance testing.",
-      skills: ["System Design", "Node.js", "Databases"],
-      availability: "Part-time",
-      availabilityStatus: "Available in 1-2 days",
-      yearsExperience: 6,
-      linkedIn: "https://linkedin.com/in/demo-mentor",
-      github: "https://github.com/demo-mentor",
-      portfolioLinks: ["https://example.com/mentor-demo"],
-      availabilityCalendarNote: "Demo slot for QA checks.",
-      avatarUrl: "",
-    },
-    availabilityStatus: "Available in 1-2 days",
-  },
-];
+async function loadAuthUserFromSession(sessionUser: User): Promise<AuthUser> {
+  const email = sessionUser.email ?? "";
+  const fallbackFullName =
+    typeof sessionUser.user_metadata?.full_name === "string"
+      ? sessionUser.user_metadata.full_name
+      : email.split("@")[0] ?? "Member";
+  const fallbackRole = normalizeRole(sessionUser.user_metadata?.role);
 
-function cloneUsers(users: StoredUser[]): StoredUser[] {
-  return users.map((user) => ({
-    ...user,
-    studentProfile: user.studentProfile ? { ...user.studentProfile } : undefined,
-    mentorProfile: user.mentorProfile
-      ? {
-          ...user.mentorProfile,
-          skills: [...user.mentorProfile.skills],
-          portfolioLinks: user.mentorProfile.portfolioLinks ? [...user.mentorProfile.portfolioLinks] : undefined,
-        }
-      : undefined,
-  }));
-}
+  const existing = await selectProfile(sessionUser.id);
+  if (existing) {
+    return mapProfileRowToAuthUser({
+      profile: existing,
+      email,
+      fallbackFullName,
+      fallbackRole,
+    });
+  }
 
-function getUsers(): StoredUser[] {
-  if (typeof window === "undefined") return [];
-  const parsed = safeParseJSON<StoredUser[]>(localStorage.getItem(IDEABRIDGE_STORAGE_KEYS.users));
-  return Array.isArray(parsed) ? parsed : [];
-}
-
-function setUsers(next: StoredUser[]) {
-  localStorage.setItem(IDEABRIDGE_STORAGE_KEYS.users, JSON.stringify(next));
-}
-
-function ensureSeedUsers(): StoredUser[] {
-  if (typeof window === "undefined") return [];
-  const existing = getUsers();
-  if (existing.length > 0) return existing;
-
-  const seeded = cloneUsers(DEMO_USERS);
-  setUsers(seeded);
-  return seeded;
-}
-
-function getAuthUserId(): StoredUser | null {
-  const parsed = safeParseJSON<{ email: string }>(localStorage.getItem(IDEABRIDGE_STORAGE_KEYS.auth));
-  if (!parsed?.email) return null;
-  const users = getUsers();
-  return users.find((u) => u.email.toLowerCase() === parsed.email.toLowerCase()) ?? null;
+  return upsertProfile({
+    id: sessionUser.id,
+    email,
+    fullName: fallbackFullName,
+    role: fallbackRole,
+  });
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<StoredUser | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [user, setUser] = React.useState<AuthUser | null>(null);
+  const [session, setSession] = React.useState<Session | null>(null);
+  const [isReady, setIsReady] = React.useState(false);
 
-  useEffect(() => {
-    ensureSeedUsers();
-    // Load auth state from localStorage on first client render.
-    const existing = getAuthUserId();
-    setUser(existing);
-    setIsReady(true);
+  const loadSessionUser = React.useCallback(async (sessionUser: User | null) => {
+    if (!sessionUser) {
+      React.startTransition(() => {
+        setUser(null);
+      });
+      return null;
+    }
+
+    const nextUser = await loadAuthUserFromSession(sessionUser);
+    React.startTransition(() => {
+      setUser(nextUser);
+    });
+    return nextUser;
   }, []);
 
-  const value = useMemo<AuthContextValue>(
+  React.useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    let cancelled = false;
+
+    async function initialize() {
+      try {
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
+
+        if (cancelled) return;
+
+        React.startTransition(() => {
+          setSession(initialSession);
+          setIsReady(true);
+        });
+
+        await loadSessionUser(initialSession?.user ?? null);
+      } catch {
+        if (cancelled) return;
+        React.startTransition(() => {
+          setSession(null);
+          setUser(null);
+          setIsReady(true);
+        });
+      }
+    }
+
+    void initialize();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      React.startTransition(() => {
+        setSession(nextSession);
+        setIsReady(true);
+      });
+      void loadSessionUser(nextSession?.user ?? null);
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [loadSessionUser]);
+
+  const value = React.useMemo<AuthContextValue>(
     () => ({
       user,
+      session,
       isReady,
       async login({ email, password }) {
-        const users = ensureSeedUsers();
-        const match = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-        if (!match) {
-          throw new Error("No account found for this email.");
-        }
-        if (match.password !== password) {
-          throw new Error("Incorrect password.");
+        const supabase = getSupabaseBrowserClient();
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error || !data.user) {
+          throw new Error(error?.message || "Login failed.");
         }
 
-        localStorage.setItem(IDEABRIDGE_STORAGE_KEYS.auth, JSON.stringify({ email: match.email }));
-        setUser(match);
-        return match;
+        React.startTransition(() => {
+          setSession(data.session);
+        });
+
+        return loadSessionUser(data.user).then((nextUser) => {
+          if (!nextUser) {
+            throw new Error("Unable to load your profile.");
+          }
+          return nextUser;
+        });
       },
       async register({ user: incoming }) {
-        const users = ensureSeedUsers();
-        const exists = users.some((u) => u.email.toLowerCase() === incoming.email.toLowerCase());
-        if (exists) {
-          throw new Error("An account with this email already exists.");
+        const supabase = getSupabaseBrowserClient();
+        const { data, error } = await supabase.auth.signUp({
+          email: incoming.email,
+          password: incoming.password,
+          options: {
+            data: {
+              full_name: incoming.fullName,
+              role: incoming.role,
+            },
+          },
+        });
+
+        if (error || !data.user) {
+          throw new Error(error?.message || "Registration failed.");
         }
 
-        const newUser: StoredUser = {
-          ...incoming,
-          id: makeId(),
-        };
+        if (data.session) {
+          React.startTransition(() => {
+            setSession(data.session);
+          });
+          const registeredUser = await upsertProfile({
+            id: data.user.id,
+            email: incoming.email,
+            fullName: incoming.fullName,
+            role: incoming.role,
+            studentProfile: incoming.studentProfile,
+            mentorProfile: incoming.mentorProfile,
+          });
 
-        setUsers([...users, newUser]);
-        localStorage.setItem(IDEABRIDGE_STORAGE_KEYS.auth, JSON.stringify({ email: newUser.email }));
-        setUser(newUser);
+          React.startTransition(() => {
+            setUser(registeredUser);
+          });
+          return registeredUser;
+        }
+
+        React.startTransition(() => {
+          setUser(null);
+        });
+        return null;
       },
-      logout() {
-        localStorage.removeItem(IDEABRIDGE_STORAGE_KEYS.auth);
-        setUser(null);
+      async logout() {
+        const supabase = getSupabaseBrowserClient();
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          throw new Error(error.message || "Failed to sign out.");
+        }
+
+        React.startTransition(() => {
+          setSession(null);
+          setUser(null);
+        });
       },
-      updateStudentProfile(profile) {
-        if (!user) return;
-        const updated: StoredUser = {
-          ...user,
+      async refreshUser() {
+        const supabase = getSupabaseBrowserClient();
+        const {
+          data: { user: sessionUser },
+        } = await supabase.auth.getUser();
+        return loadSessionUser(sessionUser);
+      },
+      async updateStudentProfile(profile) {
+        if (!user) return null;
+        const updated = await upsertProfile({
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
           role: "student",
           studentProfile: profile,
-          mentorProfile: user.mentorProfile,
-        };
-        const users = getUsers().map((u) => (u.id === updated.id ? updated : u));
-        setUsers(users);
-        setUser(updated);
+        });
+
+        React.startTransition(() => {
+          setUser(updated);
+        });
+        return updated;
       },
-      updateMentorProfile(profile) {
-        if (!user) return;
-        const updated: StoredUser = {
-          ...user,
+      async updateMentorProfile(profile) {
+        if (!user) return null;
+        const updated = await upsertProfile({
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
           role: "mentor",
           mentorProfile: profile,
-          availabilityStatus: profile.availabilityStatus,
-          studentProfile: user.studentProfile,
-        };
-        const users = getUsers().map((u) => (u.id === updated.id ? updated : u));
-        setUsers(users);
-        setUser(updated);
+        });
+
+        React.startTransition(() => {
+          setUser(updated);
+        });
+        return updated;
       },
     }),
-    [user, isReady]
+    [user, session, isReady, loadSessionUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  const ctx = React.useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+
   return ctx;
 }
-

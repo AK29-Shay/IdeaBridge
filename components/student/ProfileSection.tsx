@@ -308,7 +308,7 @@ export function ProfileSection() {
           />
         ) : (
           <p className="text-sm text-slate-600 leading-relaxed">
-            {form.bio || <span className="text-slate-400 italic">No bio added yet. Click "Edit Profile" to add one.</span>}
+            {form.bio || <span className="text-slate-400 italic">No bio added yet. Click Edit Profile to add one.</span>}
           </p>
         )}
       </div>

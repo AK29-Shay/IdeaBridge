@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { submitRating } from '@/backend/modules/rating'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
+import { getErrorMessage } from '@/lib/errorMessage'
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
     body.student_id = user.user.id
     const data = await submitRating(body)
     return NextResponse.json(data)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to submit rating.') }), { status: 400 })
   }
 }

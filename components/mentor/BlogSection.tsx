@@ -521,7 +521,7 @@ export function BlogSection() {
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#FFCBA4]/30 bg-[#FFCBA4]/5 py-16 text-center">
           <BookOpen className="h-10 w-10 text-[#F5A97F] mb-3" />
           <p className="text-slate-600 font-medium">No blogs yet</p>
-          <p className="text-sm text-slate-400 mt-1">Click "Create Blog" to write your first post.</p>
+          <p className="text-sm text-slate-400 mt-1">Click Create Blog to write your first post.</p>
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2">

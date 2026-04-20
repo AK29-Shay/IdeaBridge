@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 import { getRequestById, updateRequestStatus } from '@/backend/modules/request'
 import { getProfileByUserId } from '@/backend/modules/profile'
+import { createNotification } from '@/backend/services/notificationService'
+import { getErrorMessage } from '@/lib/errorMessage'
 
 export async function PATCH(request: Request) {
   try {
@@ -22,8 +24,26 @@ export async function PATCH(request: Request) {
     }
 
     const updated = await updateRequestStatus(request_id, status, user.user.id)
+    if (typeof reqRecord.student_id === 'string') {
+      const statusTitle =
+        status === 'in_progress' ? 'Mentorship request accepted' :
+        status === 'cancelled' ? 'Mentorship request declined' :
+        status === 'completed' ? 'Mentorship completed' :
+        'Mentorship request updated'
+
+      await createNotification({
+        user_id: reqRecord.student_id,
+        type: 'request_status_updated',
+        payload: {
+          request_id,
+          status,
+          title: statusTitle,
+        },
+      })
+    }
+
     return NextResponse.json(updated)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to update request status.') }), { status: 400 })
   }
 }

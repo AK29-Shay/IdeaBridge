@@ -23,6 +23,10 @@ function toDateInputValue(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+function getFieldErrorMessage(message: unknown) {
+  return typeof message === "string" ? message : "Invalid value.";
+}
+
 export function UpdateProgressModal({
   open,
   onOpenChange,
@@ -79,7 +83,7 @@ export function UpdateProgressModal({
       <DialogContent className="max-w-2xl bg-[#0F0F0F] text-white border border-[#FFCBA4]/20 shadow-xl rounded-xl p-6">
         <DialogHeader>
           <DialogTitle>Update Progress</DialogTitle>
-          <DialogDescription>Update the project's progress percentage, status, and add short milestone notes.</DialogDescription>
+          <DialogDescription>Update the project progress percentage, status, and add short milestone notes.</DialogDescription>
         </DialogHeader>
 
         {!project ? (
@@ -91,7 +95,7 @@ export function UpdateProgressModal({
                 <div className="font-semibold">Please fix the following:</div>
                 <ul className="mt-1 list-disc list-inside">
                   {Object.entries(form.formState.errors).map(([k, v]) => (
-                    <li key={k}>{Array.isArray((v as any).message) ? (v as any).message[0] : (v as any).message}</li>
+                    <li key={k}>{getFieldErrorMessage(v?.message)}</li>
                   ))}
                 </ul>
               </div>
@@ -132,7 +136,7 @@ export function UpdateProgressModal({
                   options={["Not Started", "In Progress", "On Track", "Delayed", "Completed"]}
                 />
                 {form.formState.errors.status ? (
-                  <div className="text-sm text-destructive">{form.formState.errors.status.message as any}</div>
+                  <div className="text-sm text-destructive">{getFieldErrorMessage(form.formState.errors.status.message)}</div>
                 ) : null}
               </div>
 
