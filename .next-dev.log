@@ -75,3 +75,92 @@
  GET /login 200 in 31ms (next.js: 2ms, application-code: 29ms)
  GET /login 200 in 60ms (next.js: 2ms, application-code: 57ms)
  GET /login 200 in 42ms (next.js: 3ms, application-code: 39ms)
+ GET /dashboard/student 200 in 1367ms (next.js: 1332ms, application-code: 36ms)
+ GET /dashboard/student 200 in 27ms (next.js: 3ms, application-code: 25ms)
+ GET /ideas 200 in 1622ms (next.js: 1497ms, application-code: 125ms)
+ GET /ideas 200 in 2.3s (next.js: 2.2s, application-code: 101ms)
+ GET /ideas/explore 200 in 2.5s (next.js: 2.4s, application-code: 105ms)
+ GET /ideas/explore 200 in 64ms (next.js: 3ms, application-code: 60ms)
+ GET /ideas/explore 200 in 57ms (next.js: 3ms, application-code: 54ms)
+ GET /ideas/explore 200 in 30ms (next.js: 2ms, application-code: 27ms)
+ GET /api/posts?limit=40 200 in 2.5s (next.js: 1817ms, application-code: 640ms)
+ GET /api/posts?limit=40 200 in 2.5s (next.js: 1800ms, application-code: 662ms)
+ GET /dashboard 200 in 1348ms (next.js: 1276ms, application-code: 72ms)
+ GET /dashboard 200 in 22ms (next.js: 2ms, application-code: 20ms)
+ GET /dashboard/analytics 200 in 2.9s (next.js: 2.6s, application-code: 277ms)
+ GET /api/analytics/overview 200 in 2.6s (next.js: 1803ms, application-code: 795ms)
+ GET /api/analytics/overview 200 in 2.8s (next.js: 1790ms, application-code: 1041ms)
+ GET /notifications 200 in 1299ms (next.js: 1255ms, application-code: 44ms)
+ GET /api/notifications 200 in 2.0s (next.js: 1204ms, application-code: 805ms)
+ GET /api/notifications 200 in 2.2s (next.js: 1208ms, application-code: 979ms)
+ GET / 200 in 1613ms (next.js: 1556ms, application-code: 57ms)
+ GET /search 200 in 1449ms (next.js: 1405ms, application-code: 44ms)
+ GET /api/posts?limit=48 200 in 1725ms (next.js: 875ms, application-code: 849ms)
+ GET /api/posts?limit=48 200 in 1752ms (next.js: 887ms, application-code: 865ms)
+ GET /mentors 200 in 1941ms (next.js: 1897ms, application-code: 44ms)
+ GET /mentors 200 in 126ms (next.js: 53ms, application-code: 73ms)
+ GET /api/mentors/search?limit=48 200 in 1902ms (next.js: 1194ms, application-code: 709ms)
+ GET /api/mentors/search?limit=48 200 in 1889ms (next.js: 1175ms, application-code: 714ms)
+ GET /ideas 200 in 1756ms (next.js: 1673ms, application-code: 83ms)
+ GET /dashboard 200 in 33ms (next.js: 11ms, application-code: 23ms)
+ GET /dashboard/analytics 200 in 39ms (next.js: 14ms, application-code: 25ms)
+ GET /api/analytics/overview 200 in 1921ms (next.js: 1160ms, application-code: 761ms)
+ GET /api/analytics/overview 200 in 1941ms (next.js: 1178ms, application-code: 763ms)
+ GET /notifications 200 in 98ms (next.js: 57ms, application-code: 41ms)
+ GET /api/notifications 200 in 1218ms (next.js: 802ms, application-code: 417ms)
+ GET /api/notifications 200 in 1384ms (next.js: 815ms, application-code: 569ms)
+ GET / 200 in 86ms (next.js: 45ms, application-code: 41ms)
+ GET /profile 200 in 2.2s (next.js: 2.2s, application-code: 43ms)
+ GET /dashboard/analytics 200 in 43ms (next.js: 20ms, application-code: 23ms)
+ GET /api/analytics/overview 200 in 536ms (next.js: 1400µs, application-code: 535ms)
+ GET /api/analytics/overview 200 in 744ms (next.js: 71ms, application-code: 672ms)
+ GET /ideas 200 in 39ms (next.js: 12ms, application-code: 27ms)
+ GET /ideas/explore 200 in 56ms (next.js: 15ms, application-code: 41ms)
+ GET /ideas/explore 200 in 22ms (next.js: 2ms, application-code: 19ms)
+ GET /api/posts?limit=40 200 in 198ms (next.js: 1378µs, application-code: 197ms)
+ GET /api/posts?limit=40 200 in 289ms (next.js: 5ms, application-code: 284ms)
+ GET /ideas 200 in 19ms (next.js: 1700µs, application-code: 17ms)
+ GET /ideas/explore 200 in 42ms (next.js: 2ms, application-code: 40ms)
+ GET /ideas/explore 200 in 24ms (next.js: 3ms, application-code: 21ms)
+ GET /api/posts?limit=40 200 in 281ms (next.js: 2ms, application-code: 279ms)
+ GET /api/posts?limit=40 200 in 356ms (next.js: 1528µs, application-code: 355ms)
+▲ Next.js 16.2.2 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://172.28.20.160:3000
+- Environments: .env.local
+✓ Ready in 563ms
+
+  We detected TypeScript in your project and reconfigured your tsconfig.json file for you.
+  The following mandatory changes were made to your tsconfig.json:
+
+  	- jsx was set to react-jsx (next.js uses the React automatic runtime)
+
+
+ GET /ideas/explore 404 in 3.3s (next.js: 2.7s, application-code: 633ms)
+ GET /ideas/explore 404 in 69ms (next.js: 8ms, application-code: 61ms)
+ GET /ideas/explore 404 in 3.3s (next.js: 2.6s, application-code: 704ms)
+ GET /ideas/explore 404 in 92ms (next.js: 8ms, application-code: 84ms)
+ GET /ideas/explore 404 in 91ms (next.js: 3ms, application-code: 88ms)
+ GET /ideas/explore 404 in 344ms (next.js: 121ms, application-code: 223ms)
+ GET /ideas/explore 404 in 167ms (next.js: 4ms, application-code: 163ms)
+▲ Next.js 16.2.2 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://172.28.20.160:3000
+- Environments: .env.local
+✓ Ready in 394ms
+
+○ Compiling /ideas/explore ...
+ GET /ideas/explore 200 in 5.8s (next.js: 5.3s, application-code: 468ms)
+ GET /ideas/explore 200 in 134ms (next.js: 61ms, application-code: 73ms)
+ GET /api/posts?limit=40 200 in 2.8s (next.js: 1792ms, application-code: 992ms)
+ GET / 200 in 1289ms (next.js: 922ms, application-code: 366ms)
+ GET /ideas/explore 200 in 239ms (next.js: 19ms, application-code: 220ms)
+ GET /api/posts?limit=40 200 in 435ms (next.js: 96ms, application-code: 339ms)
+ GET /login 200 in 1456ms (next.js: 1393ms, application-code: 63ms)
+▲ Next.js 16.2.2 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://172.28.20.160:3000
+- Environments: .env.local
+✓ Ready in 655ms
+
+○ Compiling /login ...
