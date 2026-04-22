@@ -99,6 +99,27 @@ export function ProfileSection() {
     toast.success("Profile saved! ✨");
   }
 
+  async function onSubmitAndWait(data: ProfileInput) {
+    const profile: MentorProfile = {
+      bio:                      data.bio,
+      skills:                   data.skills,
+      availability:             data.availability,
+      availabilityStatus:       data.availabilityStatus,
+      yearsExperience:          data.yearsExperience,
+      linkedIn:                 data.linkedIn || undefined,
+      github:                   data.github || undefined,
+      avatarUrl:                data.avatarUrl || undefined,
+    };
+
+    try {
+      await updateMentorProfile(profile);
+      setEditing(false);
+      toast.success("Profile saved! ✨");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save profile.");
+    }
+  }
+
   function handleCancel() {
     reset();
     setEditing(false);
@@ -150,7 +171,7 @@ export function ProfileSection() {
         )}
       </div>
 
-      <form id="profile-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form id="profile-form" onSubmit={handleSubmit(onSubmitAndWait)} className="space-y-5">
         {/* Avatar + banner */}
         <div className="rounded-2xl border border-[#FFCBA4]/30 bg-white shadow-sm overflow-hidden">
           <div className="relative h-28 bg-gradient-to-r from-[#0F0F0F] via-[#1c0f00] to-[#2a1200]">
