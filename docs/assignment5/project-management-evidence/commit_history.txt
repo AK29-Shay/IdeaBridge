@@ -1,0 +1,1521 @@
+commit ac73c165bec88287d2ef207f600a34d7e00a8f73
+date: 2026-04-20
+author: AK29-Shay
+subject: Merge pull request #10 from AK29-Shay/dev
+files:
+- (none)
+
+commit a1f5eb5498817e06e1d53f4dfe1f1fe7298f6ee2
+date: 2026-04-20
+author: AK29-Shay
+subject: feat: enhance logging for /login and /dashboard routes with detailed response times
+files:
+- .next-dev.err.log
+- .next-dev.log
+
+commit 1c5b40f5b421332d8823a3bc28d93e97f7ca9593
+date: 2026-04-20
+author: AK29-Shay
+subject: feat: add detailed logging for /login endpoint response times
+files:
+- .next-dev.log
+
+commit da194a7ce3975b1b2df309534e5743ef95078210
+date: 2026-04-20
+author: AK29-Shay
+subject: feat: update log files with detailed request timings and error handling information
+files:
+- .next-dev.err.log
+- .next-dev.log
+
+commit e773e1f6bbdc1b1ca24cc9b4f125fec1da385759
+date: 2026-04-20
+author: AK29-Shay
+subject: fix: update .next-dev.log with new API response times and compilation details for /ideas/explore
+files:
+- .next-dev.log
+
+commit 0d3f37149a8bb1c0cd28a78a5e01af34735beeba
+date: 2026-04-20
+author: AK29-Shay
+subject: Update tsconfig.json to enhance compiler options and improve project structure
+files:
+- .next-dev.err.log
+
+commit 6037701593ec115db6498231271a608f5d1e6b4d
+date: 2026-04-20
+author: AK29-Shay
+subject: Merge branch 'member1-sneha-dhaya-IT' of https://github.com/AK29-Shay/IdeaBridge into temp-pr3
+files:
+- (none)
+
+commit 3e986f56697c9ed916f99e7b7b0f8ac6f7d3a500
+date: 2026-04-20
+author: AK29-Shay
+subject: Update tsconfig.json to use 'react-jsx' for JSX transformation and add log files for development errors
+files:
+- .next-dev.err.log
+- .next-dev.log
+- tsconfig.json
+
+commit c9139d22caaba72c3bf2504c4173c63b7143480a
+date: 2026-04-20
+author: AK29-Shay
+subject: On temp-pr3: dd
+files:
+- (none)
+
+commit 158ca6e1847de0c2a0c737d8e6aecc048f1364c4
+date: 2026-04-20
+author: AK29-Shay
+subject: index on temp-pr3: 134d6cc5 Resolve merge conflict
+files:
+- (none)
+
+commit 2311ea39ccd333cbac7a6a086f53e311909cbefd
+date: 2026-04-20
+author: AK29-Shay
+subject: untracked files on temp-pr3: 134d6cc5 Resolve merge conflict
+files:
+- .next-dev.err.log
+- .next-dev.log
+- supabase/.temp/cli-latest
+- test-results/.last-run.json
+- test-results/manual-browser-check/dashboard-index.png
+- test-results/manual-browser-check/home.png
+- test-results/manual-browser-check/ideas-explore-failed.png
+- test-results/manual-browser-check/ideas-explore.png
+- test-results/manual-browser-check/login.png
+- test-results/manual-browser-check/mentor-dashboard-protected.png
+- test-results/manual-browser-check/mentors.png
+- test-results/manual-browser-check/notifications-protected.png
+- test-results/manual-browser-check/register.png
+- test-results/manual-browser-check/report.json
+- test-results/manual-browser-check/search.png
+- test-results/manual-browser-check/student-dashboard-protected.png
+
+commit 04446b0b9ec8c91ee40225abe321d52d7739bc74
+date: 2026-04-20
+author: AK29-Shay
+subject: feat: enhance profile handling with legacy support and improved error management
+files:
+- .next-dev.err.log
+- .next-dev.log
+- backend/services/profileService.ts
+- context/AuthContext.tsx
+- lib/profileMapper.ts
+
+commit 7d5c6d637d764a76f82f1b7e1d40cda8d6be6de8
+date: 2026-04-20
+author: AK29-Shay
+subject: feat: enhance mentor profile service with legacy support and improved data mapping
+files:
+- .next-dev.err.log
+- .next-dev.log
+- backend/services/profileService.ts
+
+commit 789241d24d74f3490c416868ed9b1c2c23bd2c27
+date: 2026-04-20
+author: AK29-Shay
+subject: feat: add initial log files for Next.js development environment
+files:
+- .next-dev.err.log
+- .next-dev.log
+
+commit 3d3088850dfd1b98dacfc7fcf521b7a50afce69a
+date: 2026-04-20
+author: AK29-Shay
+subject: feat: add ProfilePage component with user editing functionality and Supabase server client integration
+files:
+- next.config.mjs
+- src/app/profile/page.tsx
+- src/lib/supabase-server.ts
+
+commit e27d8c2e183c7a44842996089acc950fbc3ab77e
+date: 2026-04-20
+author: AK29-Shay
+subject: Refactor: Remove unused Supabase client and utility files
+files:
+- .gitignore
+- README.md
+- app/api/mentor-application/approve/route.ts
+- app/api/mentor-application/route.ts
+- app/api/mentors/search/route.ts
+- app/api/notifications/route.ts
+- app/api/otp/send/route.ts
+- app/api/otp/verify/route.ts
+- app/api/profile/route.ts
+- app/api/ratings/route.ts
+- app/api/requests/route.ts
+- app/api/requests/status/route.ts
+- app/dashboard/mentor/blog/page.tsx
+- app/dashboard/mentor/layout.tsx
+- app/dashboard/mentor/page.tsx
+- app/dashboard/mentor/profile/page.tsx
+- app/dashboard/mentor/projects/page.tsx
+- app/dashboard/mentor/requests/page.tsx
+- app/dashboard/page.tsx
+- app/dashboard/student/layout.tsx
+- app/dashboard/student/page.tsx
+- app/dashboard/student/profile/page.tsx
+- app/dashboard/student/projects/page.tsx
+- app/dashboard/student/requests/page.tsx
+- app/mentors/[id]/page.tsx
+- app/mentors/page.tsx
+- app/notifications/page.tsx
+- app/register/page.tsx
+- app/search/page.tsx
+- backend/config/supabaseServer.ts
+- backend/controllers/notificationController.ts
+- backend/controllers/profileController.ts
+- backend/controllers/ratingController.ts
+- backend/controllers/requestController.ts
+- backend/middleware/auth.ts
+- backend/models/schemas.ts
+- backend/services/mentorApplicationService.ts
+- backend/services/notificationService.ts
+- backend/services/profileService.ts
+- backend/services/ratingService.ts
+- backend/services/requestService.ts
+- components/analytics/UnifiedAnalyticsDashboard.tsx
+- components/dashboard/DashboardPortalLayout.tsx
+- components/mentor/BlogSection.tsx
+- components/mentor/DashboardSection.tsx
+- components/mentor/ProjectsSection.tsx
+- components/mentor/RequestsSection.tsx
+- components/modals/UpdateProgressModal.tsx
+- components/shell/AppShell.tsx
+- components/student/DashboardSection.tsx
+- components/student/ProfileSection.tsx
+- components/student/RequestsSection.tsx
+- components/ui/form.tsx
+- components/ui/input.tsx
+- components/ui/label.tsx
+- components/ui/textarea.tsx
+- context/AuthContext.tsx
+- docs/DEPLOYMENT.md
+- docs/PROJECT_STRUCTURE.md
+- lib/authFetch.ts
+- lib/errorMessage.ts
+- lib/profileMapper.ts
+- lib/requestStatus.ts
+- lib/storage.ts
+- lib/supabase/admin.ts
+- lib/supabase/client.ts
+- lib/supabase/server.ts
+- lib/supabaseUploads.ts
+- lib/useMentorshipRequests.ts
+- lib/useStudentProjects.ts
+- member 4 files/AnalyticsSection.jsx
+- member 4 files/App.jsx
+- member 4 files/ChartCard.jsx
+- member 4 files/DashboardLayout.jsx
+- member 4 files/FilterBar.jsx
+- member 4 files/InsightNote.jsx
+- member 4 files/ProjectsList.jsx
+- member 4 files/StatCard.jsx
+- member 4 files/StudentAnalyticsDashboard.jsx
+- member 4 files/TopProjectsPanel.jsx
+- member 4 files/index.css
+- member 4 files/main.jsx
+- new update/AnalyticsSection.jsx
+- new update/App.jsx
+- new update/ChartCard.jsx
+- new update/DashboardLayout.jsx
+- new update/FilterBar.jsx
+- new update/InsightNote.jsx
+- new update/ProjectsList.jsx
+- new update/StatCard.jsx
+- new update/StudentAnalyticsDashboard.jsx
+- new update/TopProjectsPanel.jsx
+- new update/index.css
+- new update/main.jsx
+- next.config.mjs
+- next.config.ts
+- package-lock.json
+- package.json
+- playwright.config.ts
+- src/app/api/posts/[postId]/comments/route.ts
+- src/app/api/posts/route.ts
+- src/app/auth/page.tsx
+- src/app/favicon.ico
+- src/app/globals.css
+- src/app/layout.tsx
+- src/app/profile/page.tsx
+- src/lib/api.ts
+- src/lib/supabase-server.ts
+- src/lib/supabase.ts
+- src/lib/utils.ts
+- src/middleware.ts
+- src/types/database.ts
+- supabase/unified_migration.sql
+- tests/dashboard-routes.spec.ts
+- tests/public-routes.spec.ts
+- types/request.ts
+- types/user.ts
+
+commit b8a5eecc45ec95f15752f5bd52d66642e75669a4
+date: 2026-04-15
+author: Sneha Dhaya
+subject: solved errors
+files:
+- .env.local.example
+- .gitignore
+- CLAUDE.md
+- README.md
+- app/api/blog/[id]/route.ts
+- app/api/blog/route.ts
+- app/api/health/db/route.ts
+- app/api/mentor-application/approve/route.ts
+- app/api/mentor-application/route.ts
+- app/api/mentors/search/route.ts
+- app/api/notifications/route.ts
+- app/api/otp/send/route.ts
+- app/api/otp/verify/route.ts
+- app/api/posts/[postId]/comments/[commentId]/route.ts
+- app/api/posts/[postId]/comments/route.ts
+- app/api/posts/route.ts
+- app/api/profile/route.ts
+- app/api/ratings/route.ts
+- app/api/requests/route.ts
+- app/api/requests/status/route.ts
+- app/api/uploads/route.ts
+- app/auth/page.tsx
+- app/dashboard/analytics/page.tsx
+- app/dashboard/mentor/page.tsx
+- app/dashboard/page.tsx
+- app/forgot-password/page.tsx
+- app/globals.css
+- app/ideas/explore/page.tsx
+- app/ideas/page.tsx
+- app/layout.tsx
+- app/login/page.tsx
+- app/mentors/page.tsx
+- app/notifications/page.tsx
+- app/page.tsx
+- app/register/page.tsx
+- app/reset-password/[token]/page.tsx
+- app/search/page.tsx
+- backend/middleware/auth.ts
+- backend/migrations/init.sql
+- backend/models/schemas.ts
+- backend/modules/index.ts
+- backend/modules/mentor-application/index.ts
+- backend/modules/mentor/index.ts
+- backend/modules/notification/index.ts
+- backend/modules/otp/index.ts
+- backend/modules/profile/index.ts
+- backend/modules/rating/index.ts
+- backend/modules/request/index.ts
+- backend/services/blogPersistenceService.ts
+- backend/services/ideaPersistenceService.ts
+- backend/services/profileService.ts
+- backend/services/ratingService.ts
+- components/analytics/UnifiedAnalyticsDashboard.tsx
+- components/auth/RequireAuth.tsx
+- components/cards/ProjectCard.tsx
+- components/ideas/DynamicPostForm.tsx
+- components/ideas/ProjectThread.tsx
+- components/mentor/BlogSection.tsx
+- components/mentor/ProfileSection.tsx
+- components/mentor/RequestsSection.tsx
+- components/modals/UpdateProgressModal.tsx
+- components/shell/AppShell.tsx
+- components/student/ProfileSection.tsx
+- components/student/ProjectsSection.tsx
+- context/AuthContext.tsx
+- docs/PROJECT_STRUCTURE.md
+- eslint.config.mjs
+- lib/ideas/mockThread.ts
+- lib/supabaseUploads.ts
+- lib/zod/projectSchemas.ts
+- member 4 files/AnalyticsSection.jsx
+- member 4 files/App.jsx
+- member 4 files/ChartCard.jsx
+- member 4 files/DashboardLayout.jsx
+- member 4 files/FilterBar.jsx
+- member 4 files/InsightNote.jsx
+- member 4 files/ProjectsList.jsx
+- member 4 files/StatCard.jsx
+- member 4 files/StudentAnalyticsDashboard.jsx
+- member 4 files/TopProjectsPanel.jsx
+- member 4 files/index.css
+- member 4 files/main.jsx
+- new update/AnalyticsSection.jsx
+- new update/App.jsx
+- new update/ChartCard.jsx
+- new update/DashboardLayout.jsx
+- new update/FilterBar.jsx
+- new update/InsightNote.jsx
+- new update/ProjectsList.jsx
+- new update/StatCard.jsx
+- new update/StudentAnalyticsDashboard.jsx
+- new update/TopProjectsPanel.jsx
+- new update/index.css
+- new update/main.jsx
+- next.config.mjs
+- next.config.ts
+- package-lock.json
+- package.json
+- scripts/tmp/check_dummy_login.mjs
+- scripts/tmp/inspect_db_schema.mjs
+- scripts/tmp/tmp_contrast_fix.js
+- scripts/tmp/tmp_refactor.js
+- scripts/tmp/verify_backend_profile_api.mjs
+- src/app/api/posts/[postId]/comments/route.ts
+- src/app/api/posts/route.ts
+- src/app/auth/page.tsx
+- src/app/favicon.ico
+- src/app/globals.css
+- src/app/layout.tsx
+- src/app/profile/page.tsx
+- src/lib/api.ts
+- src/lib/supabase-server.ts
+- src/lib/supabase.ts
+- src/lib/utils.ts
+- src/middleware.ts
+- src/types/database.ts
+- supabase/schema.sql
+- supabase/unified_migration.sql
+- tsconfig.json
+- types/student.ts
+
+commit 9abac14ff8f7970113d915291c03af91c7ea0dc9
+date: 2026-04-10
+author: AK29-Shay
+subject: Merge pull request #9 from AK29-Shay/dev
+files:
+- (none)
+
+commit 395279e6efc9b6412d9d3d15e3b3f92e5abed607
+date: 2026-04-10
+author: AK29-Shay
+subject: feat: implement file upload API with bucket management and validation
+files:
+- app/api/uploads/route.ts
+- backend/services/ideaPersistenceService.ts
+- lib/supabaseUploads.ts
+
+commit 4a7c1fa5fe97a1cca086c9e867c870e5434a9958
+date: 2026-04-10
+author: AK29-Shay
+subject: feat: add Student Analytics Dashboard with various components including FilterBar, StatCard, and ProjectsList
+files:
+- app/api/analytics/overview/route.ts
+- app/api/blog/[id]/route.ts
+- app/api/blog/route.ts
+- app/api/health/db/route.ts
+- app/api/mentor-application/approve/route.ts
+- app/api/posts/[postId]/comments/[commentId]/route.ts
+- app/api/posts/[postId]/comments/route.ts
+- app/api/posts/route.ts
+- app/api/profile/route.ts
+- app/api/requests/status/route.ts
+- app/dashboard/analytics/page.tsx
+- app/dashboard/page.tsx
+- app/ideas/explore/page.tsx
+- backend/middleware/auth.ts
+- backend/migrations/init.sql
+- backend/models/schemas.ts
+- backend/services/blogPersistenceService.ts
+- backend/services/ideaPersistenceService.ts
+- backend/services/profileService.ts
+- backend/services/ratingService.ts
+- components/analytics/UnifiedAnalyticsDashboard.tsx
+- components/ideas/DynamicPostForm.tsx
+- components/ideas/ProjectThread.tsx
+- components/mentor/BlogSection.tsx
+- components/shell/AppShell.tsx
+- new update/AnalyticsSection.jsx
+- new update/App.jsx
+- new update/ChartCard.jsx
+- new update/DashboardLayout.jsx
+- new update/FilterBar.jsx
+- new update/InsightNote.jsx
+- new update/ProjectsList.jsx
+- new update/StatCard.jsx
+- new update/StudentAnalyticsDashboard.jsx
+- new update/TopProjectsPanel.jsx
+- new update/index.css
+- new update/main.jsx
+- package-lock.json
+- package.json
+- scripts/tmp/inspect_db_schema.mjs
+- scripts/tmp/verify_backend_profile_api.mjs
+- supabase/unified_migration.sql
+
+commit 1f2b3a6a59188dd7c10014e9572c1592aa7a4558
+date: 2026-04-10
+author: AK29-Shay
+subject: feat: implement automated login scenarios for student and mentor roles
+files:
+- scripts/tmp/check_dummy_login.mjs
+
+commit f2f2d4a623a1a2f66469ef64108ba6106f21face
+date: 2026-04-10
+author: AK29-Shay
+subject: feat: fix demo login and add project detail threads in analytics
+files:
+- app/auth/page.tsx
+- app/login/page.tsx
+- components/cards/ProjectCard.tsx
+- components/student/ProjectsSection.tsx
+- context/AuthContext.tsx
+- member 4 files/AnalyticsSection.jsx
+- member 4 files/App.jsx
+- member 4 files/ChartCard.jsx
+- member 4 files/DashboardLayout.jsx
+- member 4 files/FilterBar.jsx
+- member 4 files/InsightNote.jsx
+- member 4 files/ProjectsList.jsx
+- member 4 files/StatCard.jsx
+- member 4 files/StudentAnalyticsDashboard.jsx
+- member 4 files/TopProjectsPanel.jsx
+- member 4 files/index.css
+- member 4 files/main.jsx
+- src/middleware.ts
+
+commit f33914571ba508e9a52ab49a2a2057fb13b6f813
+date: 2026-04-10
+author: AK29-Shay
+subject: fix: improve auth link contrast
+files:
+- app/forgot-password/page.tsx
+- app/reset-password/[token]/page.tsx
+
+commit 86e12c434791c96cec4c83df48efb9946ddca8c9
+date: 2026-04-10
+author: AK29-Shay
+subject: feat: update theme colors and enhance link styles in login and register pages
+files:
+- app/globals.css
+- app/login/page.tsx
+- app/register/page.tsx
+
+commit 9957442120ac8176bba3d8dbe57cdefa649043f5
+date: 2026-04-10
+author: AK29-Shay
+subject: feat: add Supabase-limited uploads for threads and dynamic form
+files:
+- .gitignore
+- components/ideas/DynamicPostForm.tsx
+- components/ideas/ProjectThread.tsx
+- lib/ideas/mockThread.ts
+- lib/supabaseUploads.ts
+
+commit 534741bdb91d34bb7b4f0917096819452895aa9f
+date: 2026-04-10
+author: AK29-Shay
+subject: merge: retest hydration and mentors UX fixes into dev
+files:
+- (none)
+
+commit 8da8bb8c871901d4a5e16d5ad680d2c6cd9a4493
+date: 2026-04-10
+author: AK29-Shay
+subject: fix: stabilize hydration and mentors empty-state UX
+files:
+- app/layout.tsx
+- app/mentors/page.tsx
+- app/register/page.tsx
+
+commit 801b03a7a2a50752ddcc63b3d6ac70b4a17371a2
+date: 2026-04-10
+author: AK29-Shay
+subject: merge: integrate dev into main
+files:
+- (none)
+
+commit 83395b5d3ec70fe30acb5c01b609cd7ca0a18453
+date: 2026-04-10
+author: AK29-Shay
+subject: feat: integrate routes and restructure project domains
+files:
+- app/api/mentor-application/approve/route.ts
+- app/api/mentor-application/route.ts
+- app/api/mentors/search/route.ts
+- app/api/notifications/route.ts
+- app/api/otp/send/route.ts
+- app/api/otp/verify/route.ts
+- app/api/profile/route.ts
+- app/api/ratings/route.ts
+- app/api/requests/route.ts
+- app/api/requests/status/route.ts
+- app/dashboard/analytics/page.tsx
+- app/dashboard/page.tsx
+- app/ideas/explore/page.tsx
+- app/ideas/page.tsx
+- app/notifications/page.tsx
+- app/page.tsx
+- app/search/page.tsx
+- backend/middleware/auth.ts
+- backend/modules/index.ts
+- backend/modules/mentor-application/index.ts
+- backend/modules/mentor/index.ts
+- backend/modules/notification/index.ts
+- backend/modules/otp/index.ts
+- backend/modules/profile/index.ts
+- backend/modules/rating/index.ts
+- backend/modules/request/index.ts
+- components/ideas/DynamicPostForm.tsx
+- components/ideas/ProjectThread.tsx
+- components/mentor/ProfileSection.tsx
+- components/modals/UpdateProgressModal.tsx
+- components/student/ProfileSection.tsx
+- docs/PROJECT_STRUCTURE.md
+- eslint.config.mjs
+- lib/ideas/mockThread.ts
+- lib/zod/projectSchemas.ts
+- next.config.mjs
+- package-lock.json
+- package.json
+- scripts/tmp/tmp_contrast_fix.js
+- scripts/tmp/tmp_refactor.js
+- src/app/dashboard/page.tsx
+- src/app/page.tsx
+- src/app/profile/page.tsx
+- src/app/search/page.tsx
+- src/lib/supabase-server.ts
+- tsconfig.json
+- types/student.ts
+
+commit 584d35299b99fa91e262eddb6d4980198bf70d78
+date: 2026-04-10
+author: AK29-Shay
+subject: feat(phase3): unified Supabase migration SQL - all 4 modules, RLS, triggers, analytics view
+files:
+- supabase/unified_migration.sql
+
+commit 2c4300a61de8ff6b2a0ce6ae0e32ce4d2eb49146
+date: 2026-04-10
+author: AK29-Shay
+subject: feat(phase2): unified AppShell sidebar navigation, updated home page with module cards, wired all routes
+files:
+- app/dashboard/analytics/page.tsx
+- app/ideas/explore/page.tsx
+- app/ideas/page.tsx
+- app/layout.tsx
+- app/page.tsx
+- app/search/page.tsx
+- components/shell/AppShell.tsx
+
+commit ca37c9ae345e64576efaaec2ca56deb09004c779
+date: 2026-04-10
+author: AK29-Shay
+subject: merge(member4): integrate Analytics Dashboard module into dev
+files:
+- src/app/dashboard/page.tsx
+
+commit e72be4a1e5a0628153d3e3335cf248e8d718d0e8
+date: 2026-04-10
+author: AK29-Shay
+subject: merge(member3): integrate Search, Filters and Trending module into dev
+files:
+- src/app/search/page.tsx
+
+commit 699c4ebbfe9bdabf115cdbb47e2ff9233f74d7c7
+date: 2026-04-10
+author: AK29-Shay
+subject: merge(member1): integrate Auth page, Profile page, route Middleware, and server Supabase client into dev
+files:
+- src/app/auth/page.tsx
+- src/app/profile/page.tsx
+- src/lib/supabase-server.ts
+- src/middleware.ts
+
+commit d7c9f9c934cfaa9ea867151499f7d9dcd89a15f9
+date: 2026-04-10
+author: Sneha Dhaya
+subject: chore: add .gitignore to exclude node_modules
+files:
+- .gitignore
+
+commit da835dfdc8a01673195f3b240f0aecb905da81ae
+date: 2026-04-10
+author: Sneha Dhaya
+subject: Sync all changes and fix Supabase auth/profile/dashboard flow
+files:
+- (none)
+
+commit e72e6719b5a9e345dfccec248a9ad7fd798c8a94
+date: 2026-04-10
+author: Sneha Dhaya
+subject: Refactor code structure for improved readability and maintainability
+files:
+- .env.local
+- .gitignore
+- .next/app-build-manifest.json
+- .next/build-manifest.json
+- .next/cache/.tsbuildinfo
+- .next/cache/next-minimal-server.js.nft.json
+- .next/cache/next-server.js.nft.json
+- .next/cache/webpack/client-development-fallback/0.pack.gz
+- .next/cache/webpack/client-development-fallback/index.pack.gz
+- .next/cache/webpack/client-development-fallback/index.pack.gz.old
+- .next/cache/webpack/client-development/0.pack.gz
+- .next/cache/webpack/client-development/1.pack.gz
+- .next/cache/webpack/client-development/10.pack.gz
+- .next/cache/webpack/client-development/11.pack.gz
+- .next/cache/webpack/client-development/12.pack.gz
+- .next/cache/webpack/client-development/13.pack.gz
+- .next/cache/webpack/client-development/14.pack.gz
+- .next/cache/webpack/client-development/15.pack.gz
+- .next/cache/webpack/client-development/16.pack.gz
+- .next/cache/webpack/client-development/17.pack.gz
+- .next/cache/webpack/client-development/18.pack.gz
+- .next/cache/webpack/client-development/19.pack.gz
+- .next/cache/webpack/client-development/2.pack.gz
+- .next/cache/webpack/client-development/20.pack.gz
+- .next/cache/webpack/client-development/3.pack.gz
+- .next/cache/webpack/client-development/4.pack.gz
+- .next/cache/webpack/client-development/5.pack.gz
+- .next/cache/webpack/client-development/6.pack.gz
+- .next/cache/webpack/client-development/7.pack.gz
+- .next/cache/webpack/client-development/8.pack.gz
+- .next/cache/webpack/client-development/9.pack.gz
+- .next/cache/webpack/client-development/index.pack.gz
+- .next/cache/webpack/client-development/index.pack.gz.old
+- .next/cache/webpack/client-production/0.pack
+- .next/cache/webpack/client-production/1.pack
+- .next/cache/webpack/client-production/10.pack
+- .next/cache/webpack/client-production/11.pack
+- .next/cache/webpack/client-production/12.pack
+- .next/cache/webpack/client-production/13.pack
+- .next/cache/webpack/client-production/14.pack
+- .next/cache/webpack/client-production/15.pack
+- .next/cache/webpack/client-production/16.pack
+- .next/cache/webpack/client-production/17.pack
+- .next/cache/webpack/client-production/18.pack
+- .next/cache/webpack/client-production/19.pack
+- .next/cache/webpack/client-production/2.pack
+- .next/cache/webpack/client-production/3.pack
+- .next/cache/webpack/client-production/4.pack
+- .next/cache/webpack/client-production/5.pack
+- .next/cache/webpack/client-production/6.pack
+- .next/cache/webpack/client-production/7.pack
+- .next/cache/webpack/client-production/8.pack
+- .next/cache/webpack/client-production/9.pack
+- .next/cache/webpack/client-production/index.pack
+- .next/cache/webpack/client-production/index.pack.old
+- .next/cache/webpack/edge-server-production/0.pack
+- .next/cache/webpack/edge-server-production/index.pack
+- .next/cache/webpack/server-development/0.pack.gz
+- .next/cache/webpack/server-development/1.pack.gz
+- .next/cache/webpack/server-development/10.pack.gz
+- .next/cache/webpack/server-development/11.pack.gz
+- .next/cache/webpack/server-development/12.pack.gz
+- .next/cache/webpack/server-development/13.pack.gz
+- .next/cache/webpack/server-development/14.pack.gz
+- .next/cache/webpack/server-development/15.pack.gz
+- .next/cache/webpack/server-development/16.pack.gz
+- .next/cache/webpack/server-development/17.pack.gz
+- .next/cache/webpack/server-development/18.pack.gz
+- .next/cache/webpack/server-development/19.pack.gz
+- .next/cache/webpack/server-development/2.pack.gz
+- .next/cache/webpack/server-development/3.pack.gz
+- .next/cache/webpack/server-development/4.pack.gz
+- .next/cache/webpack/server-development/5.pack.gz
+- .next/cache/webpack/server-development/6.pack.gz
+- .next/cache/webpack/server-development/7.pack.gz
+- .next/cache/webpack/server-development/8.pack.gz
+- .next/cache/webpack/server-development/9.pack.gz
+- .next/cache/webpack/server-development/index.pack.gz
+- .next/cache/webpack/server-development/index.pack.gz.old
+- .next/cache/webpack/server-production/0.pack
+- .next/cache/webpack/server-production/1.pack
+- .next/cache/webpack/server-production/10.pack
+- .next/cache/webpack/server-production/11.pack
+- .next/cache/webpack/server-production/12.pack
+- .next/cache/webpack/server-production/13.pack
+- .next/cache/webpack/server-production/2.pack
+- .next/cache/webpack/server-production/3.pack
+- .next/cache/webpack/server-production/4.pack
+- .next/cache/webpack/server-production/5.pack
+- .next/cache/webpack/server-production/6.pack
+- .next/cache/webpack/server-production/7.pack
+- .next/cache/webpack/server-production/8.pack
+- .next/cache/webpack/server-production/9.pack
+- .next/cache/webpack/server-production/index.pack
+- .next/cache/webpack/server-production/index.pack.old
+- .next/package.json
+- .next/react-loadable-manifest.json
+- .next/server/app-paths-manifest.json
+- .next/server/app/_not-found/page.js
+- .next/server/app/_not-found/page_client-reference-manifest.js
+- .next/server/app/dashboard/mentor/page.js
+- .next/server/app/dashboard/mentor/page_client-reference-manifest.js
+- .next/server/app/dashboard/student/page.js
+- .next/server/app/dashboard/student/page_client-reference-manifest.js
+- .next/server/app/favicon.ico/route.js
+- .next/server/app/login/page.js
+- .next/server/app/login/page_client-reference-manifest.js
+- .next/server/app/page.js
+- .next/server/app/page_client-reference-manifest.js
+- .next/server/app/register/page.js
+- .next/server/app/register/page_client-reference-manifest.js
+- .next/server/interception-route-rewrite-manifest.js
+- .next/server/middleware-build-manifest.js
+- .next/server/middleware-manifest.json
+- .next/server/middleware-react-loadable-manifest.js
+- .next/server/next-font-manifest.js
+- .next/server/next-font-manifest.json
+- .next/server/pages-manifest.json
+- .next/server/server-reference-manifest.js
+- .next/server/server-reference-manifest.json
+- .next/server/vendor-chunks/@floating-ui.js
+- .next/server/vendor-chunks/@hookform.js
+- .next/server/vendor-chunks/@radix-ui.js
+- .next/server/vendor-chunks/@supabase.js
+- .next/server/vendor-chunks/@swc.js
+- .next/server/vendor-chunks/aria-hidden.js
+- .next/server/vendor-chunks/class-variance-authority.js
+- .next/server/vendor-chunks/clsx.js
+- .next/server/vendor-chunks/get-nonce.js
+- .next/server/vendor-chunks/iceberg-js.js
+- .next/server/vendor-chunks/lucide-react.js
+- .next/server/vendor-chunks/next-themes.js
+- .next/server/vendor-chunks/next.js
+- .next/server/vendor-chunks/react-hook-form.js
+- .next/server/vendor-chunks/react-remove-scroll-bar.js
+- .next/server/vendor-chunks/react-remove-scroll.js
+- .next/server/vendor-chunks/react-style-singleton.js
+- .next/server/vendor-chunks/sonner.js
+- .next/server/vendor-chunks/tailwind-merge.js
+- .next/server/vendor-chunks/tslib.js
+- .next/server/vendor-chunks/use-callback-ref.js
+- .next/server/vendor-chunks/use-sidecar.js
+- .next/server/vendor-chunks/use-sync-external-store.js
+- .next/server/vendor-chunks/zod.js
+- .next/server/webpack-runtime.js
+- .next/static/chunks/app-pages-internals.js
+- .next/static/chunks/app/_not-found/page.js
+- .next/static/chunks/app/dashboard/layout.js
+- .next/static/chunks/app/dashboard/mentor/layout.js
+- .next/static/chunks/app/dashboard/mentor/page.js
+- .next/static/chunks/app/dashboard/student/page.js
+- .next/static/chunks/app/layout.js
+- .next/static/chunks/app/login/page.js
+- .next/static/chunks/app/page.js
+- .next/static/chunks/app/register/page.js
+- .next/static/chunks/main-app.js
+- .next/static/chunks/polyfills.js
+- .next/static/chunks/webpack.js
+- .next/static/css/app/layout.css
+- .next/static/development/_buildManifest.js
+- .next/static/development/_ssgManifest.js
+- .next/static/webpack/015f4318ad4b0081.webpack.hot-update.json
+- .next/static/webpack/06f0ef01aa16c28b.webpack.hot-update.json
+- .next/static/webpack/1b90b34ffe66d8fa.webpack.hot-update.json
+- .next/static/webpack/214318a549c55eb5.webpack.hot-update.json
+- .next/static/webpack/2e0d967413017463.webpack.hot-update.json
+- .next/static/webpack/2e618d87399ce4cd.webpack.hot-update.json
+- .next/static/webpack/2f9632322b05448f.webpack.hot-update.json
+- .next/static/webpack/364888b2d4b57fda.webpack.hot-update.json
+- .next/static/webpack/3c33c7cb7101e491.webpack.hot-update.json
+- .next/static/webpack/3e5f14461c3a6b76.webpack.hot-update.json
+- .next/static/webpack/42043dfb2d634646.webpack.hot-update.json
+- .next/static/webpack/4a13f476dfe6471d.webpack.hot-update.json
+- .next/static/webpack/4d869289d3e68900.webpack.hot-update.json
+- .next/static/webpack/4f705fc00a63c7ac.webpack.hot-update.json
+- .next/static/webpack/50583b2480d55558.webpack.hot-update.json
+- .next/static/webpack/5c36c3009cfd41f2.webpack.hot-update.json
+- .next/static/webpack/5ce26bc8bb1c0f88.webpack.hot-update.json
+- .next/static/webpack/6053cf8174160085.webpack.hot-update.json
+- .next/static/webpack/633457081244afec._.hot-update.json
+- .next/static/webpack/64af29dd04745a2e.webpack.hot-update.json
+- .next/static/webpack/652b59b4419adbb4.webpack.hot-update.json
+- .next/static/webpack/75aa0ef025676de7.webpack.hot-update.json
+- .next/static/webpack/7a3e22a393933c0e.webpack.hot-update.json
+- .next/static/webpack/8c0c09a1973a8da2.webpack.hot-update.json
+- .next/static/webpack/939d4e45eec46c5c.webpack.hot-update.json
+- .next/static/webpack/93ee8310e36cd254.webpack.hot-update.json
+- .next/static/webpack/9baecd8b266d57f7.webpack.hot-update.json
+- .next/static/webpack/9ebe7e360588f932.webpack.hot-update.json
+- .next/static/webpack/a3fa9840ee0e4889.webpack.hot-update.json
+- .next/static/webpack/a473ba66b3818ced.webpack.hot-update.json
+- .next/static/webpack/a5cde4977a05ed8c.webpack.hot-update.json
+- .next/static/webpack/acd2f705b70a4fc4.webpack.hot-update.json
+- .next/static/webpack/app/dashboard/layout.06f0ef01aa16c28b.hot-update.js
+- .next/static/webpack/app/dashboard/layout.2f9632322b05448f.hot-update.js
+- .next/static/webpack/app/dashboard/layout.4d869289d3e68900.hot-update.js
+- .next/static/webpack/app/dashboard/layout.75aa0ef025676de7.hot-update.js
+- .next/static/webpack/app/dashboard/layout.bc2a9043f0245b5f.hot-update.js
+- .next/static/webpack/app/dashboard/layout.d6adcabb54a5742b.hot-update.js
+- .next/static/webpack/app/dashboard/layout.d77e68151e6bc09c.hot-update.js
+- .next/static/webpack/app/dashboard/mentor/page.2f9632322b05448f.hot-update.js
+- .next/static/webpack/app/dashboard/mentor/page.75aa0ef025676de7.hot-update.js
+- .next/static/webpack/app/dashboard/mentor/page.9ebe7e360588f932.hot-update.js
+- .next/static/webpack/app/dashboard/mentor/page.bc2a9043f0245b5f.hot-update.js
+- .next/static/webpack/app/dashboard/mentor/page.d61cbd218ce3bc86.hot-update.js
+- .next/static/webpack/app/dashboard/mentor/page.d6adcabb54a5742b.hot-update.js
+- .next/static/webpack/app/dashboard/mentor/page.d77e68151e6bc09c.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.06f0ef01aa16c28b.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.2f9632322b05448f.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.4d869289d3e68900.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.75aa0ef025676de7.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.9ebe7e360588f932.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.bc2a9043f0245b5f.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.d61cbd218ce3bc86.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.d6adcabb54a5742b.hot-update.js
+- .next/static/webpack/app/dashboard/student/page.d77e68151e6bc09c.hot-update.js
+- .next/static/webpack/app/layout.015f4318ad4b0081.hot-update.js
+- .next/static/webpack/app/layout.06f0ef01aa16c28b.hot-update.js
+- .next/static/webpack/app/layout.214318a549c55eb5.hot-update.js
+- .next/static/webpack/app/layout.2e0d967413017463.hot-update.js
+- .next/static/webpack/app/layout.2f9632322b05448f.hot-update.js
+- .next/static/webpack/app/layout.364888b2d4b57fda.hot-update.js
+- .next/static/webpack/app/layout.3c33c7cb7101e491.hot-update.js
+- .next/static/webpack/app/layout.4a13f476dfe6471d.hot-update.js
+- .next/static/webpack/app/layout.4d869289d3e68900.hot-update.js
+- .next/static/webpack/app/layout.4f705fc00a63c7ac.hot-update.js
+- .next/static/webpack/app/layout.50583b2480d55558.hot-update.js
+- .next/static/webpack/app/layout.5ce26bc8bb1c0f88.hot-update.js
+- .next/static/webpack/app/layout.6053cf8174160085.hot-update.js
+- .next/static/webpack/app/layout.64af29dd04745a2e.hot-update.js
+- .next/static/webpack/app/layout.652b59b4419adbb4.hot-update.js
+- .next/static/webpack/app/layout.75aa0ef025676de7.hot-update.js
+- .next/static/webpack/app/layout.7a3e22a393933c0e.hot-update.js
+- .next/static/webpack/app/layout.8c0c09a1973a8da2.hot-update.js
+- .next/static/webpack/app/layout.939d4e45eec46c5c.hot-update.js
+- .next/static/webpack/app/layout.93ee8310e36cd254.hot-update.js
+- .next/static/webpack/app/layout.9baecd8b266d57f7.hot-update.js
+- .next/static/webpack/app/layout.9ebe7e360588f932.hot-update.js
+- .next/static/webpack/app/layout.a473ba66b3818ced.hot-update.js
+- .next/static/webpack/app/layout.a5cde4977a05ed8c.hot-update.js
+- .next/static/webpack/app/layout.acd2f705b70a4fc4.hot-update.js
+- .next/static/webpack/app/layout.bc2a9043f0245b5f.hot-update.js
+- .next/static/webpack/app/layout.bc72f525838d694d.hot-update.js
+- .next/static/webpack/app/layout.c4b98f3a41b9a4a3.hot-update.js
+- .next/static/webpack/app/layout.d286cc783d1c07de.hot-update.js
+- .next/static/webpack/app/layout.d61cbd218ce3bc86.hot-update.js
+- .next/static/webpack/app/layout.d6adcabb54a5742b.hot-update.js
+- .next/static/webpack/app/layout.d77e68151e6bc09c.hot-update.js
+- .next/static/webpack/app/layout.f539d91450405d81.hot-update.js
+- .next/static/webpack/app/login/page.06f0ef01aa16c28b.hot-update.js
+- .next/static/webpack/app/login/page.2e0d967413017463.hot-update.js
+- .next/static/webpack/app/login/page.2f9632322b05448f.hot-update.js
+- .next/static/webpack/app/login/page.4d869289d3e68900.hot-update.js
+- .next/static/webpack/app/login/page.652b59b4419adbb4.hot-update.js
+- .next/static/webpack/app/login/page.75aa0ef025676de7.hot-update.js
+- .next/static/webpack/app/login/page.bc2a9043f0245b5f.hot-update.js
+- .next/static/webpack/app/login/page.d6adcabb54a5742b.hot-update.js
+- .next/static/webpack/app/login/page.d77e68151e6bc09c.hot-update.js
+- .next/static/webpack/app/register/page.06f0ef01aa16c28b.hot-update.js
+- .next/static/webpack/app/register/page.2f9632322b05448f.hot-update.js
+- .next/static/webpack/app/register/page.4d869289d3e68900.hot-update.js
+- .next/static/webpack/app/register/page.75aa0ef025676de7.hot-update.js
+- .next/static/webpack/app/register/page.bc2a9043f0245b5f.hot-update.js
+- .next/static/webpack/app/register/page.d6adcabb54a5742b.hot-update.js
+- .next/static/webpack/app/register/page.d77e68151e6bc09c.hot-update.js
+- .next/static/webpack/bc2a9043f0245b5f.webpack.hot-update.json
+- .next/static/webpack/bc72f525838d694d.webpack.hot-update.json
+- .next/static/webpack/c4b98f3a41b9a4a3.webpack.hot-update.json
+- .next/static/webpack/d286cc783d1c07de.webpack.hot-update.json
+- .next/static/webpack/d61cbd218ce3bc86.webpack.hot-update.json
+- .next/static/webpack/d6adcabb54a5742b.webpack.hot-update.json
+- .next/static/webpack/d77e68151e6bc09c.webpack.hot-update.json
+- .next/static/webpack/f539d91450405d81.webpack.hot-update.json
+- .next/static/webpack/webpack.015f4318ad4b0081.hot-update.js
+- .next/static/webpack/webpack.06f0ef01aa16c28b.hot-update.js
+- .next/static/webpack/webpack.1b90b34ffe66d8fa.hot-update.js
+- .next/static/webpack/webpack.214318a549c55eb5.hot-update.js
+- .next/static/webpack/webpack.2e0d967413017463.hot-update.js
+- .next/static/webpack/webpack.2e618d87399ce4cd.hot-update.js
+- .next/static/webpack/webpack.2f9632322b05448f.hot-update.js
+- .next/static/webpack/webpack.364888b2d4b57fda.hot-update.js
+- .next/static/webpack/webpack.3c33c7cb7101e491.hot-update.js
+- .next/static/webpack/webpack.3e5f14461c3a6b76.hot-update.js
+- .next/static/webpack/webpack.42043dfb2d634646.hot-update.js
+- .next/static/webpack/webpack.4a13f476dfe6471d.hot-update.js
+- .next/static/webpack/webpack.4d869289d3e68900.hot-update.js
+- .next/static/webpack/webpack.4f705fc00a63c7ac.hot-update.js
+- .next/static/webpack/webpack.50583b2480d55558.hot-update.js
+- .next/static/webpack/webpack.5c36c3009cfd41f2.hot-update.js
+- .next/static/webpack/webpack.5ce26bc8bb1c0f88.hot-update.js
+- .next/static/webpack/webpack.6053cf8174160085.hot-update.js
+- .next/static/webpack/webpack.64af29dd04745a2e.hot-update.js
+- .next/static/webpack/webpack.652b59b4419adbb4.hot-update.js
+- .next/static/webpack/webpack.75aa0ef025676de7.hot-update.js
+- .next/static/webpack/webpack.7a3e22a393933c0e.hot-update.js
+- .next/static/webpack/webpack.8c0c09a1973a8da2.hot-update.js
+- .next/static/webpack/webpack.939d4e45eec46c5c.hot-update.js
+- .next/static/webpack/webpack.93ee8310e36cd254.hot-update.js
+- .next/static/webpack/webpack.9baecd8b266d57f7.hot-update.js
+- .next/static/webpack/webpack.9ebe7e360588f932.hot-update.js
+- .next/static/webpack/webpack.a3fa9840ee0e4889.hot-update.js
+- .next/static/webpack/webpack.a473ba66b3818ced.hot-update.js
+- .next/static/webpack/webpack.a5cde4977a05ed8c.hot-update.js
+- .next/static/webpack/webpack.acd2f705b70a4fc4.hot-update.js
+- .next/static/webpack/webpack.bc2a9043f0245b5f.hot-update.js
+- .next/static/webpack/webpack.bc72f525838d694d.hot-update.js
+- .next/static/webpack/webpack.c4b98f3a41b9a4a3.hot-update.js
+- .next/static/webpack/webpack.d286cc783d1c07de.hot-update.js
+- .next/static/webpack/webpack.d61cbd218ce3bc86.hot-update.js
+- .next/static/webpack/webpack.d6adcabb54a5742b.hot-update.js
+- .next/static/webpack/webpack.d77e68151e6bc09c.hot-update.js
+- .next/static/webpack/webpack.f539d91450405d81.hot-update.js
+- .next/trace
+- .next/types/app/dashboard/layout.ts
+- .next/types/app/dashboard/mentor/layout.ts
+- .next/types/app/dashboard/mentor/page.ts
+- .next/types/app/dashboard/student/page.ts
+- .next/types/app/layout.ts
+- .next/types/app/login/page.ts
+- .next/types/app/page.ts
+- .next/types/app/register/page.ts
+- .next/types/package.json
+- next-env.d.ts
+- tsconfig.tsbuildinfo
+
+commit d656877f8f6631d264e18c43ee5c8eba6120ab5a
+date: 2026-04-10
+author: Sneha Dhaya
+subject: feat: add ProfileHeader and StudentProfileForm components for user profile management
+files:
+- app/api/blogs/[id]/route.ts
+- app/api/blogs/mine/route.ts
+- app/api/blogs/route.ts
+- app/api/mentor-application/approve/route.ts
+- app/api/mentor-application/route.ts
+- app/api/mentors/[id]/ratings/route.ts
+- app/api/mentors/[id]/route.ts
+- app/api/mentors/dashboard/route.ts
+- app/api/mentors/rating-summary/route.ts
+- app/api/mentors/search/route.ts
+- app/api/notifications/[id]/read/route.ts
+- app/api/notifications/route.ts
+- app/api/otp/resend/route.ts
+- app/api/otp/send/route.ts
+- app/api/otp/verify/route.ts
+- app/api/profile/route.ts
+- app/api/ratings/route.ts
+- app/api/requests/[id]/accept/route.ts
+- app/api/requests/[id]/reject/route.ts
+- app/api/requests/[id]/route.ts
+- app/api/requests/route.ts
+- app/api/requests/status/route.ts
+- app/api/supabase-test/route.ts
+- app/dashboard/layout.tsx
+- app/dashboard/mentor/page.tsx
+- app/dashboard/mentor/profile/page.tsx
+- app/dashboard/mentor/requests/page.tsx
+- app/dashboard/student/page.tsx
+- app/dashboard/student/profile/page.tsx
+- app/dev-seed/page.tsx
+- app/layout.tsx
+- app/login/page.tsx
+- app/page.tsx
+- app/profile-new/page.tsx
+- app/profile/page.tsx
+- backend/config/supabaseClient.ts
+- backend/config/supabaseServer.ts
+- backend/controllers/blogController.ts
+- backend/controllers/mentorController.ts
+- backend/controllers/notificationController.ts
+- backend/controllers/otpController.ts
+- backend/controllers/profileController.ts
+- backend/controllers/ratingController.ts
+- backend/controllers/requestController.ts
+- backend/middleware/auth.ts
+- backend/middleware/requireRole.ts
+- backend/migrations/001_full_schema.sql
+- backend/models/schemas.ts
+- backend/models/types.ts
+- backend/services/blogService.ts
+- backend/services/mentorService.ts
+- backend/services/notificationService.ts
+- backend/services/otpService.ts
+- backend/services/profileService.ts
+- backend/services/ratingService.ts
+- backend/services/requestService.ts
+- backend/utils/helpers.ts
+- backend/utils/otp.ts
+- components/auth/RequireAuth.tsx
+- components/auth/RequireRole.tsx
+- components/mentor/DashboardSection.tsx
+- components/mentor/ProfileSection.tsx
+- components/profile/MentorProfileForm.tsx
+- components/profile/ProfileHeader.tsx
+- components/profile/StudentProfileForm.tsx
+- components/site/Header.tsx
+- components/site/LandingHeader.tsx
+- components/student/ProfileSection.tsx
+- context/AuthContext.tsx
+- global.d.ts
+- package-lock.json
+- package.json
+- tsconfig.json
+- types/user.ts
+
+commit 38e30309a20c1ab86c3df94faac07b49d012d38a
+date: 2026-04-10
+author: AK29-Shay
+subject: feat(analytics): Analytics Dashboard module - stat cards, activity chart, post breakdown, top posts
+files:
+- README.md
+- src/app/dashboard/page.tsx
+
+commit a88c4dc9495356ffd90c610c4b4270416f957bc2
+date: 2026-04-10
+author: AK29-Shay
+subject: feat(search): Search, Filters and Trending module - debounced search, filter panel, trending sidebar
+files:
+- README.md
+- src/app/search/page.tsx
+
+commit ad4ae4b1ed57e713e34179ce35facf853c4e6ae2
+date: 2026-04-10
+author: AK29-Shay
+subject: feat(auth): User Management module - auth page, profile page, auth middleware, server Supabase client
+files:
+- .gitignore
+- README.md
+- next-env.d.ts
+- src/app/auth/page.tsx
+- src/app/profile/page.tsx
+- src/lib/supabase-server.ts
+- src/middleware.ts
+
+commit 112fa6da4ca81c4f050f3f2ef0328e7b45b32ee9
+date: 2026-04-10
+author: Nethmini Chinthana
+subject: status page
+files:
+- Frontend/src/StatusPage.jsx
+- Frontend/src/components/ProjectDetailsModal.css
+- Frontend/src/components/ProjectDetailsModal.jsx
+
+commit 0b44998808a8e09760c3c102d7a588180d2d1f25
+date: 2026-04-09
+author: Nethmini Chinthana
+subject: add part
+files:
+- .gitignore
+- .qoder/repowiki/en/content/Architecture Overview/Architecture Overview.md
+- .qoder/repowiki/en/content/Architecture Overview/Backend API Documentation.md
+- .qoder/repowiki/en/content/Architecture Overview/Database Models and Schema Documentation.md
+- .qoder/repowiki/en/content/Architecture Overview/Frontend React Application Documentation.md
+- .qoder/repowiki/en/content/Architecture Overview/Search & Filtering System Documentation.md
+- .qoder/repowiki/en/content/Development Guidelines.md
+- .qoder/repowiki/en/content/Getting Started.md
+- .qoder/repowiki/en/content/Implementation Roadmap.md
+- .qoder/repowiki/en/content/Project Overview.md
+- .qoder/repowiki/en/meta/repowiki-metadata.json
+- .vite/deps/_metadata.json
+- .vite/deps/package.json
+- Backend/Controlers/searchController.js
+- Backend/Model/ProjectIdea.js
+- Backend/Route/searchRoutes.js
+- Backend/app.js
+- Backend/config/projects.json
+- Backend/controller/searchController.js
+- Backend/data/sampleData.js
+- Backend/package-lock.json
+- Backend/package.json
+- Backend/routes/search.js
+- Backend/seed.js
+- Backend/utils/validation.js
+- Frontend/README.md
+- Frontend/app.js
+- Frontend/index.html
+- Frontend/package-lock.json
+- Frontend/package.json
+- Frontend/src/App.jsx
+- Frontend/src/StatusPage.css
+- Frontend/src/StatusPage.jsx
+- Frontend/src/main.jsx
+- Frontend/src/styles.css
+- Frontend/styles.css
+- ideabridge/.gitignore
+- ideabridge/AGENTS.md
+- ideabridge/CLAUDE.md
+- ideabridge/README.md
+- ideabridge/app/favicon.ico
+- ideabridge/app/globals.css
+- ideabridge/app/layout.tsx
+- ideabridge/app/page.tsx
+- ideabridge/eslint.config.mjs
+- ideabridge/next.config.ts
+- ideabridge/package-lock.json
+- ideabridge/package.json
+- ideabridge/postcss.config.mjs
+- ideabridge/public/file.svg
+- ideabridge/public/globe.svg
+- ideabridge/public/next.svg
+- ideabridge/public/vercel.svg
+- ideabridge/public/window.svg
+- ideabridge/tsconfig.json
+- package-lock.json
+
+commit d1bba6b490a55cc9741ca97d72f19fd86bd35c43
+date: 2026-04-09
+author: Abinayan
+subject: Add IdeaBridge project files
+files:
+- .gitignore
+- Backend/.env.example
+- Backend/.gitignore
+- Backend/README.md
+- Backend/package-lock.json
+- Backend/package.json
+- Backend/src/app.js
+- Backend/src/config/db.js
+- Backend/src/controllers/activityController.js
+- Backend/src/controllers/dashboardController.js
+- Backend/src/controllers/projectController.js
+- Backend/src/controllers/requestController.js
+- Backend/src/data/seedData.js
+- Backend/src/middleware/errorHandler.js
+- Backend/src/models/Activity.js
+- Backend/src/models/Project.js
+- Backend/src/models/Request.js
+- Backend/src/routes/activityRoutes.js
+- Backend/src/routes/dashboardRoutes.js
+- Backend/src/routes/healthRoutes.js
+- Backend/src/routes/projectRoutes.js
+- Backend/src/routes/requestRoutes.js
+- Backend/src/scripts/seed.js
+- Backend/src/server.js
+- Backend/src/utils/asyncHandler.js
+- Backend/src/utils/queryFilters.js
+- ESD.docx
+- Frontend/index.html
+- Frontend/package-lock.json
+- Frontend/package.json
+- Frontend/postcss.config.js
+- Frontend/src/App.jsx
+- Frontend/src/components/AnalyticsSection.jsx
+- Frontend/src/components/ChartCard.jsx
+- Frontend/src/components/DashboardLayout.jsx
+- Frontend/src/components/FilterBar.jsx
+- Frontend/src/components/InsightNote.jsx
+- Frontend/src/components/ProjectsList.jsx
+- Frontend/src/components/StatCard.jsx
+- Frontend/src/components/TopProjectsPanel.jsx
+- Frontend/src/data/dummyData.js
+- Frontend/src/index.css
+- Frontend/src/main.jsx
+- Frontend/src/pages/StudentAnalyticsDashboard.jsx
+- Frontend/src/utils/dataHelpers.js
+- Frontend/tailwind.config.js
+- Frontend/vite.config.js
+
+commit f4f179845f5bc8cecbe6d54bb44adb372b6e7028
+date: 2026-04-09
+author: AK29-Shay
+subject: Merge pull request #6 from AK29-Shay/feat/member2-AK29-Shay
+files:
+- (none)
+
+commit eea9c3a1df6e9ba42b27a436d9870fad4ece7a14
+date: 2026-04-09
+author: AK29-Shay
+subject: feat: implement ProjectThread component with comment editing, deletion, and threaded display capabilities
+files:
+- src/components/ProjectThread.tsx
+
+commit 12a2967a61a5f7b68925717be8a2407de261f936
+date: 2026-04-09
+author: AK29-Shay
+subject: merge: bring dev (with PR#3 mentor dashboard) into main - all conflicts resolved
+files:
+- (none)
+
+commit 59f59e95a3bb791617edc30983a3644cfb50b522
+date: 2026-04-09
+author: AK29-Shay
+subject: merge: PR#3 mentor dashboard improvements (member1-sneha-dhaya-IT) into dev - all conflicts resolved, deps merged
+files:
+- (none)
+
+commit eaef4f66640d3ce01151a6d35761f2063208acd5
+date: 2026-04-09
+author: AK29-Shay
+subject: merge: sync feat/member4 with latest dev
+files:
+- (none)
+
+commit 75939703db6d9b6b3af70e303719ae12a8262d5f
+date: 2026-04-09
+author: AK29-Shay
+subject: merge: sync feat/member3 with latest dev
+files:
+- (none)
+
+commit 0569ada0597262f3931cfa9699b093f23e0217f5
+date: 2026-04-09
+author: AK29-Shay
+subject: merge: sync feat/member1 with latest dev
+files:
+- (none)
+
+commit 7f85d8d872be5e65e8d51cd9c21f5415ff89bb10
+date: 2026-04-09
+author: AK29-Shay
+subject: merge: integrate dev into main - all member features combined, conflicts resolved
+files:
+- (none)
+
+commit 39f0862edac2dfc0fca6217afa7fb8adfaf08389
+date: 2026-04-09
+author: AK29-Shay
+subject: feat: add .env.local.example template for Supabase configuration
+files:
+- .env.local.example
+
+commit 9256a5aa25b971cc6dfc4cb628e3c8df5008dafd
+date: 2026-04-09
+author: AK29-Shay
+subject: chore: add .gitignore to exclude node_modules and build artifacts
+files:
+- .gitignore
+
+commit 98aefbe29ed8c4c14460e27b723490dbc966b5f0
+date: 2026-04-09
+author: AK29-Shay
+subject: Merge pull request #5 from AK29-Shay/feat/member2-AK29-Shay
+files:
+- (none)
+
+commit 10f1c29b07fa43bf77d7aa7328a7541338e00eb5
+date: 2026-04-09
+author: AK29-Shay
+subject: feat: implement ProjectThread component for recursive comment rendering and interaction
+files:
+- src/components/ProjectThread.tsx
+
+commit 95bbb9305443e0f0b02bad34dbfdd0890624a6e2
+date: 2026-04-07
+author: AK29-Shay
+subject: Merge pull request #1 from AK29-Shay/member1-sneha-dhaya-IT
+files:
+- (none)
+
+commit 1f829bb8de2cae5b5a8c3c2d6ae4ff09455629b7
+date: 2026-04-07
+author: AK29-Shay
+subject: Merge pull request #2 from AK29-Shay/feat/member2-AK29-Shay
+files:
+- (none)
+
+commit bed4c3c3c552ac22543849285b997ea44a91fd78
+date: 2026-04-07
+author: AK29-Shay
+subject: feat: add backend schema, RLS, API routes, types, and Supabase client functions
+files:
+- package-lock.json
+- package.json
+- src/app/api/posts/[postId]/comments/route.ts
+- src/app/api/posts/route.ts
+- src/components/DynamicPostForm.tsx
+- src/components/ProjectThread.tsx
+- src/lib/api.ts
+- src/lib/supabase.ts
+- src/types/database.ts
+- supabase/schema.sql
+
+commit cfd8847996c49423e0d7eca9d4bc6e3d1fd4e301
+date: 2026-04-07
+author: AK29-Shay
+subject: feat: setup Next.js app and DynamicPostForm + ProjectThread components
+files:
+- .gitignore
+- AGENTS.md
+- CLAUDE.md
+- README.md
+- eslint.config.mjs
+- next.config.ts
+- package-lock.json
+- package.json
+- postcss.config.mjs
+- public/file.svg
+- public/globe.svg
+- public/next.svg
+- public/vercel.svg
+- public/window.svg
+- src/app/favicon.ico
+- src/app/globals.css
+- src/app/layout.tsx
+- src/app/page.tsx
+- src/components/DynamicPostForm.tsx
+- src/components/ProjectThread.tsx
+- src/data/mockThread.ts
+- src/lib/utils.ts
+- tsconfig.json
+
+commit 134d6cc50eff8a1fb3d0ec95cec5fdb302578ec0
+date: 2026-04-06
+author: Sneha Dhaya
+subject: Resolve merge conflict
+files:
+- (none)
+
+commit 1fd064d6449c93d83ee3d47e9f5ee489b084d437
+date: 2026-04-06
+author: Sneha Dhaya
+subject: Restructure project and add latest code
+files:
+- .gitignore
+- AGENTS.md
+- README.md
+- app/api/mentor-application/approve/route.ts
+- app/api/mentor-application/route.ts
+- app/api/mentors/search/route.ts
+- app/api/notifications/route.ts
+- app/api/otp/send/route.ts
+- app/api/otp/verify/route.ts
+- app/api/profile/route.ts
+- app/api/ratings/route.ts
+- app/api/requests/route.ts
+- app/api/requests/status/route.ts
+- app/dashboard/mentor/blog/page.tsx
+- app/dashboard/mentor/layout.tsx
+- app/dashboard/mentor/page.tsx
+- app/dashboard/mentor/profile/page.tsx
+- app/dashboard/mentor/projects/page.tsx
+- app/dashboard/mentor/requests/page.tsx
+- app/dashboard/student/page.tsx
+- app/favicon.ico
+- app/forgot-password/page.tsx
+- app/globals.css
+- app/layout.tsx
+- app/login/page.tsx
+- app/mentors/[id]/page.tsx
+- app/mentors/page.tsx
+- app/page.tsx
+- app/profile/page.tsx
+- app/register/page.tsx
+- app/reset-password/[token]/page.tsx
+- app/verify-email/page.tsx
+- backend/config/supabaseServer.ts
+- backend/controllers/mentorApplicationController.ts
+- backend/controllers/mentorController.ts
+- backend/controllers/notificationController.ts
+- backend/controllers/otpController.ts
+- backend/controllers/profileController.ts
+- backend/controllers/ratingController.ts
+- backend/controllers/requestController.ts
+- backend/middleware/auth.ts
+- backend/migrations/init.sql
+- backend/models/schemas.ts
+- backend/services/mentorApplicationService.ts
+- backend/services/notificationService.ts
+- backend/services/otpService.ts
+- backend/services/profileService.ts
+- backend/services/ratingService.ts
+- backend/services/requestService.ts
+- backend/utils/otp.ts
+- components/auth/RequireAuth.tsx
+- components/auth/RequireRole.tsx
+- components/cards/MentorCard.tsx
+- components/cards/ProjectCard.tsx
+- components/common/StarRating.tsx
+- components/forms/SkillMultiSelect.tsx
+- components/mentor/BlogSection.tsx
+- components/mentor/DashboardSection.tsx
+- components/mentor/ProfileSection.tsx
+- components/mentor/ProjectsSection.tsx
+- components/mentor/RequestsSection.tsx
+- components/modals/CheckAvailabilityModal.tsx
+- components/modals/RequestMentorshipModal.tsx
+- components/modals/UpdateProgressModal.tsx
+- components/providers/AppProviders.tsx
+- components/site/ThemeToggle.tsx
+- components/student/DashboardSection.tsx
+- components/student/ProfileSection.tsx
+- components/student/ProjectsSection.tsx
+- components/student/RequestsSection.tsx
+- components/ui/avatar.tsx
+- components/ui/badge.tsx
+- components/ui/button.tsx
+- components/ui/calendar.tsx
+- components/ui/card.tsx
+- components/ui/dialog.tsx
+- components/ui/dropdown-menu.tsx
+- components/ui/form.tsx
+- components/ui/icons.tsx
+- components/ui/input.tsx
+- components/ui/label.tsx
+- components/ui/popover.tsx
+- components/ui/progress.tsx
+- components/ui/select.tsx
+- components/ui/separator.tsx
+- components/ui/skeleton.tsx
+- components/ui/table.tsx
+- components/ui/tabs.tsx
+- components/ui/textarea.tsx
+- context/AuthContext.tsx
+- eslint.config.mjs
+- ideabridge/CLAUDE.md
+- ideabridge/app/globals.css
+- ideabridge/app/layout.tsx
+- ideabridge/app/page.tsx
+- ideabridge/next.config.ts
+- ideabridge/package.json
+- lib/constants.ts
+- lib/dummyData.ts
+- lib/storage.ts
+- lib/supabaseClient.js
+- lib/utils.ts
+- lib/zod/authSchemas.ts
+- lib/zod/mentorshipSchemas.ts
+- lib/zod/profileFormSchemas.ts
+- lib/zod/profileSchemas.ts
+- lib/zod/projectSchemas.ts
+- next.config.mjs
+- package-lock.json
+- package.json
+- postcss.config.mjs
+- public/file.svg
+- public/globe.svg
+- public/next.svg
+- public/vercel.svg
+- public/window.svg
+- tailwind.config.ts
+- tmp_contrast_fix.js
+- tmp_refactor.js
+- tsconfig.json
+- types/auth.ts
+- types/mentor.ts
+- types/project.ts
+- types/student.ts
+- types/user.ts
+
+commit dc2051a0c135b6505df1db6f4d2b31f40d9739ef
+date: 2026-04-06
+author: AK29-Shay
+subject: docs: add Git workflow and integration protocol documentation
+files:
+- GIT_WORKFLOW.md
+
+commit b968df29827fc4d088bc1fa33ddff1259e2faf40
+date: 2026-04-06
+author: AK29-Shay
+subject: Initial commit
+files:
+- README.md
+
+commit c58095c6a24968c7f37314fcf7ccb5e1f0c43be9
+date: 2026-03-24
+author: Sneha Dhaya
+subject: Initial Commit
+files:
+- ideabridge/.gitignore
+- ideabridge/AGENTS.md
+- ideabridge/CLAUDE.md
+- ideabridge/README.md
+- ideabridge/app/favicon.ico
+- ideabridge/app/globals.css
+- ideabridge/app/layout.tsx
+- ideabridge/app/page.tsx
+- ideabridge/eslint.config.mjs
+- ideabridge/next.config.ts
+- ideabridge/package-lock.json
+- ideabridge/package.json
+- ideabridge/postcss.config.mjs
+- ideabridge/public/file.svg
+- ideabridge/public/globe.svg
+- ideabridge/public/next.svg
+- ideabridge/public/vercel.svg
+- ideabridge/public/window.svg
+- ideabridge/tsconfig.json

@@ -4,11 +4,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { User, Mail, Shield, Edit3, Save, X, Camera, Star, BookOpen } from "lucide-react";
 
+type DemoRole = "Student" | "Mentor";
+
 const mockUser = {
   id: "u-001",
   fullName: "Sneha Dhaya",
   email: "sneha@ideabridge.dev",
-  role: "Mentor" as const,
+  role: "Mentor" as DemoRole,
   avatarUrl: "https://i.pravatar.cc/150?u=sneha",
   joinedAt: "March 2025",
   postsCount: 12,

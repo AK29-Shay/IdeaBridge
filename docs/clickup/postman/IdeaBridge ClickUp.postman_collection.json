@@ -1,0 +1,158 @@
+{
+  "info": {
+    "_postman_id": "75d2396d-5a8d-421d-a782-c8a01de2be90",
+    "name": "IdeaBridge ClickUp",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "GET /team",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{CLICKUP_PAT}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/team",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "team"
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /team/{team_id}/space",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{CLICKUP_PAT}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/team/{{WORKSPACE_ID}}/space?archived=false",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "team",
+            "{{WORKSPACE_ID}}",
+            "space"
+          ],
+          "query": [
+            {
+              "key": "archived",
+              "value": "false"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /space/{space_id}/list",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{CLICKUP_PAT}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/space/{{SPACE_ID}}/list?archived=false",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "space",
+            "{{SPACE_ID}}",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "archived",
+              "value": "false"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GET /list/{list_id}/task",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{CLICKUP_PAT}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/list/{{A5_LIST_ID}}/task?include_closed=true&page=0",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "list",
+            "{{A5_LIST_ID}}",
+            "task"
+          ],
+          "query": [
+            {
+              "key": "include_closed",
+              "value": "true"
+            },
+            {
+              "key": "page",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "POST /list/{list_id}/task",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{CLICKUP_PAT}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Sample ClickUp verification task\",\n  \"markdown_content\": \"Created from the IdeaBridge ClickUp Postman collection.\",\n  \"status\": \"to do\",\n  \"notify_all\": false\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/list/{{A5_LIST_ID}}/task",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "list",
+            "{{A5_LIST_ID}}",
+            "task"
+          ]
+        }
+      }
+    }
+  ]
+}
