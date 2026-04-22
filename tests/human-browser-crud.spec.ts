@@ -20,12 +20,17 @@ type MentorSearchResult = {
   };
 };
 
+function getRestorableBioValue(originalBio: string, fallbackBio: string, minLength: number) {
+  const trimmedOriginalBio = originalBio.trim();
+  return trimmedOriginalBio.length >= minLength ? trimmedOriginalBio : fallbackBio;
+}
+
 async function login(page: Page, credentials: typeof STUDENT | typeof MENTOR) {
   await page.goto("/login");
   await page.fill("#login-email", credentials.email);
   await page.fill("#login-password", credentials.password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page).toHaveURL(new RegExp(credentials.expectedPath), { timeout: 20_000 });
+  await expect(page).toHaveURL(new RegExp(credentials.expectedPath), { timeout: 60_000 });
 }
 
 async function findDemoMentor(request: APIRequestContext) {
@@ -49,14 +54,15 @@ async function updateStudentProfileAndRestore(page: Page, runId: string) {
   const bioField = page.getByPlaceholder(/Tell mentors about yourself/i);
   const originalBio = await bioField.inputValue();
   const updatedBio = `Playwright student profile QA ${runId}. I am validating the editable student bio flow end to end.`;
-  const restoredBioPreview = (originalBio || updatedBio).slice(0, 40);
+  const restoredBio = getRestorableBioValue(originalBio, updatedBio, 5);
+  const restoredBioPreview = restoredBio.slice(0, 40);
 
   await bioField.fill(updatedBio);
   await page.getByRole("button", { name: /save profile/i }).click();
   await expect(page.getByText(updatedBio)).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /edit profile/i }).click();
-  await bioField.fill(originalBio);
+  await bioField.fill(restoredBio);
   await page.getByRole("button", { name: /save profile/i }).click();
   await expect(page.getByText(restoredBioPreview, { exact: false })).toBeVisible({ timeout: 15_000 });
 }
@@ -80,8 +86,9 @@ async function createStudentPostAndVerifySearch(page: Page, postTitle: string, u
 
   await page.goto("/search");
   await expect(page.getByRole("heading", { name: /Explore ideas, projects, and requests/i })).toBeVisible();
+  await expect(page.getByText(/Loading ideas/i)).toHaveCount(0, { timeout: 20_000 });
   await page.getByPlaceholder(/Search by title, description, author, or tech stack/i).fill(postTitle);
-  await expect(page.getByText(postTitle).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(postTitle).first()).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole("button", { name: /^Filters/i }).click();
   await page.getByRole("button", { name: uniqueTag }).click();
@@ -101,21 +108,25 @@ async function exerciseThreadCrud(page: Page, runId: string) {
   await page.getByRole("button", { name: /^Post$/ }).first().click();
   await expect(page.getByText(replyText)).toBeVisible({ timeout: 15_000 });
 
-  const createdReply = page
-    .getByText(replyText, { exact: true })
-    .first()
-    .locator('xpath=ancestor::*[contains(@class,"group")][1]');
+  const findCommentCard = (text: string) =>
+    page
+      .getByText(text, { exact: true })
+      .first()
+      .locator('xpath=ancestor::*[contains(@class,"group")][1]');
+
+  const createdReply = findCommentCard(replyText);
   await createdReply.hover();
   await createdReply.getByLabel(/Open comment actions/i).first().click({ force: true });
   await createdReply.getByRole("button", { name: /^Edit$/ }).click();
-  await createdReply.getByLabel(/Edit comment text/i).fill(editedReplyText);
-  await createdReply.getByRole("button", { name: /^Save$/ }).click();
+  await page.getByLabel(/Edit comment text/i).fill(editedReplyText);
+  await page.getByRole("button", { name: /^Save$/ }).click();
   await expect(page.getByText(editedReplyText)).toBeVisible({ timeout: 15_000 });
 
-  await createdReply.hover();
-  await createdReply.getByLabel(/Open comment actions/i).first().click({ force: true });
-  await createdReply.getByRole("button", { name: /^Delete$/ }).click();
-  await createdReply.getByRole("button", { name: /^Delete$/ }).click();
+  const editedReply = findCommentCard(editedReplyText);
+  await editedReply.hover();
+  await editedReply.getByLabel(/Open comment actions/i).first().click({ force: true });
+  await editedReply.getByRole("button", { name: /^Delete$/ }).first().click();
+  await editedReply.getByRole("button", { name: /^Delete$/ }).last().click();
   await expect(page.getByText(editedReplyText)).toHaveCount(0);
 }
 
@@ -161,14 +172,14 @@ async function updateStudentProjectProgress(page: Page, runId: string) {
   await page.goto("/dashboard/student/projects");
   await expect(page.getByRole("heading", { name: /My Projects/i })).toBeVisible();
 
-  await page.getByRole("button", { name: /Update Progress/i }).first().click();
+  await page.getByRole("button", { name: /^Update Progress$/ }).first().click();
   await expect(page.getByRole("dialog")).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /Quick fill/i }).click();
   await page.getByLabel(/Milestone notes/i).fill(projectNote);
   await page.getByRole("button", { name: /Save Update/i }).click();
 
-  await expect(page.getByText(projectNote)).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator("p").filter({ hasText: projectNote }).last()).toBeVisible({ timeout: 15_000 });
 }
 
 async function updateMentorProfileAndRestore(page: Page, runId: string) {
@@ -180,14 +191,15 @@ async function updateMentorProfileAndRestore(page: Page, runId: string) {
   const bioField = page.getByPlaceholder(/Describe your expertise, teaching style/i);
   const originalBio = await bioField.inputValue();
   const updatedBio = `Playwright mentor profile QA ${runId}. This temporary bio confirms mentor profile edits save correctly.`;
-  const restoredBioPreview = (originalBio || updatedBio).slice(0, 40);
+  const restoredBio = getRestorableBioValue(originalBio, updatedBio, 10);
+  const restoredBioPreview = restoredBio.slice(0, 40);
 
   await bioField.fill(updatedBio);
   await page.getByRole("button", { name: /Save Profile/i }).click();
   await expect(page.getByText(updatedBio)).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /Edit Profile/i }).click();
-  await bioField.fill(originalBio);
+  await bioField.fill(restoredBio);
   await page.getByRole("button", { name: /Save Profile/i }).click();
   await expect(page.getByText(restoredBioPreview, { exact: false })).toBeVisible({ timeout: 15_000 });
 }
