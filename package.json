@@ -8,8 +8,12 @@
     "start": "next start",
     "lint": "eslint .",
     "clickup:import:evidence": "node scripts/push-clickup-tasks.mjs",
+    "clickup:final-features": "node scripts/create-final-feature-clickup-tasks.mjs",
+    "clickup:link-history": "node scripts/link-clickup-history-evidence.mjs",
     "evidence:pm": "node scripts/generate-project-management-evidence.mjs",
+    "smoke:api": "node scripts/run-local-api-smoke.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/final-smoke.spec.ts",
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {

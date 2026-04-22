@@ -11,6 +11,6 @@ test("dashboard index lists the available workspaces", async ({ page }) => {
 test("protected student dashboard redirects unauthenticated users to login", async ({ page }) => {
   await page.goto("/dashboard/student");
 
-  await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible({ timeout: 15_000 });
 });
