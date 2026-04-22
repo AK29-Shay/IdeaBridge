@@ -79,52 +79,41 @@ export default function SearchPage() {
   const [posts, setPosts] = React.useState<SearchPost[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const recoveryQueryRef = React.useRef<string | null>(null);
 
   const deferredQuery = React.useDeferredValue(query);
 
-  React.useEffect(() => {
-    let cancelled = false;
+  const loadPosts = React.useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
 
-    async function loadPosts() {
-      setIsLoading(true);
-      setLoadError(null);
+    try {
+      const response = await fetch("/api/posts?limit=48", { cache: "no-store" });
+      const payload = (await response.json().catch(() => null)) as ApiPost[] | { error?: string } | null;
 
-      try {
-        const response = await fetch("/api/posts?limit=48", { cache: "no-store" });
-        const payload = (await response.json().catch(() => null)) as ApiPost[] | { error?: string } | null;
-
-        if (!response.ok) {
-          const message =
-            payload &&
-            typeof payload === "object" &&
-            !Array.isArray(payload) &&
-            "error" in payload
-              ? payload.error
-              : undefined;
-          throw new Error(message || "Failed to load ideas.");
-        }
-
-        if (!cancelled) {
-          setPosts(Array.isArray(payload) ? payload.map(mapPost) : []);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setPosts([]);
-          setLoadError(error instanceof Error ? error.message : "Failed to load ideas.");
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+      if (!response.ok) {
+        const message =
+          payload &&
+          typeof payload === "object" &&
+          !Array.isArray(payload) &&
+          "error" in payload
+            ? payload.error
+            : undefined;
+        throw new Error(message || "Failed to load ideas.");
       }
+
+      setPosts(Array.isArray(payload) ? payload.map(mapPost) : []);
+    } catch (error) {
+      setPosts([]);
+      setLoadError(error instanceof Error ? error.message : "Failed to load ideas.");
+    } finally {
+      setIsLoading(false);
     }
-
-    void loadPosts();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  React.useEffect(() => {
+    void loadPosts();
+  }, [loadPosts]);
 
   const techTags = React.useMemo(() => {
     return Array.from(new Set(posts.flatMap((post) => post.tags))).sort((left, right) => left.localeCompare(right));
@@ -155,6 +144,27 @@ export default function SearchPage() {
   const trending = React.useMemo(() => {
     return [...posts].sort((left, right) => right.views - left.views).slice(0, 3);
   }, [posts]);
+
+  React.useEffect(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      recoveryQueryRef.current = null;
+      return;
+    }
+
+    if (isLoading || results.length > 0 || recoveryQueryRef.current === normalizedQuery) {
+      return;
+    }
+
+    recoveryQueryRef.current = normalizedQuery;
+    const timer = window.setTimeout(() => {
+      void loadPosts();
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [deferredQuery, isLoading, loadPosts, results.length]);
 
   function toggleType(value: string) {
     setSelectedTypes((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
