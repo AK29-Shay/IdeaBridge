@@ -178,12 +178,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (cancelled) return;
 
+        await loadSessionUser(initialSession?.user ?? null);
+
+        if (cancelled) return;
+
         React.startTransition(() => {
           setSession(initialSession);
           setIsReady(true);
         });
-
-        await loadSessionUser(initialSession?.user ?? null);
       } catch {
         if (cancelled) return;
         React.startTransition(() => {
@@ -201,9 +203,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       React.startTransition(() => {
         setSession(nextSession);
-        setIsReady(true);
       });
-      void loadSessionUser(nextSession?.user ?? null);
+      void (async () => {
+        try {
+          await loadSessionUser(nextSession?.user ?? null);
+        } finally {
+          if (cancelled) return;
+          React.startTransition(() => {
+            setIsReady(true);
+          });
+        }
+      })();
     });
 
     return () => {
