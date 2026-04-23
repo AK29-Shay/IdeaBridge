@@ -184,6 +184,7 @@ export function DashboardSection({
         <div className="relative mt-6 flex flex-wrap gap-2">
           {[
             { label: "Review Requests", tab: "requests" },
+            { label: "Open Chat Space", tab: "mentorships" },
             { label: "Track Projects", tab: "projects" },
             { label: "Write a Blog", tab: "blog" },
           ].map(({ label, tab }) => (

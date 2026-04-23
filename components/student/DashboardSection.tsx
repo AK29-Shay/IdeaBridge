@@ -196,6 +196,20 @@ export function DashboardSection({ projects, onTabChange }: DashboardSectionProp
             </div>
           </div>
         </div>
+        <div
+          onClick={() => onTabChange("mentorships")}
+          className="group cursor-pointer rounded-2xl border border-[#FFCBA4]/30 bg-gradient-to-br from-white to-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md sm:col-span-2"
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-gradient-to-br from-[#F5A97F] to-[#E28A5D] p-2.5 shadow">
+              <Sparkles className="h-5 w-5 text-[#0F0F0F]" />
+            </div>
+            <div>
+              <div className="font-semibold text-slate-800">Open Mentorship Space</div>
+              <div className="text-xs text-slate-500">Chat with mentors and confirm your next session</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
