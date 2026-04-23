@@ -134,7 +134,8 @@ export async function listMentorProfiles(options?: {
 
   const { data, error } = await query.order('reputation', { ascending: false })
   if (!error) {
-    return (data ?? []).map((row) => mapLegacyMentorRow(row as MentorProfileRow))
+    const rows = (data ?? []) as MentorProfileRow[]
+    return rows.map((row) => mapLegacyMentorRow(row))
   }
 
   if (!isMissingProfilesColumn(error)) throw error
@@ -156,7 +157,8 @@ export async function listMentorProfiles(options?: {
   const { data: legacyData, error: legacyError } = await legacyQuery.order('full_name', { ascending: true })
   if (legacyError) throw legacyError
 
-  const mapped = (legacyData ?? []).map((row) => mapLegacyMentorRow(row as MentorProfileRow))
+  const legacyRows = (legacyData ?? []) as MentorProfileRow[]
+  const mapped = legacyRows.map((row) => mapLegacyMentorRow(row))
   if (options?.availability) {
     return mapped.filter((row) => row.availability_status === options.availability)
   }

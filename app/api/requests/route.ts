@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const user = await getUserFromAuthHeader(authorization)
     if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-    const profile = await getProfileByUserId(user.user.id)
+    const profile = (await getProfileByUserId(user.user.id)) as { role?: string | null } | null
     const data = await listRequestsForUser(user.user.id, typeof profile?.role === 'string' ? profile.role : undefined)
     return NextResponse.json(data)
   } catch (error: unknown) {
