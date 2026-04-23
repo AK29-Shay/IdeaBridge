@@ -9,6 +9,7 @@ import type { z } from "zod";
 import { Lock, Eye, EyeOff } from "@/components/ui/icons";
 
 import { resetPasswordSchema } from "@/lib/zod/authSchemas";
+import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -78,6 +79,7 @@ export default function ResetPasswordPage() {
   const params = useParams() as { token?: string };
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { updatePassword, session } = useAuth();
   const token = params.token ?? "";
   const [showNew, setShowNew] = React.useState(false);
   const [showConfirm, setShowConfirm] = React.useState(false);
@@ -101,10 +103,10 @@ export default function ResetPasswordPage() {
     if (token) form.setValue("token", token);
   }, [token, form]);
 
-  function onSubmit(_values: ResetInput) {
+  async function onSubmit(values: ResetInput) {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await updatePassword({ password: values.newPassword });
       setSuccess(true);
       toast.success("Password reset successfully!");
       setTimeout(() => {
@@ -112,7 +114,13 @@ export default function ResetPasswordPage() {
           `/login?next=${encodeURIComponent(searchParams.get("next") ?? "")}`
         );
       }, 2500);
-    }, 1200);
+    } catch (rawError: unknown) {
+      const message =
+        rawError instanceof Error ? rawError.message : "Failed to reset password.";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -140,6 +148,11 @@ export default function ResetPasswordPage() {
           {!success ? (
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <input type="hidden" {...form.register("token")} />
+              {!session && (
+                <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
+                  This reset link looks invalid or expired. Please request a new one.
+                </div>
+              )}
 
               {/* Token badge */}
               {token && (
@@ -248,7 +261,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 id="reset-password-submit"
-                disabled={isLoading}
+                disabled={isLoading || !session}
                 className="w-full py-3 rounded-xl bg-[#0F0F0F] text-[#FFCBA4] font-semibold text-sm hover:brightness-125 transition-all duration-200 shadow-lg shadow-black/20 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
