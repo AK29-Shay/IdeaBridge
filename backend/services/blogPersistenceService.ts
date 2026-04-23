@@ -66,6 +66,11 @@ function tableHint() {
   return "Run supabase/unified_migration.sql to create the mentor_blogs table.";
 }
 
+type AuthAdminUser = {
+  id?: string;
+  email?: string | null;
+};
+
 function mapPostRowToBlogRow(row: {
   id: string;
   title: string;
@@ -104,7 +109,7 @@ async function ensureAuthUserIdByEmail(authorEmail: string) {
   }
 
   const existing = listed.users.find(
-    (entry) => normalizeEmail(entry.email) === normalizedEmail
+    (entry: AuthAdminUser) => normalizeEmail(entry.email) === normalizedEmail
   );
 
   if (existing?.id) {
@@ -167,7 +172,7 @@ async function createInMentorBlogs(input: BlogWriteInput) {
 
   const { data, error } = await supabaseServer
     .from("mentor_blogs")
-    .insert(payload)
+    .insert(payload as never)
     .select("id,title,content,image_url,video_url,author_email,created_at,updated_at")
     .single();
 
@@ -192,7 +197,7 @@ async function createInPosts(input: BlogWriteInput) {
         imageUrl: normalizeOptionalUrl(input.imageUrl),
         videoUrl: normalizeOptionalUrl(input.videoUrl),
       },
-    })
+    } as never)
     .select("id,title,description,dynamic_content,created_at,updated_at")
     .single();
 
@@ -218,14 +223,23 @@ async function loadPostBlogById(id: string) {
     throw new BlogStorageError("Blog post not found.", 404);
   }
 
-  const dynamic = dynamicObject(data.dynamic_content);
+  const typedRow = data as {
+    id: string;
+    title: string;
+    description: string | null;
+    dynamic_content: unknown;
+    created_at: string;
+    updated_at: string;
+  };
+
+  const dynamic = dynamicObject(typedRow.dynamic_content);
   const moduleValue = typeof dynamic.module === "string" ? dynamic.module : "";
   if (moduleValue !== BLOG_MODULE) {
     throw new BlogStorageError("Blog post not found.", 404);
   }
 
   return {
-    row: data,
+    row: typedRow,
     dynamic,
   };
 }
@@ -240,7 +254,7 @@ async function updateInMentorBlogs(id: string, input: BlogWriteInput) {
 
   const { data, error } = await supabaseServer
     .from("mentor_blogs")
-    .update(updates)
+    .update(updates as never)
     .eq("id", id)
     .eq("author_email", normalizeEmail(input.authorEmail))
     .select("id,title,content,image_url,video_url,author_email,created_at,updated_at")
@@ -278,7 +292,7 @@ async function updateInPosts(id: string, input: BlogWriteInput) {
         imageUrl: normalizeOptionalUrl(input.imageUrl),
         videoUrl: normalizeOptionalUrl(input.videoUrl),
       },
-    })
+    } as never)
     .eq("id", id)
     .select("id,title,description,dynamic_content,created_at,updated_at")
     .single();
@@ -337,13 +351,20 @@ export async function createStoredBlog(input: BlogWriteInput) {
     authorEmail: normalizeEmail(input.authorEmail),
   };
 
-  const primary = await createInMentorBlogs(normalizedInput);
+  const primary = (await createInMentorBlogs(normalizedInput)) as {
+    data: StoredBlogRow | null;
+    error: { message: string } | null;
+  };
   if (primary.error) {
     if (!isMentorBlogsTableMissing(primary.error)) {
       throw new BlogStorageError(primary.error.message, 500);
     }
 
     return createInPosts(normalizedInput);
+  }
+
+  if (!primary.data) {
+    throw new BlogStorageError("Failed to create blog post.", 500);
   }
 
   return primary.data as StoredBlogRow;
@@ -355,7 +376,10 @@ export async function updateStoredBlog(id: string, input: BlogWriteInput) {
     authorEmail: normalizeEmail(input.authorEmail),
   };
 
-  const primary = await updateInMentorBlogs(id, normalizedInput);
+  const primary = (await updateInMentorBlogs(id, normalizedInput)) as {
+    data: StoredBlogRow | null;
+    error: { message: string } | null;
+  };
   if (primary.error) {
     if (!isMentorBlogsTableMissing(primary.error)) {
       throw new BlogStorageError(primary.error.message, 500);
@@ -364,12 +388,18 @@ export async function updateStoredBlog(id: string, input: BlogWriteInput) {
     return updateInPosts(id, normalizedInput);
   }
 
+  if (!primary.data) {
+    throw new BlogStorageError("Blog post not found.", 404);
+  }
+
   return primary.data as StoredBlogRow;
 }
 
 export async function deleteStoredBlog(id: string, authorEmail: string) {
   const normalizedEmail = normalizeEmail(authorEmail);
-  const primary = await deleteInMentorBlogs(id, normalizedEmail);
+  const primary = (await deleteInMentorBlogs(id, normalizedEmail)) as {
+    error: { message: string } | null;
+  };
 
   if (primary.error) {
     if (!isMentorBlogsTableMissing(primary.error)) {

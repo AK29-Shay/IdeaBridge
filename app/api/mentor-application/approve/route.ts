@@ -10,7 +10,7 @@ export async function PATCH(request: Request) {
     const user = await getUserFromAuthHeader(authorization)
     if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-    const profile = await getProfileByUserId(user.user.id)
+    const profile = (await getProfileByUserId(user.user.id)) as { role?: string | null } | null
     const role = typeof profile?.role === 'string' ? profile.role.toLowerCase() : ''
     if (!profile || role !== 'admin') return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
 

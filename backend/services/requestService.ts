@@ -123,3 +123,13 @@ export async function listRequestsForUser(userId: string, role?: string) {
   if (error) throw error
   return ((data as RequestRow[] | null) ?? []).map(mapRequestRow)
 }
+
+export async function listAllRequests() {
+  const { data, error } = await supabaseServer
+    .from('requests')
+    .select(REQUEST_SELECT)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return ((data as RequestRow[] | null) ?? []).map(mapRequestRow)
+}

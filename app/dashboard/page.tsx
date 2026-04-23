@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ChartColumnBig, GraduationCap, Sparkles, UserRound } from "lucide-react";
+import { ArrowRight, ChartColumnBig, GraduationCap, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 
+import type { UserRole } from "@/types/auth";
 import { useAuth } from "@/context/AuthContext";
 
 type RoleCard = {
-  id: "student" | "mentor" | "analytics";
-  roleMatch?: "student" | "mentor";
+  id: "student" | "mentor" | "admin" | "analytics";
+  roleMatch?: UserRole;
   label: string;
   description: string;
   href: string;
@@ -36,6 +37,16 @@ const ROLE_CARDS: RoleCard[] = [
     icon: UserRound,
     accent: "text-emerald-600 bg-emerald-100",
     panel: "border-emerald-200 hover:border-emerald-400",
+  },
+  {
+    id: "admin",
+    roleMatch: "admin",
+    label: "Admin Portal",
+    description: "Approve mentor applications, moderate requests, and monitor platform operations.",
+    href: "/dashboard/admin",
+    icon: ShieldCheck,
+    accent: "text-sky-600 bg-sky-100",
+    panel: "border-sky-200 hover:border-sky-400",
   },
   {
     id: "analytics",
@@ -73,7 +84,7 @@ export default function DashboardIndexPage() {
             </p>
           ) : null}
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {ROLE_CARDS.map(({ id, roleMatch, label, description, href, icon: Icon, accent, panel }) => {
               const isCurrentRole = isReady && roleMatch ? user?.role === roleMatch : false;
 
