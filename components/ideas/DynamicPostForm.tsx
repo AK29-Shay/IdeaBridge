@@ -23,6 +23,14 @@ type DynamicPostFormProps = {
   onPostCreated?: (post: unknown) => void;
 };
 
+type IdeaRefinementPayload = {
+  refinedTitle: string;
+  refinedDescription: string;
+  recommendedTags: string[];
+  checklist: string[];
+  rationale: string[];
+};
+
 function parseApiError(payload: unknown, fallback: string) {
   if (!payload || typeof payload !== "object") return fallback;
   const error = "error" in payload ? String((payload as { error?: unknown }).error ?? "") : "";
@@ -44,6 +52,8 @@ export default function DynamicPostForm({ onPostCreated }: DynamicPostFormProps)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedSupabaseFile[]>([]);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+  const [isRefiningIdea, setIsRefiningIdea] = useState(false);
+  const [refinement, setRefinement] = useState<IdeaRefinementPayload | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const variants: PostVariant[] = [
@@ -190,12 +200,55 @@ export default function DynamicPostForm({ onPostCreated }: DynamicPostFormProps)
       setTags("");
       setExtras({});
       setUploadedFiles([]);
+      setRefinement(null);
 
       onPostCreated?.(payload);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to submit.");
     } finally {
       setIsSubmittingPost(false);
+    }
+  };
+
+  const handleRefineIdea = async () => {
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+    const techStack = tags
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (!trimmedTitle && !trimmedDescription) {
+      toast.error("Add a title or description before refining the idea.");
+      return;
+    }
+
+    setIsRefiningIdea(true);
+    try {
+      const response = await fetch("/api/ideas/refine", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          title: trimmedTitle,
+          description: trimmedDescription,
+          techStack,
+          variant: mode === "Request" ? "Guidance Request" : variant,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as IdeaRefinementPayload | { error?: string } | null;
+      if (!response.ok || !payload || Array.isArray(payload)) {
+        throw new Error(parseApiError(payload, "Failed to refine the idea."));
+      }
+
+      setRefinement(payload as IdeaRefinementPayload);
+      toast.success("Idea refinement is ready.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to refine the idea.");
+    } finally {
+      setIsRefiningIdea(false);
     }
   };
 
@@ -225,14 +278,25 @@ export default function DynamicPostForm({ onPostCreated }: DynamicPostFormProps)
           <h2 className="text-xl font-bold tracking-tight">
             {mode === "Request" ? "What are you looking for?" : "Share your knowledge."}
           </h2>
-          <button 
-            type="button"
-            onClick={handleFillDummyData}
-            className="flex items-center gap-2 text-xs font-semibold bg-secondary text-secondary-foreground hover:bg-secondary/80 px-3 py-1.5 rounded-full transition"
-          >
-            <RefreshCw size={14} />
-            Fill Dummy Data
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleRefineIdea()}
+              disabled={isRefiningIdea}
+              className="flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-700 transition hover:bg-purple-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isRefiningIdea ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {isRefiningIdea ? "Refining..." : "Refine Idea"}
+            </button>
+            <button 
+              type="button"
+              onClick={handleFillDummyData}
+              className="flex items-center gap-2 text-xs font-semibold bg-secondary text-secondary-foreground hover:bg-secondary/80 px-3 py-1.5 rounded-full transition"
+            >
+              <RefreshCw size={14} />
+              Fill Dummy Data
+            </button>
+          </div>
         </div>
 
         {/* Post Type Selector */}
@@ -345,6 +409,60 @@ export default function DynamicPostForm({ onPostCreated }: DynamicPostFormProps)
                 </div>
 
                 {/* --- VARIANT SPECIFIC FIELDS --- */}
+
+                {refinement ? (
+                  <div className="space-y-4 rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-semibold text-purple-700">Idea Refinement Assistant</div>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Use the refined copy below, or mix it with your current draft.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTitle(refinement.refinedTitle);
+                          setDescription(refinement.refinedDescription);
+                          setTags(refinement.recommendedTags.join(", "));
+                          toast.success("Refined copy applied to the form.");
+                        }}
+                        className="rounded-full bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-purple-700"
+                      >
+                        Apply All
+                      </button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-xl border border-purple-500/20 bg-white/70 p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-purple-700">Refined title</div>
+                        <p className="mt-2 text-sm font-semibold text-foreground">{refinement.refinedTitle}</p>
+                        <div className="mt-4 text-xs font-semibold uppercase tracking-[0.14em] text-purple-700">Recommended tags</div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {refinement.recommendedTags.map((tag) => (
+                            <span key={tag} className="rounded-full bg-purple-500/10 px-2.5 py-1 text-[11px] font-semibold text-purple-700">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-purple-500/20 bg-white/70 p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-purple-700">Pitch checklist</div>
+                        <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
+                          {refinement.checklist.map((item) => (
+                            <li key={item}>- {item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-purple-500/20 bg-white/70 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-purple-700">Refined description</div>
+                      <pre className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{refinement.refinedDescription}</pre>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* 1. Full Project */}
                 {variant === "Full Project Details" && (
