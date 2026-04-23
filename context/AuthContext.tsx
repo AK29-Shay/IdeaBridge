@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import type { Session, User } from "@supabase/supabase-js";
@@ -8,6 +8,8 @@ import type { MentorProfile } from "@/types/mentor";
 import type { StudentProfile } from "@/types/student";
 import type { AuthUser } from "@/types/user";
 import {
+  buildMentorProfile,
+  buildStudentProfile,
   buildLegacyProfileUpsertPayload,
   buildProfileUpsertPayload,
   FULL_PROFILE_SELECT,
@@ -18,7 +20,10 @@ import {
   normalizeProfileRow,
   type ProfileRow,
 } from "@/lib/profileMapper";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  getSupabaseBrowserClient,
+  getSupabaseBrowserConfigError,
+} from "@/lib/supabase/client";
 
 type RegisterUserInput = {
   role: UserRole;
@@ -35,6 +40,8 @@ type AuthContextValue = {
   isReady: boolean;
   login: (params: { email: string; password: string }) => Promise<AuthUser>;
   register: (params: { user: RegisterUserInput }) => Promise<AuthUser | null>;
+  sendPasswordResetEmail: (params: { email: string; redirectTo: string }) => Promise<void>;
+  updatePassword: (params: { password: string }) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<AuthUser | null>;
   updateStudentProfile: (profile: StudentProfile) => Promise<AuthUser | null>;
@@ -42,6 +49,22 @@ type AuthContextValue = {
 };
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
+
+function normalizeSupabaseAuthError(
+  error: unknown,
+  fallbackMessage: string
+): Error {
+  if (error instanceof Error) {
+    const lower = error.message.toLowerCase();
+    if (lower.includes("failed to fetch")) {
+      return new Error(
+        "Unable to reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and your internet connection."
+      );
+    }
+    return error;
+  }
+  return new Error(fallbackMessage);
+}
 
 async function selectProfile(userId: string) {
   const supabase = getSupabaseBrowserClient();
@@ -130,6 +153,20 @@ async function loadAuthUserFromSession(sessionUser: User): Promise<AuthUser> {
 
   const existing = await selectProfile(sessionUser.id);
   if (existing) {
+    const existingRole = normalizeRole(existing.role);
+    if (existingRole !== fallbackRole) {
+      return upsertProfile({
+        id: sessionUser.id,
+        email,
+        fullName: existing.full_name ?? fallbackFullName,
+        role: fallbackRole,
+        studentProfile:
+          fallbackRole === "student" ? buildStudentProfile(existing) : undefined,
+        mentorProfile:
+          fallbackRole === "mentor" ? buildMentorProfile(existing) : undefined,
+      });
+    }
+
     return mapProfileRowToAuthUser({
       profile: existing,
       email,
@@ -167,6 +204,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(() => {
+    const configError = getSupabaseBrowserConfigError();
+    if (configError) {
+      React.startTransition(() => {
+        setSession(null);
+        setUser(null);
+        setIsReady(true);
+      });
+      return;
+    }
+
     const supabase = getSupabaseBrowserClient();
     let cancelled = false;
 
@@ -228,63 +275,103 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       isReady,
       async login({ email, password }) {
-        const supabase = getSupabaseBrowserClient();
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error || !data.user) {
-          throw new Error(error?.message || "Login failed.");
-        }
-
-        React.startTransition(() => {
-          setSession(data.session);
-        });
-
-        return loadSessionUser(data.user).then((nextUser) => {
-          if (!nextUser) {
-            throw new Error("Unable to load your profile.");
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (error || !data.user) {
+            throw new Error(error?.message || "Login failed.");
           }
-          return nextUser;
-        });
-      },
-      async register({ user: incoming }) {
-        const supabase = getSupabaseBrowserClient();
-        const { data, error } = await supabase.auth.signUp({
-          email: incoming.email,
-          password: incoming.password,
-          options: {
-            data: {
-              full_name: incoming.fullName,
-              role: incoming.role,
-            },
-          },
-        });
 
-        if (error || !data.user) {
-          throw new Error(error?.message || "Registration failed.");
-        }
-
-        if (data.session) {
           React.startTransition(() => {
             setSession(data.session);
           });
-          const registeredUser = await upsertProfile({
-            id: data.user.id,
-            email: incoming.email,
-            fullName: incoming.fullName,
-            role: incoming.role,
-            studentProfile: incoming.studentProfile,
-            mentorProfile: incoming.mentorProfile,
+
+          return loadSessionUser(data.user).then((nextUser) => {
+            if (!nextUser) {
+              throw new Error("Unable to load your profile.");
+            }
+            return nextUser;
           });
+        } catch (error: unknown) {
+          throw normalizeSupabaseAuthError(error, "Login failed.");
+        }
+      },
+      async register({ user: incoming }) {
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { data, error } = await supabase.auth.signUp({
+            email: incoming.email,
+            password: incoming.password,
+            options: {
+              data: {
+                full_name: incoming.fullName,
+                role: incoming.role,
+              },
+            },
+          });
+
+          if (error || !data.user) {
+            throw new Error(error?.message || "Registration failed.");
+          }
+
+          if (data.session) {
+            React.startTransition(() => {
+              setSession(data.session);
+            });
+            const registeredUser = await upsertProfile({
+              id: data.user.id,
+              email: incoming.email,
+              fullName: incoming.fullName,
+              role: incoming.role,
+              studentProfile: incoming.studentProfile,
+              mentorProfile: incoming.mentorProfile,
+            });
+
+            React.startTransition(() => {
+              setUser(registeredUser);
+            });
+            return registeredUser;
+          }
 
           React.startTransition(() => {
-            setUser(registeredUser);
+            setUser(null);
           });
-          return registeredUser;
+          return null;
+        } catch (error: unknown) {
+          throw normalizeSupabaseAuthError(error, "Registration failed.");
         }
-
-        React.startTransition(() => {
-          setUser(null);
-        });
-        return null;
+      },
+      async sendPasswordResetEmail({ email, redirectTo }) {
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo,
+          });
+          if (error) {
+            throw new Error(error.message || "Failed to send reset link.");
+          }
+        } catch (error: unknown) {
+          throw normalizeSupabaseAuthError(error, "Failed to send reset link.");
+        }
+      },
+      async updatePassword({ password }) {
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { data, error } = await supabase.auth.updateUser({
+            password,
+          });
+          if (error) {
+            throw new Error(error.message || "Failed to reset password.");
+          }
+          if (data.user) {
+            await loadSessionUser(data.user);
+          }
+        } catch (error: unknown) {
+          throw normalizeSupabaseAuthError(error, "Failed to reset password.");
+        }
       },
       async logout() {
         const supabase = getSupabaseBrowserClient();
@@ -350,3 +437,4 @@ export function useAuth() {
 
   return ctx;
 }
+

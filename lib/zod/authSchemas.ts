@@ -79,7 +79,7 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z
   .object({
-    token: z.string().min(1),
+    token: z.string().optional(),
     newPassword: passwordStrengthSchema(),
     confirmNewPassword: z.string(),
   })
