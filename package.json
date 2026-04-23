@@ -6,7 +6,16 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "clickup:import:evidence": "node scripts/push-clickup-tasks.mjs",
+    "clickup:final-features": "node scripts/create-final-feature-clickup-tasks.mjs",
+    "clickup:link-history": "node scripts/link-clickup-history-evidence.mjs",
+    "evidence:pm": "node scripts/generate-project-management-evidence.mjs",
+    "smoke:api": "node scripts/run-local-api-smoke.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/final-smoke.spec.ts",
+    "test:e2e:human": "playwright test tests/human-browser-crud.spec.ts",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -19,8 +28,9 @@
     "@radix-ui/react-select": "^2.1.1",
     "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slot": "^1.2.4",
-    "@radix-ui/react-tabs": "^1.1.13",
-    "@supabase/ssr": "^0.10.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.1",
+    "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.101.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -41,6 +51,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

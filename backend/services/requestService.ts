@@ -1,154 +1,125 @@
-/**
- * requestService.ts
- * Database operations for help requests.
- */
 import supabaseServer from '../config/supabaseServer'
-import type { DbHelpRequest, RequestStatus } from '../models/types'
-import { STATUS_TRANSITIONS } from '../models/schemas'
+import type { MentorshipRequestRecord, MentorshipRequestStatus, MentorshipRequestType } from '@/types/request'
 
-// ─── Create ───────────────────────────────────────────────────
-
-export interface CreateRequestPayload {
-  student_id:   string
-  title:        string
-  request_type: 'full_project' | 'specific_idea'
-  description:  string
-  domain:       string
-  deadline?:    string
+type RequestPayload = {
+  student_id: string
+  title: string
+  description: string
+  domain: string
+  deadline?: string
+  type: MentorshipRequestType
+  assigned_mentor?: string
 }
 
-export async function createRequest(payload: CreateRequestPayload): Promise<DbHelpRequest> {
-  const { data, error } = await supabaseServer
-    .from('help_requests')
-    .insert({ ...payload, status: 'open' })
-    .select()
-    .single()
-
-  if (error) throw new Error(error.message)
-  return data
+type RequestProfileRefRow = {
+  id: string
+  full_name: string | null
+  avatar_url: string | null
 }
 
-// ─── Read ─────────────────────────────────────────────────────
+type RequestRow = Omit<MentorshipRequestRecord, 'status' | 'type' | 'student' | 'mentor'> & {
+  type: MentorshipRequestType | null
+  status: MentorshipRequestStatus
+  student?: RequestProfileRefRow | RequestProfileRefRow[] | null
+  mentor?: RequestProfileRefRow | RequestProfileRefRow[] | null
+}
 
-export async function getRequestById(request_id: string): Promise<DbHelpRequest | null> {
+const REQUEST_SELECT = `
+  id,
+  student_id,
+  title,
+  description,
+  domain,
+  deadline,
+  type,
+  status,
+  assigned_mentor,
+  updated_by,
+  created_at,
+  updated_at,
+  student:profiles!requests_student_id_fkey (
+    id,
+    full_name,
+    avatar_url
+  ),
+  mentor:profiles!requests_assigned_mentor_fkey (
+    id,
+    full_name,
+    avatar_url
+  )
+`
+
+function pickProfileRef(
+  value?: RequestProfileRefRow | RequestProfileRefRow[] | null
+): MentorshipRequestRecord['student'] {
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+
+  return value ?? null
+}
+
+function mapRequestRow(row: RequestRow): MentorshipRequestRecord {
+  return {
+    id: row.id,
+    student_id: row.student_id,
+    title: row.title,
+    description: row.description,
+    domain: row.domain,
+    deadline: row.deadline,
+    type: row.type,
+    status: row.status,
+    assigned_mentor: row.assigned_mentor,
+    updated_by: row.updated_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    student: pickProfileRef(row.student),
+    mentor: pickProfileRef(row.mentor),
+  }
+}
+
+export async function createRequest(payload: RequestPayload) {
   const { data, error } = await supabaseServer
-    .from('help_requests')
-    .select('*')
-    .eq('id', request_id)
+    .from('requests')
+    .insert(payload)
+    .select(REQUEST_SELECT)
     .maybeSingle()
-
-  if (error) throw new Error(error.message)
-  return data
+  if (error) throw error
+  return data ? mapRequestRow(data as RequestRow) : null
 }
 
-/** All requests created by a given student */
-export async function getRequestsByStudent(student_id: string): Promise<DbHelpRequest[]> {
+export async function updateRequestStatus(request_id: string, status: string, actorId?: string) {
+  // TODO: validate allowed transitions elsewhere
   const { data, error } = await supabaseServer
-    .from('help_requests')
-    .select('*')
-    .eq('student_id', student_id)
-    .order('created_at', { ascending: false })
-
-  if (error) throw new Error(error.message)
-  return data ?? []
-}
-
-/**
- * Returns open/relevant requests for a mentor, filtered by their skills.
- * Shows: open requests + requests assigned to this mentor.
- */
-export async function getRequestsForMentor(
-  mentor_user_id: string,
-  mentorSkills: string[]
-): Promise<DbHelpRequest[]> {
-  // Requests assigned to this mentor
-  const { data: assigned, error: e1 } = await supabaseServer
-    .from('help_requests')
-    .select('*')
-    .eq('mentor_id', mentor_user_id)
-    .order('created_at', { ascending: false })
-
-  if (e1) throw new Error(e1.message)
-
-  // Open requests in matching domains (domain compared against skills for simplicity)
-  const { data: open, error: e2 } = await supabaseServer
-    .from('help_requests')
-    .select('*')
-    .eq('status', 'open')
-    .is('mentor_id', null)
-    .order('created_at', { ascending: false })
-    .limit(50)
-
-  if (e2) throw new Error(e2.message)
-
-  // Deduplicate and merge
-  const assignedIds = new Set((assigned ?? []).map((r: DbHelpRequest) => r.id))
-  const combined = [
-    ...(assigned ?? []),
-    ...(open ?? []).filter((r: DbHelpRequest) => !assignedIds.has(r.id)),
-  ]
-
-  return combined
-}
-
-// ─── Update status ────────────────────────────────────────────
-
-/**
- * Updates request status after validating the transition is allowed.
- * Throws if the transition is invalid.
- */
-export async function updateRequestStatus(
-  request_id: string,
-  newStatus: RequestStatus,
-  actorId: string
-): Promise<DbHelpRequest> {
-  const existing = await getRequestById(request_id)
-  if (!existing) throw new Error('Request not found')
-
-  const allowed = STATUS_TRANSITIONS[existing.status]
-  if (!allowed.includes(newStatus)) {
-    throw new Error(
-      `Invalid status transition: ${existing.status} → ${newStatus}. Allowed: ${allowed.join(', ') || 'none'}`
-    )
-  }
-
-  const updates: Partial<DbHelpRequest> = {
-    status: newStatus,
-    updated_by: actorId,
-  }
-
-  const { data, error } = await supabaseServer
-    .from('help_requests')
-    .update(updates)
+    .from('requests')
+    .update({ status, updated_by: actorId })
     .eq('id', request_id)
-    .select()
-    .single()
+    .select(REQUEST_SELECT)
+    .maybeSingle()
+  if (error) throw error
+  return data ? mapRequestRow(data as RequestRow) : null
+}
 
-  if (error) throw new Error(error.message)
+export async function getRequestById(request_id: string) {
+  const { data, error } = await supabaseServer.from('requests').select('*').eq('id', request_id).maybeSingle()
+  if (error) throw error
   return data
 }
 
-/**
- * Assigns a mentor to a request (when mentor accepts).
- * Also transitions status to 'accepted'.
- */
-export async function assignMentorToRequest(
-  request_id: string,
-  mentor_id: string
-): Promise<DbHelpRequest> {
-  const existing = await getRequestById(request_id)
-  if (!existing) throw new Error('Request not found')
-  if (existing.status !== 'open') {
-    throw new Error('Only open requests can be accepted')
+export async function listRequestsForUser(userId: string, role?: string) {
+  let query = supabaseServer
+    .from('requests')
+    .select(REQUEST_SELECT)
+    .order('created_at', { ascending: false })
+  const normalizedRole = typeof role === 'string' ? role.toLowerCase() : ''
+
+  if (normalizedRole === 'mentor') {
+    query = query.eq('assigned_mentor', userId)
+  } else {
+    query = query.eq('student_id', userId)
   }
 
-  const { data, error } = await supabaseServer
-    .from('help_requests')
-    .update({ mentor_id, status: 'accepted', updated_by: mentor_id })
-    .eq('id', request_id)
-    .select()
-    .single()
-
-  if (error) throw new Error(error.message)
-  return data
+  const { data, error } = await query
+  if (error) throw error
+  return ((data as RequestRow[] | null) ?? []).map(mapRequestRow)
 }

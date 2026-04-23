@@ -1,29 +1,47 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { submitRequest } from '@/backend/modules/request'
+import { createNotification } from '@/backend/services/notificationService'
+import { listRequestsForUser } from '@/backend/services/requestService'
+import { getProfileByUserId } from '@/backend/modules/profile'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
+import { getErrorMessage } from '@/lib/errorMessage'
 
-/** POST /api/requests/create â€” students only */
-export const POST = withAuth(async (req: NextRequest, user) => {
+export async function GET(request: Request) {
   try {
-    const profile = await getProfileByUserId(user.id)
-    if (!profile || profile.role !== 'student') {
-      return NextResponse.json({ error: 'Forbidden: only students can create requests' }, { status: 403 })
+    const authorization = request.headers.get('authorization')
+    const user = await getUserFromAuthHeader(authorization)
+    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+    const profile = await getProfileByUserId(user.user.id)
+    const data = await listRequestsForUser(user.user.id, typeof profile?.role === 'string' ? profile.role : undefined)
+    return NextResponse.json(data)
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to load requests.') }), { status: 400 })
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const authorization = request.headers.get('authorization')
+    const user = await getUserFromAuthHeader(authorization)
+    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+    const body = await request.json()
+    body.student_id = user.user.id
+    const data = await submitRequest(body)
+    if (typeof data?.assigned_mentor === 'string') {
+      await createNotification({
+        user_id: data.assigned_mentor,
+        type: 'mentorship_request',
+        payload: {
+          request_id: data.id,
+          title: data.title,
+          student_id: user.user.id,
+        },
+      })
     }
-
-    const body = await req.json()
-    const request = await submitRequest(user.id, body)
-    return NextResponse.json({ data: request }, { status: 201 })
-  } catch (e) {
-    return handleError(e)
+    return NextResponse.json(data)
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to submit request.') }), { status: 400 })
   }
-})
-
-/** GET /api/requests/my â€” student views their own requests */
-export const GET = withAuth(async (_req: NextRequest, user) => {
-  try {
-    const requests = await getStudentRequests(user.id)
-    return NextResponse.json({ data: requests })
-  } catch (e) {
-    return handleError(e)
-  }
-})
+}

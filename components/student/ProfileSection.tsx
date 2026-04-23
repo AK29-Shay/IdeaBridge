@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { toast } from "sonner";
@@ -161,7 +161,32 @@ export function ProfileSection() {
     };
     updateStudentProfile(profile);
     setEditing(false);
-    toast.success("Profile saved successfully! âœ¨");
+    toast.success("Profile saved successfully! ✨");
+  }
+
+  async function handleSaveAndWait() {
+    if (!form.bio || form.bio.length < 5) {
+      toast.error("Bio is too short. Please write at least a sentence.");
+      return;
+    }
+
+    const profile: StudentProfile = {
+      bio: form.bio,
+      skills: form.skills,
+      studyYear: form.studyYear || undefined,
+      faculty: form.faculty || undefined,
+      specialization: form.specialization || undefined,
+      portfolioLinks: [form.github, form.linkedin, form.website].filter(Boolean),
+      avatarUrl: form.avatarUrl || undefined,
+    };
+
+    try {
+      await updateStudentProfile(profile);
+      setEditing(false);
+      toast.success("Profile saved successfully! ✨");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save profile.");
+    }
   }
 
   function handleCancel() {
@@ -211,7 +236,9 @@ export function ProfileSection() {
               Cancel
             </button>
             <button
-              onClick={handleSave}
+              onClick={() => {
+                void handleSaveAndWait();
+              }}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-[#0F0F0F] shadow-sm hover:brightness-110 hover:-translate-y-0.5 transition-all duration-200"
             >
               <Save className="h-4 w-4" />
@@ -241,7 +268,7 @@ export function ProfileSection() {
             </div>
             <div className="mb-2">
               <div className="text-xl font-bold text-slate-800">{form.fullName}</div>
-              <div className="text-sm text-slate-500">{form.faculty || "Faculty not set"} Â· {form.studyYear || "Year not set"}</div>
+              <div className="text-sm text-slate-500">{form.faculty || "Faculty not set"} · {form.studyYear || "Year not set"}</div>
             </div>
           </div>
 
@@ -308,7 +335,7 @@ export function ProfileSection() {
           />
         ) : (
           <p className="text-sm text-slate-600 leading-relaxed">
-            {form.bio || <span className="text-slate-400 italic">No bio added yet. Click "Edit Profile" to add one.</span>}
+            {form.bio || <span className="text-slate-400 italic">No bio added yet. Click Edit Profile to add one.</span>}
           </p>
         )}
       </div>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -11,7 +11,6 @@ import { Mail, Lock, Eye, EyeOff } from "@/components/ui/icons";
 
 import { loginSchema } from "@/lib/zod/authSchemas";
 import { useAuth } from "@/context/AuthContext";
-import { supabaseClient } from "@/backend/config/supabaseClient";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -43,7 +42,6 @@ export default function LoginPage() {
     },
   });
 
-
   async function handleSubmit(values: LoginInput) {
     setIsLoading(true);
     try {
@@ -57,14 +55,11 @@ export default function LoginPage() {
       const nextRole = signedInUser.role;
       if (!nextRole) throw new Error("Unable to determine your role.");
 
-      toast.success("Welcome back to IdeaBridge! ðŸš€");
-      if (redirectTo) {
-        router.push(redirectTo);
-        return;
-      }
-
-      const roleHome = nextRole === "mentor" ? "/dashboard/mentor" : "/dashboard/student";
-      router.push(roleHome);
+      toast.success("Welcome back to IdeaBridge! 🚀");
+      router.push(
+        redirectTo ||
+          (nextRole === "student" ? "/dashboard/student" : "/dashboard/mentor")
+      );
     } catch (rawError: unknown) {
       const message =
         rawError instanceof Error ? rawError.message : "Login failed.";
@@ -193,10 +188,10 @@ export default function LoginPage() {
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  Signing inâ€¦
+                  Signing in…
                 </span>
               ) : (
-                "Sign In â†’"
+                "Sign In →"
               )}
             </button>
           </form>

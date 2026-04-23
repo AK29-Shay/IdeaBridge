@@ -1,245 +1,385 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, SlidersHorizontal, X, TrendingUp, FileCode2, Lightbulb, Sparkles, GraduationCap, Tag } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  X,
+  TrendingUp,
+  FileCode2,
+  Lightbulb,
+  Sparkles,
+  GraduationCap,
+  Tag,
+} from "lucide-react";
+
+type PostType = "full_project" | "idea" | "ai_driven" | "campus_req";
+type PostMode = "post" | "request";
+
+type SearchPost = {
+  id: string;
+  title: string;
+  type: PostType;
+  mode: PostMode;
+  author: string;
+  role: string;
+  tags: string[];
+  views: number;
+  description: string;
+};
+
+type ApiPost = {
+  id: string;
+  title: string;
+  description: string;
+  post_type: PostType;
+  post_mode: PostMode;
+  tech_stack: string[];
+  view_count: number;
+  author?: {
+    name?: string;
+    role?: string;
+  };
+};
 
 const POST_TYPES = [
   { label: "Full Project", value: "full_project", icon: <FileCode2 size={14} /> },
   { label: "Idea", value: "idea", icon: <Lightbulb size={14} /> },
   { label: "AI Driven", value: "ai_driven", icon: <Sparkles size={14} /> },
   { label: "Campus Req", value: "campus_req", icon: <GraduationCap size={14} /> },
-];
+] as const;
 
-const TECH_TAGS = ["Next.js", "React", "Supabase", "TypeScript", "Tailwind", "Node.js", "PostgreSQL", "Python"];
+const TYPE_STYLES: Record<PostType, string> = {
+  full_project: "bg-[#FFF1E6] text-[#8A4E2A]",
+  idea: "bg-emerald-50 text-emerald-700",
+  ai_driven: "bg-sky-50 text-sky-700",
+  campus_req: "bg-amber-50 text-amber-700",
+};
 
-const MOCK_POSTS = [
-  { id: "1", title: "IdeaBridge: AI-Powered Collaboration Platform", type: "full_project", author: "AK29-Shay", role: "Student", tags: ["Next.js", "Supabase", "TypeScript"], upvotes: 42, views: 310, mode: "post" },
-  { id: "2", title: "How do I connect Supabase RLS with Next.js server actions?", type: "campus_req", author: "sneha-dhaya-IT", role: "Student", tags: ["Supabase", "Next.js"], upvotes: 18, views: 145, mode: "request" },
-  { id: "3", title: "Fully AI-Generated E-Commerce Store", type: "ai_driven", author: "abinayan03", role: "Mentor", tags: ["React", "Python", "TypeScript"], upvotes: 87, views: 620, mode: "post" },
-  { id: "4", title: "Campus Library Management System", type: "campus_req", author: "NethminiChinthana101", role: "Student", tags: ["PostgreSQL", "Node.js"], upvotes: 23, views: 190, mode: "post" },
-  { id: "5", title: "Micro-SaaS Idea: AI Code Reviewer", type: "idea", author: "AK29-Shay", role: "Student", tags: ["TypeScript", "React"], upvotes: 55, views: 410, mode: "post" },
-];
-
-interface Post {
-  id: string;
-  title: string;
-  type: string;
-  author: string;
-  role: string;
-  tags: string[];
-  upvotes: number;
-  views: number;
-  mode: string;
-}
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debouncedValue;
+function mapPost(post: ApiPost): SearchPost {
+  return {
+    id: post.id,
+    title: post.title,
+    type: post.post_type,
+    mode: post.post_mode,
+    author: post.author?.name ?? "IdeaBridge Member",
+    role: post.author?.role ?? "Student",
+    tags: Array.isArray(post.tech_stack) ? post.tech_stack : [],
+    views: Number(post.view_count) || 0,
+    description: post.description ?? "",
+  };
 }
 
 export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
-  const [results, setResults] = useState<Post[]>(MOCK_POSTS);
+  const [query, setQuery] = React.useState("");
+  const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [posts, setPosts] = React.useState<SearchPost[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
+  const recoveryQueryRef = React.useRef<string | null>(null);
 
-  const debouncedQuery = useDebounce(query, 300);
+  const deferredQuery = React.useDeferredValue(query);
 
-  const filter = useCallback(() => {
-    let filtered = MOCK_POSTS;
-    if (debouncedQuery.trim()) {
-      filtered = filtered.filter(p =>
-        p.title.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-        p.tags.some(t => t.toLowerCase().includes(debouncedQuery.toLowerCase()))
-      );
+  const loadPosts = React.useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const response = await fetch("/api/posts?limit=48", { cache: "no-store" });
+      const payload = (await response.json().catch(() => null)) as ApiPost[] | { error?: string } | null;
+
+      if (!response.ok) {
+        const message =
+          payload &&
+          typeof payload === "object" &&
+          !Array.isArray(payload) &&
+          "error" in payload
+            ? payload.error
+            : undefined;
+        throw new Error(message || "Failed to load ideas.");
+      }
+
+      setPosts(Array.isArray(payload) ? payload.map(mapPost) : []);
+    } catch (error) {
+      setPosts([]);
+      setLoadError(error instanceof Error ? error.message : "Failed to load ideas.");
+    } finally {
+      setIsLoading(false);
     }
-    if (selectedTypes.length > 0) {
-      filtered = filtered.filter(p => selectedTypes.includes(p.type));
+  }, []);
+
+  React.useEffect(() => {
+    void loadPosts();
+  }, [loadPosts]);
+
+  const techTags = React.useMemo(() => {
+    return Array.from(new Set(posts.flatMap((post) => post.tags))).sort((left, right) => left.localeCompare(right));
+  }, [posts]);
+
+  const results = React.useMemo(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
+    return posts.filter((post) => {
+      if (normalizedQuery) {
+        const haystack = `${post.title} ${post.description} ${post.tags.join(" ")} ${post.author}`.toLowerCase();
+        if (!haystack.includes(normalizedQuery)) {
+          return false;
+        }
+      }
+
+      if (selectedTypes.length > 0 && !selectedTypes.includes(post.type)) {
+        return false;
+      }
+
+      if (selectedTags.length > 0 && !selectedTags.every((tag) => post.tags.includes(tag))) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [deferredQuery, posts, selectedTags, selectedTypes]);
+
+  const trending = React.useMemo(() => {
+    return [...posts].sort((left, right) => right.views - left.views).slice(0, 3);
+  }, [posts]);
+
+  React.useEffect(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      recoveryQueryRef.current = null;
+      return;
     }
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(p => selectedTags.some(t => p.tags.includes(t)));
+
+    if (isLoading || results.length > 0 || recoveryQueryRef.current === normalizedQuery) {
+      return;
     }
-    setResults(filtered);
-  }, [debouncedQuery, selectedTypes, selectedTags]);
 
-  useEffect(() => { filter(); }, [filter]);
+    recoveryQueryRef.current = normalizedQuery;
+    const timer = window.setTimeout(() => {
+      void loadPosts();
+    }, 600);
 
-  const toggleType = (v: string) =>
-    setSelectedTypes(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
-  const toggleTag = (t: string) =>
-    setSelectedTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
-  const clearAll = () => { setSelectedTypes([]); setSelectedTags([]); setQuery(""); };
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [deferredQuery, isLoading, loadPosts, results.length]);
 
-  const trending = [...MOCK_POSTS].sort((a, b) => b.upvotes - a.upvotes).slice(0, 3);
+  function toggleType(value: string) {
+    setSelectedTypes((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
+  }
 
-  const typeColor: Record<string, string> = {
-    full_project: "text-indigo-400 bg-indigo-900/30",
-    idea: "text-green-400 bg-green-900/30",
-    ai_driven: "text-purple-400 bg-purple-900/30",
-    campus_req: "text-orange-400 bg-orange-900/30",
-  };
+  function toggleTag(value: string) {
+    setSelectedTags((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
+  }
+
+  function clearAll() {
+    setSelectedTypes([]);
+    setSelectedTags([]);
+    setQuery("");
+  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Explore Ideas</h1>
-          <p className="text-slate-400 text-sm">Search projects, ideas, and guidance across the community.</p>
-        </div>
-
-        {/* Search Bar */}
-        <div className="relative mb-4">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search by title, tech stack, topic..."
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-12 py-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-          />
-          {query && (
-            <button onClick={() => setQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-              <X size={16} />
-            </button>
-          )}
-        </div>
-
-        {/* Filter Toggle Row */}
-        <div className="flex items-center gap-3 mb-6 flex-wrap">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg border transition ${showFilters ? "bg-indigo-600 border-indigo-500 text-white" : "bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200"}`}
-          >
-            <SlidersHorizontal size={15} />
-            Filters
-            {(selectedTypes.length + selectedTags.length) > 0 && (
-              <span className="bg-indigo-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {selectedTypes.length + selectedTags.length}
-              </span>
-            )}
-          </button>
-          {(selectedTypes.length + selectedTags.length) > 0 && (
-            <button onClick={clearAll} className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1">
-              <X size={12} /> Clear all
-            </button>
-          )}
-        </div>
-
-        {/* Filter Panel */}
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden mb-6"
-            >
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Post Type</p>
-                  <div className="flex flex-wrap gap-2">
-                    {POST_TYPES.map(t => (
-                      <button
-                        key={t.value}
-                        onClick={() => toggleType(t.value)}
-                        className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${selectedTypes.includes(t.value) ? "bg-indigo-600 border-indigo-500 text-white" : "border-slate-700 text-slate-400 hover:border-slate-500"}`}
-                      >
-                        {t.icon} {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                    <Tag size={12} className="inline mr-1" />Tech Stack
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {TECH_TAGS.map(tag => (
-                      <button
-                        key={tag}
-                        onClick={() => toggleTag(tag)}
-                        className={`text-xs font-medium px-3 py-1 rounded-full border transition ${selectedTags.includes(tag) ? "bg-purple-600 border-purple-500 text-white" : "border-slate-700 text-slate-400 hover:border-slate-500"}`}
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Results */}
-          <div className="lg:col-span-3 space-y-3">
-            <p className="text-slate-500 text-sm mb-3">
-              {results.length === 0 ? "No results found." : `${results.length} result${results.length !== 1 ? "s" : ""} found`}
+    <div className="min-h-screen bg-gradient-to-br from-[#FFF8F3] via-[#FFF4EA] to-[#FFEBDD] px-4 py-8 sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-6xl">
+        <section className="overflow-hidden rounded-[32px] border border-[#FFD4B1] bg-[#0F0F0F] px-6 py-8 text-[#FDE0C9] shadow-[0_35px_70px_-45px_rgba(15,15,15,0.9)] sm:px-8">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#FFCBA4]">
+              <Sparkles className="h-3.5 w-3.5" />
+              Search & Discovery
+            </div>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">Explore ideas, projects, and requests</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#FDE0C9]/75 sm:text-base">
+              Discover what the community is building, filter by project type and tech stack, and spot the most active ideas across IdeaBridge.
             </p>
+          </div>
+        </section>
+
+        <div className="mt-6 rounded-[28px] border border-[#FFD4B1] bg-white/90 p-5 shadow-[0_28px_60px_-44px_rgba(63,31,7,0.35)] backdrop-blur">
+          <div className="relative">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A4E2A]" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by title, description, author, or tech stack..."
+              className="h-13 w-full rounded-2xl border border-[#FFD7BC] bg-[#FFF8F2] pl-12 pr-12 text-sm text-[#0F0F0F] placeholder:text-[#8A4E2A]/55 focus:border-[#F5A97F] focus:outline-none focus:ring-2 focus:ring-[#F5A97F]/25"
+            />
+            {query ? (
+              <button
+                onClick={() => setQuery("")}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8A4E2A]/70 transition-colors hover:text-[#0F0F0F]"
+              >
+                <X size={16} />
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowFilters((current) => !current)}
+              className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                showFilters
+                  ? "border-[#F5A97F] bg-[#0F0F0F] text-[#FFCBA4]"
+                  : "border-[#FFD7BC] bg-[#FFF8F2] text-[#8A4E2A] hover:border-[#F5A97F]"
+              }`}
+            >
+              <SlidersHorizontal size={15} />
+              Filters
+              {selectedTypes.length + selectedTags.length > 0 ? (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#FFCBA4] text-[11px] text-[#0F0F0F]">
+                  {selectedTypes.length + selectedTags.length}
+                </span>
+              ) : null}
+            </button>
+
+            {selectedTypes.length + selectedTags.length > 0 ? (
+              <button onClick={clearAll} className="inline-flex items-center gap-1 text-xs font-semibold text-[#B95D35] transition hover:text-[#0F0F0F]">
+                <X size={12} />
+                Clear all
+              </button>
+            ) : null}
+          </div>
+
+          <AnimatePresence>
+            {showFilters ? (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 rounded-2xl border border-[#FFE1CC] bg-[#FFF8F2] p-5">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A4E2A]/70">Post Type</p>
+                    <div className="flex flex-wrap gap-2">
+                      {POST_TYPES.map((type) => (
+                        <button
+                          key={type.value}
+                          onClick={() => toggleType(type.value)}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                            selectedTypes.includes(type.value)
+                              ? "border-[#F5A97F] bg-[#0F0F0F] text-[#FFCBA4]"
+                              : "border-[#FFD7BC] bg-white text-[#8A4E2A] hover:border-[#F5A97F]"
+                          }`}
+                        >
+                          {type.icon}
+                          {type.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#8A4E2A]/70">
+                      <Tag size={12} className="mr-1 inline" />
+                      Tech Stack
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {techTags.map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => toggleTag(tag)}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                            selectedTags.includes(tag)
+                              ? "border-[#F5A97F] bg-[#FDE8D8] text-[#8A4E2A]"
+                              : "border-[#FFD7BC] bg-white text-[#8A4E2A]/85 hover:border-[#F5A97F]"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-4">
+          <div className="space-y-4 lg:col-span-3">
+            <p className="text-sm text-[#8A4E2A]">
+              {isLoading
+                ? "Loading ideas..."
+                : results.length === 0
+                  ? "No results found for the current filters."
+                  : `${results.length} result${results.length !== 1 ? "s" : ""} found`}
+            </p>
+
+            {loadError ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>
+            ) : null}
+
             <AnimatePresence mode="popLayout">
-              {results.map(post => (
-                <motion.div
+              {results.map((post) => (
+                <motion.article
                   key={post.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.97 }}
                   layout
-                  className="bg-slate-900 border border-slate-800 hover:border-slate-600 rounded-xl p-4 cursor-pointer transition-colors"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="rounded-[24px] border border-[#FFD7BC] bg-white/92 p-5 shadow-[0_24px_45px_-38px_rgba(63,31,7,0.35)] transition hover:-translate-y-0.5 hover:border-[#F5A97F]"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${typeColor[post.type]}`}>
-                          {POST_TYPES.find(t => t.value === post.type)?.label}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${TYPE_STYLES[post.type]}`}>
+                          {POST_TYPES.find((type) => type.value === post.type)?.label}
                         </span>
-                        <span className="text-[11px] text-slate-500">{post.mode === "request" ? "🙋 Request" : "💡 Post"}</span>
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A4E2A]/60">
+                          {post.mode === "request" ? "Request" : "Post"}
+                        </span>
                       </div>
-                      <h3 className="font-semibold text-white text-sm leading-snug mb-2">{post.title}</h3>
-                      <div className="flex flex-wrap gap-1.5 mb-2">
-                        {post.tags.map(tag => (
-                          <span key={tag} className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">{tag}</span>
+                      <h2 className="text-lg font-semibold text-[#0F0F0F]">{post.title}</h2>
+                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#5D4739]">
+                        {post.description || "This post is ready for discussion in the IdeaBridge community feed."}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {post.tags.map((tag) => (
+                          <span key={tag} className="rounded-full bg-[#FFF3E8] px-2.5 py-1 text-[11px] font-medium text-[#8A4E2A]">
+                            {tag}
+                          </span>
                         ))}
                       </div>
-                      <p className="text-xs text-slate-500">{post.author} · {post.role}</p>
+                      <p className="mt-3 text-xs font-medium text-[#8A4E2A]/75">
+                        {post.author} · {post.role}
+                      </p>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-indigo-400 font-bold text-lg">{post.upvotes}</div>
-                      <div className="text-slate-600 text-[10px]">upvotes</div>
-                      <div className="text-slate-600 text-[10px] mt-1">{post.views} views</div>
+
+                    <div className="shrink-0 rounded-2xl border border-[#FFE1CC] bg-[#FFF8F2] px-4 py-3 text-right">
+                      <div className="text-2xl font-bold text-[#0F0F0F]">{post.views}</div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8A4E2A]/60">Views</div>
                     </div>
                   </div>
-                </motion.div>
+                </motion.article>
               ))}
             </AnimatePresence>
           </div>
 
-          {/* Trending Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sticky top-6">
-              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                <TrendingUp size={15} className="text-orange-400" />
+          <aside className="lg:col-span-1">
+            <div className="sticky top-6 rounded-[24px] border border-[#FFD7BC] bg-white/92 p-5 shadow-[0_24px_45px_-38px_rgba(63,31,7,0.35)]">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-[#0F0F0F]">
+                <TrendingUp size={15} className="text-[#B95D35]" />
                 Trending Now
               </h3>
-              <div className="space-y-3">
-                {trending.map((post, idx) => (
+              <div className="mt-4 space-y-4">
+                {trending.map((post, index) => (
                   <div key={post.id} className="flex items-start gap-3">
-                    <span className="text-xl font-black text-slate-700 leading-none">#{idx + 1}</span>
+                    <span className="text-2xl font-black leading-none text-[#FFD4B1]">#{index + 1}</span>
                     <div>
-                      <p className="text-xs text-slate-300 font-medium leading-snug line-clamp-2">{post.title}</p>
-                      <p className="text-[10px] text-orange-400 mt-0.5">↑ {post.upvotes} upvotes</p>
+                      <p className="line-clamp-2 text-sm font-semibold text-[#0F0F0F]">{post.title}</p>
+                      <p className="mt-1 text-[11px] font-medium text-[#8A4E2A]/75">{post.views} views</p>
                     </div>
                   </div>
                 ))}
+                {!isLoading && trending.length === 0 ? (
+                  <p className="text-sm text-[#8A4E2A]/70">Trending items will appear here once posts are available.</p>
+                ) : null}
               </div>
             </div>
-          </div>
+          </aside>
         </div>
       </div>
     </div>

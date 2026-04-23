@@ -1,27 +1,33 @@
-﻿/**
- * GET  /api/notifications       â†’ fetch all notifications for the logged-in user
- * PATCH /api/notifications      â†’ mark ALL notifications as read
- */
 import { NextResponse } from 'next/server'
 import { notify } from '@/backend/modules/notification'
+import { listNotificationsForUser } from '@/backend/services/notificationService'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
+import { getErrorMessage } from '@/lib/errorMessage'
 
-/** GET /api/notifications â€” returns the caller's notifications (newest first) */
-export const GET = withAuth(async (_req, user) => {
+export async function GET(request: Request) {
   try {
-    const notifications = await fetchNotifications(user.id)
-    return NextResponse.json({ data: notifications })
-  } catch (e) {
-    return handleError(e)
-  }
-})
+    const authorization = request.headers.get('authorization')
+    const user = await getUserFromAuthHeader(authorization)
+    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-/** PATCH /api/notifications â€” marks ALL unread notifications as read */
-export const PATCH = withAuth(async (_req, user) => {
-  try {
-    await markAllRead(user.id)
-    return NextResponse.json({ message: 'All notifications marked as read' })
-  } catch (e) {
-    return handleError(e)
+    const data = await listNotificationsForUser(user.user.id)
+    return NextResponse.json(data)
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to load notifications.') }), { status: 400 })
   }
-})
+}
+
+export async function POST(request: Request) {
+  try {
+    const authorization = request.headers.get('authorization')
+    const user = await getUserFromAuthHeader(authorization)
+    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+    const body = await request.json()
+    body.actor_id = user.user.id
+    const data = await notify(body)
+    return NextResponse.json(data)
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to create notification.') }), { status: 400 })
+  }
+}

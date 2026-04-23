@@ -90,7 +90,7 @@ export function BlogSection() {
   const [isSavingBlog, setIsSavingBlog] = React.useState(false);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
   const [isUploadingVideo, setIsUploadingVideo] = React.useState(false);
-  const IMAGE_MAX = 5 * 1024 * 1024; // 5MB
+  const IMAGE_MAX = 2 * 1024 * 1024; // 2MB
   const VIDEO_MAX = 50 * 1024 * 1024; // 50MB
   const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
   const ALLOWED_IMAGE_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -410,7 +410,7 @@ export function BlogSection() {
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] transition-all"
                 />
                   <FieldError msg={errors.imageUrl?.message} />
-                  <label className="text-sm text-slate-500">Or upload an image (max 5MB)</label>
+                  <label className="text-sm text-slate-500">Or upload an image (max 2MB)</label>
                   <input
                     accept="image/*"
                     type="file"
@@ -426,7 +426,7 @@ export function BlogSection() {
                         return;
                       }
                       if (f.size > IMAGE_MAX) {
-                        setImageFileError("Image is too large. Max 5MB.");
+                        setImageFileError("Image is too large. Max 2MB.");
                         return;
                       }
                       void uploadMediaFile(f, "image");
@@ -521,7 +521,7 @@ export function BlogSection() {
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#FFCBA4]/30 bg-[#FFCBA4]/5 py-16 text-center">
           <BookOpen className="h-10 w-10 text-[#F5A97F] mb-3" />
           <p className="text-slate-600 font-medium">No blogs yet</p>
-          <p className="text-sm text-slate-400 mt-1">Click "Create Blog" to write your first post.</p>
+          <p className="text-sm text-slate-400 mt-1">Click Create Blog to write your first post.</p>
         </div>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2">

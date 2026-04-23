@@ -12,7 +12,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       lang="en"
-      className="h-full antialiased light"
+      className="h-full antialiased"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
     >

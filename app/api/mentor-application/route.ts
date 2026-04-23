@@ -1,20 +1,20 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { submitApplication } from '@/backend/modules/mentor-application'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
+import { getErrorMessage, hasErrorCode } from '@/lib/errorMessage'
 
-export const POST = withAuth(async (req: NextRequest, user) => {
+export async function POST(request: Request) {
   try {
-    const body = await req.json()
-    // Always inject user_id from auth â€” never trust the body
-    const data = await submitApplication({ ...body, user_id: user.id })
-    return NextResponse.json({ data }, { status: 201 })
-  } catch (e: unknown) {
-    if (e instanceof Error && (e as NodeJS.ErrnoException & { code?: string }).code === 'DUPLICATE') {
-      return NextResponse.json(
-        { error: 'You have already submitted an application' },
-        { status: 409 }
-      )
-    }
-    return handleError(e)
+    const authorization = request.headers.get('authorization')
+    const user = await getUserFromAuthHeader(authorization)
+    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+    const body = await request.json()
+    body.user_id = user.user.id
+    const data = await submitApplication(body)
+    return NextResponse.json(data)
+  } catch (error: unknown) {
+    const status = hasErrorCode(error, 'DUPLICATE') ? 409 : 400
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to submit mentor application.') }), { status })
   }
-})
+}

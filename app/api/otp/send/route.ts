@@ -1,16 +1,18 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { sendOtp } from '@/backend/modules/otp'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
+import { getErrorMessage } from '@/lib/errorMessage'
 
-export const POST = withAuth(async (_req: NextRequest, user) => {
+export async function POST(request: Request) {
   try {
-    const result = await handleSendOtp({ user_id: user.id })
-    // Strip OTP from response in production
-    if (process.env.NODE_ENV === 'production') {
-      return NextResponse.json({ message: result.message })
-    }
-    return NextResponse.json(result)
-  } catch (e) {
-    return handleError(e)
+    const authorization = request.headers.get('authorization')
+    const user = await getUserFromAuthHeader(authorization)
+    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+
+    const result = await sendOtp(user.user.id)
+    // In production do NOT return OTP in response. This is for development convenience.
+    return NextResponse.json({ ok: true, otp: result.otp })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to send OTP.') }), { status: 400 })
   }
-})
+}

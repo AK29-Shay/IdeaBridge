@@ -1,9 +1,9 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createOrUpdateProfile, fetchProfile } from '@/backend/modules/profile'
 import { getUserFromAuthHeader } from '../../../backend/middleware/auth'
+import { getErrorMessage } from '@/lib/errorMessage'
 
-/** GET /api/profile/me */
-export const GET = withAuth(async (_req, user) => {
+export async function POST(request: Request) {
   try {
     const authorization = request.headers.get('authorization')
     const user = await getUserFromAuthHeader(authorization)
@@ -13,29 +13,20 @@ export const GET = withAuth(async (_req, user) => {
     body.id = user.user.id
     const data = await createOrUpdateProfile(body)
     return NextResponse.json(data)
-  } catch (e: any) {
-    return new NextResponse(JSON.stringify({ error: e.message || String(e) }), { status: 400 })
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to save profile.') }), { status: 400 })
   }
-})
+}
 
-/** POST /api/profile/create */
-export const POST = withAuth(async (req, user) => {
+export async function GET(request: Request) {
   try {
-    const body = await req.json()
-    const profile = await createOrUpdateProfile(user.id, body)
-    return NextResponse.json({ data: profile }, { status: 201 })
-  } catch (e) {
-    return handleError(e)
-  }
-})
+    const authorization = request.headers.get('authorization')
+    const user = await getUserFromAuthHeader(authorization)
+    if (!user) return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-/** PATCH /api/profile/update */
-export const PATCH = withAuth(async (req, user) => {
-  try {
-    const body = await req.json()
-    const profile = await createOrUpdateProfile(user.id, body)
-    return NextResponse.json({ data: profile })
-  } catch (e) {
-    return handleError(e)
+    const data = await fetchProfile(user.user.id)
+    return NextResponse.json(data)
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to load profile.') }), { status: 400 })
   }
-})
+}

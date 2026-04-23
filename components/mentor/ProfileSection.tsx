@@ -1,174 +1,391 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
-import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
-
+import { Pencil, Save, X, Plus, Tag, Upload, Link2, ExternalLink, Globe, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { ALL_SKILLS } from "@/lib/constants";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SkillMultiSelect } from "@/components/forms/SkillMultiSelect";
-import { Textarea } from "@/components/ui/textarea";
+import type { MentorProfile } from "@/types/mentor";
 
-const mentorProfileSchema = z.object({
-  fullName: z.string().min(2, "Name is required"),
-  bio: z.string().min(10, "Bio must be at least 10 characters"),
-  availability: z.enum(["Full-time", "Part-time", "Evenings"]),
-  yearsExperience: z.preprocess((value) => Number(value), z.number().min(0, "Minimum 0")),
-  skills: z.array(z.string()).min(1, "Add at least one skill"),
-  avatarUrl: z.string().optional(),
+/* ───── Schema ───── */
+const profileSchema = z.object({
+  fullName:           z.string().min(2, "Full name is required."),
+  bio:                z.string().min(10, "Bio must be at least 10 characters."),
+  skills:             z.array(z.string()).min(1, "Add at least one skill."),
+  availability:       z.enum(["Full-time", "Part-time", "Evenings"]),
+  availabilityStatus: z.enum(["Available Now", "Available in 1-2 days", "Busy", "On Leave"]),
+  yearsExperience:    z.coerce.number().min(0, "Min 0").max(50, "Max 50"),
+  linkedIn:           z.string().url("Must be a valid URL.").optional().or(z.literal("")),
+  github:             z.string().url("Must be a valid URL.").optional().or(z.literal("")),
+  avatarUrl:          z.string().optional(),
 });
+type ProfileFormValues = z.input<typeof profileSchema>;
+type ProfileInput = z.output<typeof profileSchema>;
 
-type MentorProfileInput = z.infer<typeof mentorProfileSchema>;
-type MentorProfileFormValues = z.input<typeof mentorProfileSchema>;
-type MentorProfileSubmitValues = z.output<typeof mentorProfileSchema>;
+const SUGGESTED_SKILLS = [
+  "Python", "JavaScript", "TypeScript", "React", "Node.js", "Machine Learning",
+  "Deep Learning", "Data Science", "SQL", "MongoDB", "Java", "C++", "TensorFlow",
+  "PyTorch", "Docker", "Kubernetes", "System Design", "Agile", "Cloud Computing",
+];
 
-export function MentorProfileSection() {
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="mt-1 text-xs text-red-500">{msg}</p>;
+}
+
+export function ProfileSection() {
   const { user, updateMentorProfile } = useAuth();
-  const [isSaving, setIsSaving] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
+  const [skillInput, setSkillInput] = React.useState("");
+  const [showSkillSugg, setShowSkillSugg] = React.useState(false);
 
-  const defaultValues = React.useMemo<MentorProfileFormValues>(
-    () => ({
-      fullName: user?.fullName ?? "",
-      bio: user?.mentorProfile?.bio ?? "",
-      availability: user?.mentorProfile?.availability ?? "Part-time",
-      yearsExperience: user?.mentorProfile?.yearsExperience ?? 0,
-      skills: user?.mentorProfile?.skills ?? [],
-      avatarUrl: user?.mentorProfile?.avatarUrl ?? "",
-    }),
-    [user]
-  );
+  const defaultProfile = user?.mentorProfile;
 
-  const form = useForm<MentorProfileFormValues, unknown, MentorProfileSubmitValues>({
-    resolver: zodResolver(mentorProfileSchema),
-    mode: "onChange",
-    defaultValues,
-  });
+  const { register, handleSubmit, control, watch, setValue, reset, formState: { errors } } =
+    useForm<ProfileFormValues, unknown, ProfileInput>({
+      resolver: zodResolver(profileSchema),
+      mode: "onChange",
+      defaultValues: {
+        fullName:           user?.fullName ?? "",
+        bio:                defaultProfile?.bio ?? "",
+        skills:             defaultProfile?.skills ?? [],
+        availability:       defaultProfile?.availability ?? "Full-time",
+        availabilityStatus: defaultProfile?.availabilityStatus ?? "Available Now",
+        yearsExperience:    defaultProfile?.yearsExperience ?? 0,
+        linkedIn:           defaultProfile?.linkedIn ?? "",
+        github:             defaultProfile?.github ?? "",
+        avatarUrl:          defaultProfile?.avatarUrl ?? "",
+      },
+    });
 
-  React.useEffect(() => {
-    form.reset(defaultValues);
-  }, [defaultValues, form]);
+  const skills          = watch("skills") ?? [];
+  const avatarUrl       = watch("avatarUrl") ?? "";
+  const avStatus        = watch("availabilityStatus");
 
-  async function onSubmit(values: MentorProfileSubmitValues) {
-    if (!user) return;
+  function addSkill(s: string) {
+    const t = s.trim();
+    if (!t || skills.includes(t)) return;
+    setValue("skills", [...skills, t], { shouldValidate: true });
+    setSkillInput("");
+    setShowSkillSugg(false);
+  }
+  function removeSkill(s: string) {
+    setValue("skills", skills.filter(k => k !== s), { shouldValidate: true });
+  }
 
-    setIsSaving(true);
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setValue("avatarUrl", ev.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function onSubmit(data: ProfileInput) {
+    const profile: MentorProfile = {
+      bio:                      data.bio,
+      skills:                   data.skills,
+      availability:             data.availability,
+      availabilityStatus:       data.availabilityStatus,
+      yearsExperience:          data.yearsExperience,
+      linkedIn:                 data.linkedIn || undefined,
+      github:                   data.github || undefined,
+      avatarUrl:                data.avatarUrl || undefined,
+    };
+    updateMentorProfile(profile);
+    setEditing(false);
+    toast.success("Profile saved! ✨");
+  }
+
+  async function onSubmitAndWait(data: ProfileInput) {
+    const profile: MentorProfile = {
+      bio:                      data.bio,
+      skills:                   data.skills,
+      availability:             data.availability,
+      availabilityStatus:       data.availabilityStatus,
+      yearsExperience:          data.yearsExperience,
+      linkedIn:                 data.linkedIn || undefined,
+      github:                   data.github || undefined,
+      avatarUrl:                data.avatarUrl || undefined,
+    };
+
     try {
-      await updateMentorProfile({
-        ...values,
-        fullName: values.fullName,
-        availabilityStatus: user.availabilityStatus ?? "Available in 1-2 days",
-      });
-      toast.success("Mentor profile updated successfully");
+      await updateMentorProfile(profile);
+      setEditing(false);
+      toast.success("Profile saved! ✨");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to update mentor profile.";
-      toast.error(message);
-    } finally {
-      setIsSaving(false);
+      toast.error(error instanceof Error ? error.message : "Failed to save profile.");
     }
   }
 
-  if (!user) return null;
+  function handleCancel() {
+    reset();
+    setEditing(false);
+  }
 
-  const { errors } = form.formState;
+  const filteredSkills = SUGGESTED_SKILLS.filter(s =>
+    s.toLowerCase().includes(skillInput.toLowerCase()) && !skills.includes(s) && skillInput.length > 0
+  );
+
+  const avStatusColor = {
+    "Available Now":       "bg-emerald-100 text-emerald-700 border-emerald-200",
+    "Available in 1-2 days": "bg-blue-100 text-blue-700 border-blue-200",
+    "Busy":                "bg-amber-100 text-amber-700 border-amber-200",
+    "On Leave":            "bg-slate-100 text-slate-600 border-slate-200",
+  }[avStatus ?? "Available Now"];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle>Profile Details</CardTitle>
-          <CardDescription>Update your mentor profile information</CardDescription>
-        </CardHeader>
+    <div className="space-y-6 animate-fade-up">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">My Profile</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Manage your mentor information</p>
+        </div>
+        {!editing ? (
+          <button
+            onClick={() => setEditing(true)}
+            className="flex items-center gap-2 rounded-xl bg-[#0F0F0F] px-5 py-2.5 text-sm font-semibold text-[#FFCBA4] shadow-sm hover:brightness-125 hover:-translate-y-0.5 transition-all duration-200"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit Profile
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancel}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <X className="h-4 w-4" /> Cancel
+            </button>
+            <button
+              form="profile-form"
+              type="submit"
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-[#0F0F0F] shadow-sm hover:brightness-110 hover:-translate-y-0.5 transition-all duration-200"
+            >
+              <Save className="h-4 w-4" /> Save Profile
+            </button>
+          </div>
+        )}
+      </div>
 
-        <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarFallback className="text-lg font-semibold">
-                  {form.watch("fullName")?.charAt(0)?.toUpperCase() || "M"}
-                </AvatarFallback>
-              </Avatar>
-
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="avatarUrl">Profile Photo URL</Label>
-                <Input id="avatarUrl" placeholder="https://example.com/avatar.jpg" {...form.register("avatarUrl")} />
-                {errors.avatarUrl && <p className="text-sm text-destructive">{String(errors.avatarUrl.message)}</p>}
+      <form id="profile-form" onSubmit={handleSubmit(onSubmitAndWait)} className="space-y-5">
+        {/* Avatar + banner */}
+        <div className="rounded-2xl border border-[#FFCBA4]/30 bg-white shadow-sm overflow-hidden">
+          <div className="relative h-28 bg-gradient-to-r from-[#0F0F0F] via-[#1c0f00] to-[#2a1200]">
+            <div className="pointer-events-none absolute inset-0 opacity-20"
+              style={{ backgroundImage: "radial-gradient(circle at 30% 60%, white 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
+          </div>
+          <div className="px-6 pb-6">
+            <div className="flex flex-wrap items-end gap-4 -mt-12 mb-4">
+              <div className="relative">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="h-20 w-20 rounded-full object-cover ring-4 ring-white shadow-xl" />
+                ) : (
+                  <div className="h-20 w-20 rounded-full bg-[#0F0F0F] flex items-center justify-center text-[#FFCBA4] font-black text-3xl ring-4 ring-white shadow-xl">
+                    {user?.fullName?.charAt(0)?.toUpperCase() ?? "M"}
+                  </div>
+                )}
+                {editing && (
+                  <label className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-[#0F0F0F] p-1.5 shadow-md hover:bg-[#1c0f00] transition-colors">
+                    <Upload className="h-3 w-3 text-[#FFCBA4]" />
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  </label>
+                )}
+              </div>
+              <div className="mb-2">
+                <div className="text-xl font-bold text-slate-800">{user?.fullName}</div>
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${avStatusColor}`}>
+                  {avStatus}
+                </span>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Name</Label>
-              <Input id="fullName" {...form.register("fullName")} />
-              {errors.fullName && <p className="text-sm text-destructive">{String(errors.fullName.message)}</p>}
+            {/* Full Name */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" /> Full Name
+              </label>
+              {editing ? (
+                <>
+                  <input {...register("fullName")} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] transition-all" />
+                  <FieldError msg={errors.fullName?.message} />
+                </>
+              ) : (
+                <p className="text-sm text-slate-700">{user?.fullName}</p>
+              )}
             </div>
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea id="bio" rows={4} placeholder="Write a short mentor bio..." {...form.register("bio")} />
-              {errors.bio && <p className="text-sm text-destructive">{String(errors.bio.message)}</p>}
-            </div>
+        {/* Bio */}
+        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6 space-y-1.5">
+          <label className="block text-sm font-semibold text-slate-700">Bio <span className="text-red-500">*</span></label>
+          {editing ? (
+            <>
+              <textarea
+                {...register("bio")}
+                rows={4}
+                placeholder="Describe your expertise, teaching style, and what you offer mentees..."
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] transition-all resize-none"
+              />
+              <FieldError msg={errors.bio?.message} />
+            </>
+          ) : (
+            <p className="text-sm text-slate-600 leading-relaxed">
+              {watch("bio") || <span className="text-slate-400 italic">No bio yet. Click Edit Profile.</span>}
+            </p>
+          )}
+        </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Availability</Label>
-                <Controller
-                  control={form.control}
-                  name="availability"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select availability" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Full-time">Full-time</SelectItem>
-                        <SelectItem value="Part-time">Part-time</SelectItem>
-                        <SelectItem value="Evenings">Evenings</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
+        {/* Skills */}
+        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
+            <Tag className="h-4 w-4 text-[#F5A97F]" />
+            Skills <span className="text-red-500">*</span>
+          </label>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {skills.length === 0 && !editing && (
+              <span className="text-sm text-slate-400 italic">No skills added yet.</span>
+            )}
+            {skills.map(s => (
+              <span key={s} className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#FFCBA4]/20 to-[#FFCBA4]/20 border border-[#FFCBA4]/30 px-3 py-1.5 text-xs font-semibold text-[#0F0F0F]">
+                {s}
+                {editing && (
+                  <button type="button" onClick={() => removeSkill(s)} className="hover:text-red-500 transition-colors">
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+          {errors.skills && <p className="text-xs text-red-500 mb-2">{errors.skills.message as string}</p>}
+          {editing && (
+            <div className="relative flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Add a skill..."
+                  value={skillInput}
+                  onChange={e => { setSkillInput(e.target.value); setShowSkillSugg(true); }}
+                  onFocus={() => setShowSkillSugg(true)}
+                  onBlur={() => setTimeout(() => setShowSkillSugg(false), 150)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSkill(skillInput); } }}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] transition-all"
                 />
-                {errors.availability && <p className="text-sm text-destructive">{String(errors.availability.message)}</p>}
+                {showSkillSugg && filteredSkills.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-20 mt-1 rounded-xl border border-slate-200 bg-white shadow-lg max-h-44 overflow-y-auto">
+                    {filteredSkills.map(s => (
+                      <button key={s} type="button" onMouseDown={() => addSkill(s)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-[#FFCBA4]/10 hover:text-[#0F0F0F] transition-colors">
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="yearsExperience">Years of Experience</Label>
-                <Input id="yearsExperience" type="number" min={0} {...form.register("yearsExperience", { valueAsNumber: true })} />
-                {errors.yearsExperience && <p className="text-sm text-destructive">{String(errors.yearsExperience.message)}</p>}
-              </div>
+              <button type="button" onClick={() => addSkill(skillInput)} className="flex items-center gap-1.5 rounded-xl bg-[#0F0F0F] px-4 py-2.5 text-sm font-semibold text-[#FFCBA4] hover:bg-[#1c0f00] transition-colors">
+                <Plus className="h-4 w-4" /> Add
+              </button>
             </div>
+          )}
+        </div>
 
-            <div className="space-y-2">
-              <Label>Skills</Label>
+        {/* Availability + experience */}
+        <div className="grid gap-5 sm:grid-cols-3 rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+          {/* Availability type */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Availability</label>
+            {editing ? (
               <Controller
-                control={form.control}
-                name="skills"
+                name="availability"
+                control={control}
                 render={({ field }) => (
-                  <SkillMultiSelect value={field.value ?? []} onChange={field.onChange} options={ALL_SKILLS} />
+                  <select {...field} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] transition-all">
+                    {["Full-time", "Part-time", "Evenings"].map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
                 )}
               />
-              {errors.skills && <p className="text-sm text-destructive">{String(errors.skills.message)}</p>}
-            </div>
+            ) : (
+              <p className="text-sm text-slate-700">{watch("availability") || "–"}</p>
+            )}
+          </div>
 
-            <div className="flex gap-3">
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Profile"}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => form.reset(defaultValues)} disabled={isSaving}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          {/* Availability status */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</label>
+            {editing ? (
+              <Controller
+                name="availabilityStatus"
+                control={control}
+                render={({ field }) => (
+                  <select {...field} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] transition-all">
+                    {["Available Now", "Available in 1-2 days", "Busy", "On Leave"].map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                )}
+              />
+            ) : (
+              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${avStatusColor}`}>
+                {watch("availabilityStatus") || "–"}
+              </span>
+            )}
+          </div>
+
+          {/* Years of experience */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Years of Experience</label>
+            {editing ? (
+              <>
+                <input
+                  {...register("yearsExperience")}
+                  type="number"
+                  min={0}
+                  max={50}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] transition-all"
+                />
+                <FieldError msg={errors.yearsExperience?.message} />
+              </>
+            ) : (
+              <p className="text-sm text-slate-700">{Number(watch("yearsExperience") ?? 0)} yrs</p>
+            )}
+          </div>
+        </div>
+
+        {/* Portfolio Links */}
+        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+          <label className="block text-sm font-semibold text-slate-700 mb-4">Portfolio Links</label>
+          <div className="space-y-3">
+            {([
+              { field: "github" as const,   label: "GitHub",   icon: Link2,         placeholder: "https://github.com/username",          color: "text-slate-700" },
+              { field: "linkedIn" as const, label: "LinkedIn", icon: ExternalLink,   placeholder: "https://linkedin.com/in/username",     color: "text-blue-600"  },
+            ] as const).map(({ field, label, icon: Icon, placeholder, color }) => (
+              <div key={field} className="flex items-center gap-3">
+                <div className={`rounded-xl border border-slate-200 bg-slate-50 p-2.5 ${color}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                {editing ? (
+                  <>
+                    <input
+                      {...register(field)}
+                      type="url"
+                      placeholder={placeholder}
+                      className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFCBA4] transition-all"
+                    />
+                  </>
+                ) : watch(field) ? (
+                  <a href={watch(field) as string} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0F0F0F] hover:underline truncate">
+                    {watch(field) as string}
+                  </a>
+                ) : (
+                  <span className="text-sm text-slate-400 italic">{label} not added</span>
+                )}
+                <FieldError msg={errors[field]?.message} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </form>
     </div>
   );
 }
-
-export const ProfileSection = MentorProfileSection;

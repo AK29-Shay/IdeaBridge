@@ -4,7 +4,6 @@ import supabaseServer from "@/backend/config/supabaseServer";
 export const dynamic = "force-dynamic";
 
 const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024;
-const MAX_UPLOAD_SIZE_TEXT = "100MB";
 
 function parseBucketName(value: FormDataEntryValue | null): string {
   if (typeof value !== "string") return "";
@@ -35,37 +34,15 @@ async function ensureBucketExists(bucketName: string) {
 
   const exists = (buckets ?? []).some((bucket) => bucket.name === bucketName);
   if (exists) {
-    // Keep existing buckets in sync with expected size limits.
-    const { error: updateError } = await supabaseServer.storage.updateBucket(bucketName, {
-      public: true,
-      fileSizeLimit: MAX_UPLOAD_SIZE_TEXT,
-    });
-    if (updateError) {
-      const normalized = (updateError.message || "").toLowerCase();
-      // Some Supabase projects reject bucket-level fileSizeLimit values.
-      // In that case keep the bucket as-is and continue with upload.
-      if (!normalized.includes("maximum allowed size") && !normalized.includes("exceeded")) {
-        throw new Error(updateError.message || `Failed to update bucket '${bucketName}'.`);
-      }
-    }
     return;
   }
 
   const { error: createError } = await supabaseServer.storage.createBucket(bucketName, {
     public: true,
-    fileSizeLimit: MAX_UPLOAD_SIZE_TEXT,
+    fileSizeLimit: MAX_UPLOAD_SIZE_BYTES,
   });
 
   if (createError) {
-    const normalized = (createError.message || "").toLowerCase();
-    if (normalized.includes("maximum allowed size") || normalized.includes("exceeded")) {
-      // Retry without fileSizeLimit if project policy rejects explicit limit.
-      const { error: fallbackError } = await supabaseServer.storage.createBucket(bucketName, {
-        public: true,
-      });
-      if (!fallbackError) return;
-      throw new Error(fallbackError.message || `Failed to create bucket '${bucketName}'.`);
-    }
     throw new Error(createError.message || `Failed to create bucket '${bucketName}'.`);
   }
 }
@@ -118,21 +95,6 @@ export async function POST(request: Request) {
       });
 
     if (uploadError) {
-      console.error("[uploads] storage upload error", {
-        bucket,
-        path: uploadPath,
-        fileSize: fileEntry.size,
-        mimeType: fileEntry.type,
-        error: uploadError,
-      });
-      const raw = uploadError.message || "Upload failed.";
-      const normalized = raw.toLowerCase();
-      if (normalized.includes("maximum allowed size") || normalized.includes("exceeded")) {
-        return NextResponse.json(
-          { error: `File too large for storage bucket. Maximum ${Math.floor(MAX_UPLOAD_SIZE_BYTES / (1024 * 1024))}MB.` },
-          { status: 400 }
-        );
-      }
       return NextResponse.json({ error: uploadError.message || "Upload failed." }, { status: 500 });
     }
 
@@ -156,7 +118,6 @@ export async function POST(request: Request) {
       kind,
     });
   } catch (error) {
-    console.error("[uploads] unexpected error", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Unexpected upload error.",

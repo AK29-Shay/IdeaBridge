@@ -1,9 +1,11 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 import { getRequestById, updateRequestStatus } from '@/backend/modules/request'
 import { getProfileByUserId } from '@/backend/modules/profile'
+import { createNotification } from '@/backend/services/notificationService'
+import { getErrorMessage } from '@/lib/errorMessage'
 
-export const PATCH = withAuth(async (req: NextRequest, user) => {
+export async function PATCH(request: Request) {
   try {
     const authorization = request.headers.get('authorization')
     const user = await getUserFromAuthHeader(authorization)
@@ -21,19 +23,27 @@ export const PATCH = withAuth(async (req: NextRequest, user) => {
       return new NextResponse(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
     }
 
-    const body = await req.json()
-    const { request_id, status } = body as { request_id: string; status: RequestStatus }
+    const updated = await updateRequestStatus(request_id, status, user.user.id)
+    if (typeof reqRecord.student_id === 'string') {
+      const statusTitle =
+        status === 'in_progress' ? 'Mentorship request accepted' :
+        status === 'cancelled' ? 'Mentorship request declined' :
+        status === 'completed' ? 'Mentorship completed' :
+        'Mentorship request updated'
 
-    if (!request_id || !status) {
-      return NextResponse.json(
-        { error: 'request_id and status are required' },
-        { status: 400 }
-      )
+      await createNotification({
+        user_id: reqRecord.student_id,
+        type: 'request_status_updated',
+        payload: {
+          request_id,
+          status,
+          title: statusTitle,
+        },
+      })
     }
 
-    const updated = await changeRequestStatus(user.id, profile.role, request_id, status)
-    return NextResponse.json({ data: updated })
-  } catch (e) {
-    return handleError(e)
+    return NextResponse.json(updated)
+  } catch (error: unknown) {
+    return new NextResponse(JSON.stringify({ error: getErrorMessage(error, 'Failed to update request status.') }), { status: 400 })
   }
-})
+}

@@ -20,8 +20,7 @@ export function RequireRole({
   React.useEffect(() => {
     if (!isReady || !user) return;
     if (user.role !== role) {
-      // Redirect to the actual user's dashboard (don't push the required role's path)
-      router.push(user.role === "student" ? "/dashboard/student" : "/dashboard/mentor");
+      router.push(role === "student" ? "/dashboard/student" : "/dashboard/mentor");
     }
   }, [isReady, user, router, role]);
 
