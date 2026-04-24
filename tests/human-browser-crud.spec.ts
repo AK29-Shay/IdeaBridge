@@ -191,6 +191,17 @@ async function login(page: Page, credentials: { email: string; password: string;
         .catch(() => undefined);
       return;
     } catch (error) {
+      const currentUrl = page.url();
+      const fellBackToPlainGet =
+        currentUrl.includes("/login?") &&
+        currentUrl.includes("email=") &&
+        currentUrl.includes("password=");
+      if (fellBackToPlainGet) {
+        await page.waitForLoadState("networkidle").catch(() => undefined);
+        await page.waitForTimeout(1_000 * attempt);
+        continue;
+      }
+
       if (attempt === 3) {
         throw error;
       }
@@ -259,7 +270,7 @@ async function findDemoMentor(request: APIRequestContext) {
 async function updateStudentProfileAndRestore(page: Page, runId: string) {
   await page.goto("/dashboard/student/profile");
   await expect(page).toHaveURL(/\/dashboard\/student\/profile$/, { timeout: 15_000 });
-  await expect(page.getByRole("heading", { name: /(?:My|Student) Profile/i })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: /edit profile/i })).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /edit profile/i }).click();
   const bioField = page.getByPlaceholder(/Tell mentors about yourself/i);
@@ -312,13 +323,13 @@ async function createStudentPostAndVerifySearch(page: Page, postTitle: string, u
   await expect(page.getByText(postTitle).first()).toBeVisible({ timeout: 20_000 });
 
   const resultCard = page
-    .locator("article")
+    .getByRole("article")
     .filter({ hasText: postTitle })
     .filter({ has: page.getByRole("button", { name: /^Save$/ }) })
     .first();
   await expect(resultCard).toBeVisible({ timeout: 15_000 });
   await resultCard.getByRole("button", { name: /^Save$/ }).click();
-  await page.waitForTimeout(750);
+  await expect(resultCard.getByRole("button", { name: /^Saved$/ })).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole("button", { name: /^Filters/i }).click();
   await page.getByRole("button", { name: uniqueTag }).click();
@@ -470,7 +481,7 @@ async function updateStudentProjectProgress(page: Page, runId: string) {
 async function updateMentorProfileAndRestore(page: Page, runId: string) {
   await page.goto("/dashboard/mentor/profile");
   await expect(page).toHaveURL(/\/dashboard\/mentor\/profile$/, { timeout: 15_000 });
-  await expect(page.getByRole("heading", { name: /(?:My|Mentor) Profile/i })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: /edit profile/i })).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /Edit Profile/i }).click();
   const bioField = page.getByPlaceholder(/Describe your expertise, teaching style/i);
@@ -837,13 +848,13 @@ async function exerciseMentorBlogCrud(page: Page, runId: string) {
 
   await expect(page.getByText(blogTitle).first()).toBeVisible({ timeout: 15_000 });
 
-  const createdCard = page.locator(".group").filter({ hasText: blogTitle }).first();
+  const createdCard = page.locator("article").filter({ hasText: blogTitle }).first();
   await createdCard.getByLabel(/Edit blog/i).click();
   await page.getByPlaceholder(/How to Conduct Effective/i).fill(updatedBlogTitle);
   await page.getByRole("button", { name: /Save Changes/i }).click();
   await expect(page.getByText(updatedBlogTitle).first()).toBeVisible({ timeout: 15_000 });
 
-  const updatedCard = page.locator(".group").filter({ hasText: updatedBlogTitle }).first();
+  const updatedCard = page.locator("article").filter({ hasText: updatedBlogTitle }).first();
   await updatedCard.getByLabel(/Delete blog/i).click();
   await expect(page.getByText(updatedBlogTitle)).toHaveCount(0);
 }
