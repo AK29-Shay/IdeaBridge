@@ -22,8 +22,20 @@ import {
 } from "@/lib/profileMapper";
 import {
   getSupabaseBrowserClient,
+  getSupabaseBrowserClientOrNull,
   getSupabaseBrowserConfigError,
+  isSupabaseConfigurationError,
 } from "@/lib/supabase/client";
+import {
+  clearStoredAuthUser,
+  getOfflineAuthUser,
+  hasStoredUserWithEmail,
+  saveOfflineCredential,
+  getStoredAuthUser,
+  setStoredAuthUser,
+  upsertStoredUser,
+  updateStoredUserProfile,
+} from "@/lib/storage";
 
 type RegisterUserInput = {
   role: UserRole;
@@ -50,20 +62,20 @@ type AuthContextValue = {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
-function normalizeSupabaseAuthError(
-  error: unknown,
-  fallbackMessage: string
-): Error {
-  if (error instanceof Error) {
-    const lower = error.message.toLowerCase();
-    if (lower.includes("failed to fetch")) {
-      return new Error(
-        "Unable to reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and your internet connection."
-      );
-    }
-    return error;
+function normalizeAuthError(error: unknown, fallback: string) {
+  if (isSupabaseConfigurationError(error)) {
+    return error.message;
   }
-  return new Error(fallbackMessage);
+
+  if (error instanceof TypeError && error.message.toLowerCase().includes("fetch")) {
+    return "Unable to reach Supabase. Check your .env.local values and network connection.";
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 async function selectProfile(userId: string) {
@@ -204,24 +216,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(() => {
-    const configError = getSupabaseBrowserConfigError();
-    if (configError) {
+    const supabase = getSupabaseBrowserClientOrNull();
+    let cancelled = false;
+
+    if (!supabase) {
+      const configError = getSupabaseBrowserConfigError();
+      if (configError) {
+        console.warn(configError.message);
+      }
+
+      const storedUser = getStoredAuthUser();
+
       React.startTransition(() => {
         setSession(null);
-        setUser(null);
+        setUser(storedUser);
         setIsReady(true);
       });
-      return;
+
+      return () => {
+        cancelled = true;
+      };
     }
 
-    const supabase = getSupabaseBrowserClient();
-    let cancelled = false;
+    const supabaseClient = supabase;
 
     async function initialize() {
       try {
         const {
           data: { session: initialSession },
-        } = await supabase.auth.getSession();
+        } = await supabaseClient.auth.getSession();
 
         if (cancelled) return;
 
@@ -247,7 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
       React.startTransition(() => {
         setSession(nextSession);
       });
@@ -275,34 +298,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       isReady,
       async login({ email, password }) {
-        try {
-          const supabase = getSupabaseBrowserClient();
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          if (error || !data.user) {
-            throw new Error(error?.message || "Login failed.");
+        const supabase = getSupabaseBrowserClientOrNull();
+        if (!supabase) {
+          const offlineUser = getOfflineAuthUser(email, password);
+          if (!offlineUser) {
+            throw new Error(
+              "Supabase is not configured. Use a registered local account, or the demo accounts `student.demo@ideabridge.dev` / `mentor.demo@ideabridge.dev` with password `Demo@123`."
+            );
           }
 
+          setStoredAuthUser(offlineUser);
           React.startTransition(() => {
-            setSession(data.session);
+            setSession(null);
+            setUser(offlineUser);
           });
-
-          return loadSessionUser(data.user).then((nextUser) => {
-            if (!nextUser) {
-              throw new Error("Unable to load your profile.");
-            }
-            return nextUser;
-          });
-        } catch (error: unknown) {
-          throw normalizeSupabaseAuthError(error, "Login failed.");
+          return offlineUser;
         }
+
+        let data: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"];
+        let error: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["error"];
+
+        try {
+          ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
+        } catch (authError) {
+          throw new Error(normalizeAuthError(authError, "Login failed."));
+        }
+
+        if (error || !data.user) {
+          throw new Error(error?.message || "Login failed.");
+        }
+
+        React.startTransition(() => {
+          setSession(data.session);
+        });
+
+        return loadSessionUser(data.user).then((nextUser) => {
+          if (!nextUser) {
+            throw new Error("Unable to load your profile.");
+          }
+          return nextUser;
+        });
       },
       async register({ user: incoming }) {
+        const supabase = getSupabaseBrowserClientOrNull();
+        if (!supabase) {
+          if (hasStoredUserWithEmail(incoming.email)) {
+            throw new Error("An account with this email already exists.");
+          }
+
+          const registeredUser: AuthUser = {
+            id: `offline-${Math.random().toString(36).slice(2, 10)}`,
+            role: incoming.role,
+            fullName: incoming.fullName.trim(),
+            email: incoming.email.trim().toLowerCase(),
+            studentProfile: incoming.studentProfile,
+            mentorProfile: incoming.mentorProfile,
+            availabilityStatus: incoming.mentorProfile?.availabilityStatus,
+          };
+
+          upsertStoredUser(registeredUser);
+          saveOfflineCredential(registeredUser.email, incoming.password);
+          setStoredAuthUser(registeredUser);
+
+          React.startTransition(() => {
+            setSession(null);
+            setUser(registeredUser);
+          });
+
+          return registeredUser;
+        }
+
+        let data: Awaited<ReturnType<typeof supabase.auth.signUp>>["data"];
+        let error: Awaited<ReturnType<typeof supabase.auth.signUp>>["error"];
+
         try {
-          const supabase = getSupabaseBrowserClient();
-          const { data, error } = await supabase.auth.signUp({
+          ({ data, error } = await supabase.auth.signUp({
             email: incoming.email,
             password: incoming.password,
             options: {
@@ -311,38 +381,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 role: incoming.role,
               },
             },
+          }));
+        } catch (authError) {
+          throw new Error(normalizeAuthError(authError, "Registration failed."));
+        }
+
+        if (error || !data.user) {
+          throw new Error(error?.message || "Registration failed.");
+        }
+
+        if (data.session) {
+          React.startTransition(() => {
+            setSession(data.session);
           });
-
-          if (error || !data.user) {
-            throw new Error(error?.message || "Registration failed.");
-          }
-
-          if (data.session) {
-            React.startTransition(() => {
-              setSession(data.session);
-            });
-            const registeredUser = await upsertProfile({
-              id: data.user.id,
-              email: incoming.email,
-              fullName: incoming.fullName,
-              role: incoming.role,
-              studentProfile: incoming.studentProfile,
-              mentorProfile: incoming.mentorProfile,
-            });
-
-            React.startTransition(() => {
-              setUser(registeredUser);
-            });
-            return registeredUser;
-          }
+          const registeredUser = await upsertProfile({
+            id: data.user.id,
+            email: incoming.email,
+            fullName: incoming.fullName,
+            role: incoming.role,
+            studentProfile: incoming.studentProfile,
+            mentorProfile: incoming.mentorProfile,
+          });
 
           React.startTransition(() => {
-            setUser(null);
+            setUser(registeredUser);
           });
-          return null;
-        } catch (error: unknown) {
-          throw normalizeSupabaseAuthError(error, "Registration failed.");
+          return registeredUser;
         }
+
+        React.startTransition(() => {
+          setUser(null);
+        });
+        return null;
       },
       async sendPasswordResetEmail({ email, redirectTo }) {
         try {
@@ -354,7 +424,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             throw new Error(error.message || "Failed to send reset link.");
           }
         } catch (error: unknown) {
-          throw normalizeSupabaseAuthError(error, "Failed to send reset link.");
+          throw new Error(normalizeAuthError(error, "Failed to send reset link."));
         }
       },
       async updatePassword({ password }) {
@@ -370,11 +440,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await loadSessionUser(data.user);
           }
         } catch (error: unknown) {
-          throw normalizeSupabaseAuthError(error, "Failed to reset password.");
+          throw new Error(normalizeAuthError(error, "Failed to reset password."));
         }
       },
       async logout() {
-        const supabase = getSupabaseBrowserClient();
+        const supabase = getSupabaseBrowserClientOrNull();
+        if (!supabase) {
+          clearStoredAuthUser();
+          React.startTransition(() => {
+            setSession(null);
+            setUser(null);
+          });
+          return;
+        }
+
         const { error } = await supabase.auth.signOut();
         if (error) {
           throw new Error(error.message || "Failed to sign out.");
@@ -386,7 +465,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       },
       async refreshUser() {
-        const supabase = getSupabaseBrowserClient();
+        const supabase = getSupabaseBrowserClientOrNull();
+        if (!supabase) {
+          const storedUser = getStoredAuthUser();
+          React.startTransition(() => {
+            setUser(storedUser);
+          });
+          return storedUser;
+        }
+
         const {
           data: { user: sessionUser },
         } = await supabase.auth.getUser();
@@ -394,6 +481,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async updateStudentProfile(profile) {
         if (!user) return null;
+        if (!getSupabaseBrowserClientOrNull()) {
+          const updatedUser: AuthUser = {
+            ...user,
+            role: "student",
+            studentProfile: profile,
+          };
+          updateStoredUserProfile(updatedUser);
+          React.startTransition(() => {
+            setUser(updatedUser);
+          });
+          return updatedUser;
+        }
+
         const updated = await upsertProfile({
           id: user.id,
           email: user.email,
@@ -409,6 +509,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       async updateMentorProfile(profile) {
         if (!user) return null;
+        if (!getSupabaseBrowserClientOrNull()) {
+          const updatedUser: AuthUser = {
+            ...user,
+            role: "mentor",
+            mentorProfile: profile,
+            availabilityStatus: profile.availabilityStatus,
+          };
+          updateStoredUserProfile(updatedUser);
+          React.startTransition(() => {
+            setUser(updatedUser);
+          });
+          return updatedUser;
+        }
+
         const updated = await upsertProfile({
           id: user.id,
           email: user.email,

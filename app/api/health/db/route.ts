@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import supabaseServer from "@/backend/config/supabaseServer";
+import {
+  getSupabaseServerConfigError,
+  isSupabaseServerConfigured,
+} from "@/lib/supabase/admin";
 
 const CORE_TABLES = [
   "profiles",
@@ -18,6 +22,22 @@ type TableResult = {
 };
 
 export async function GET() {
+  if (!isSupabaseServerConfigured()) {
+    const configError = getSupabaseServerConfigError();
+
+    return NextResponse.json({
+      ok: true,
+      mode: "offline",
+      checks: {},
+      optional: {
+        missing: [...OPTIONAL_TABLES],
+      },
+      hint:
+        configError?.message ??
+        "Supabase is not configured. IdeaBridge is running in offline demo mode.",
+    });
+  }
+
   const checks: Record<string, TableResult> = {};
 
   const tablesToCheck = [...CORE_TABLES, ...OPTIONAL_TABLES];

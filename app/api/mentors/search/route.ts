@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getMentorProfileById, listMentorProfiles } from '@/backend/services/profileService'
+import { DUMMY_MENTORS } from '@/lib/dummyData'
 import { getErrorMessage } from '@/lib/errorMessage'
+import { isSupabaseServerConfigured } from '@/lib/supabase/admin'
 
 function toMentorPayload(profile: {
   id: string
@@ -39,10 +41,64 @@ function toMentorPayload(profile: {
   }
 }
 
+function listOfflineMentors(params: {
+  id?: string
+  query?: string
+  skill?: string
+  availability?: string
+  limit?: number
+}) {
+  if (params.id) {
+    return DUMMY_MENTORS.find((mentor) => mentor.id === params.id) ?? null
+  }
+
+  const query = params.query?.trim().toLowerCase() ?? ""
+  const skill = params.skill?.trim()
+  const availability = params.availability?.trim()
+  const limit = params.limit && params.limit > 0 ? Math.min(params.limit, 50) : 24
+
+  return DUMMY_MENTORS.filter((mentor) => {
+    if (query) {
+      const haystack = `${mentor.fullName} ${mentor.profile.bio} ${mentor.profile.skills.join(" ")}`.toLowerCase()
+      if (!haystack.includes(query)) {
+        return false
+      }
+    }
+
+    if (skill && !mentor.profile.skills.includes(skill)) {
+      return false
+    }
+
+    if (availability && mentor.profile.availabilityStatus !== availability) {
+      return false
+    }
+
+    return true
+  }).slice(0, limit)
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url)
     const id = url.searchParams.get('id')
+    const query = url.searchParams.get('q') || undefined
+    const skill = url.searchParams.get('skill') || undefined
+    const availability = url.searchParams.get('availability') || undefined
+    const limitRaw = Number(url.searchParams.get('limit'))
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : undefined
+
+    if (!isSupabaseServerConfigured()) {
+      if (id) {
+        const mentor = listOfflineMentors({ id })
+        if (!mentor) {
+          return new NextResponse(JSON.stringify({ error: 'Mentor not found' }), { status: 404 })
+        }
+        return NextResponse.json(mentor)
+      }
+
+      return NextResponse.json(listOfflineMentors({ query, skill, availability, limit }))
+    }
+
     if (id) {
       const mentor = await getMentorProfileById(id)
       if (!mentor) {
@@ -51,11 +107,6 @@ export async function GET(request: Request) {
       return NextResponse.json(toMentorPayload(mentor))
     }
 
-    const query = url.searchParams.get('q') || undefined
-    const skill = url.searchParams.get('skill') || undefined
-    const availability = url.searchParams.get('availability') || undefined
-    const limitRaw = Number(url.searchParams.get('limit'))
-    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : undefined
     const data = await listMentorProfiles({ search: query, skill, availability, limit })
     return NextResponse.json(data.map(toMentorPayload))
   } catch (error: unknown) {

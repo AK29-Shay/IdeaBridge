@@ -1,32 +1,66 @@
 import { createClient } from "@supabase/supabase-js";
 
 let browserClient: ReturnType<typeof createClient> | null = null;
+const SUPABASE_CONFIG_ERROR_PREFIX = "Supabase is not configured.";
 
-const SUPABASE_ENV_SETUP_HINT =
-  "Create .env.local from .env.local.example and restart the dev server.";
+function isPlaceholderValue(value: string) {
+  return (
+    value.includes("your-project-ref.supabase.co") ||
+    value.includes("your-anon-key-here") ||
+    value.includes("your-service-role-key-here")
+  );
+}
+
+function getRequiredEnv(name: string, value: string | undefined) {
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+
+  if (isPlaceholderValue(value)) {
+    throw new Error(
+      `Supabase is not configured. Replace the placeholder value for ${name} in .env.local.`
+    );
+  }
+
+  if (name === "NEXT_PUBLIC_SUPABASE_URL") {
+    try {
+      const parsed = new URL(value);
+      if (!parsed.protocol.startsWith("http")) {
+        throw new Error("Invalid protocol");
+      }
+    } catch {
+      throw new Error(`Invalid Supabase URL in ${name}.`);
+    }
+  }
+
+  return value;
+}
 
 export function getSupabaseBrowserConfigError() {
-  const missing: string[] = [];
-
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    missing.push("NEXT_PUBLIC_SUPABASE_URL");
-  }
-
-  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
-
-  if (missing.length === 0) {
+  try {
+    getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+    getRequiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     return null;
+  } catch (error) {
+    return error instanceof Error ? error : new Error("Supabase browser config is invalid.");
   }
-
-  return `Missing required environment variable${
-    missing.length === 1 ? "" : "s"
-  }: ${missing.join(", ")}. ${SUPABASE_ENV_SETUP_HINT}`;
 }
 
 export function hasSupabaseBrowserConfig() {
   return getSupabaseBrowserConfigError() === null;
+}
+
+export function getSupabaseBrowserClientOrNull() {
+  const configError = getSupabaseBrowserConfigError();
+  if (configError) {
+    return null;
+  }
+
+  return getSupabaseBrowserClient();
+}
+
+export function isSupabaseConfigurationError(error: unknown): error is Error {
+  return error instanceof Error && error.message.startsWith(SUPABASE_CONFIG_ERROR_PREFIX);
 }
 
 export function getSupabaseBrowserClient() {
@@ -34,13 +68,11 @@ export function getSupabaseBrowserClient() {
     return browserClient;
   }
 
-  const configError = getSupabaseBrowserConfigError();
-  if (configError) {
-    throw new Error(configError);
-  }
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+  const url = getRequiredEnv("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const anonKey = getRequiredEnv(
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 
   browserClient = createClient(url, anonKey);
   return browserClient;

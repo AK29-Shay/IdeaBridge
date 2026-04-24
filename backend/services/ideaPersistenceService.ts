@@ -1,4 +1,7 @@
 import supabaseServer from "../config/supabaseServer";
+import { DUMMY_STUDENT_PROJECTS } from "@/lib/dummyData";
+import { mockThreadData, type CommentNode } from "@/lib/ideas/mockThread";
+import { getSupabaseServerConfigError, isSupabaseServerConfigured } from "@/lib/supabase/admin";
 
 const IDEAS_MODULE = "idea_guidance";
 const AUTH_USERS_PAGE_SIZE = 200;
@@ -76,10 +79,23 @@ export type IdeaAnalyticsThreadNote = {
   message: string;
 };
 
+export type IdeaAnalyticsTopicSignal = {
+  topic: string;
+  score: number;
+  mentions: number;
+  categories: string[];
+  projects: string[];
+};
+
+export type IdeaAnalyticsDataSource = "live" | "hybrid";
+
 export type IdeaAnalyticsSnapshot = {
   projects: IdeaAnalyticsProject[];
   requests: IdeaAnalyticsRequest[];
   threadsByProject: Record<string, IdeaAnalyticsThreadNote[]>;
+  topicSignals: IdeaAnalyticsTopicSignal[];
+  dataSource: IdeaAnalyticsDataSource;
+  dataSourceMessage: string;
 };
 
 export class IdeaPersistenceError extends Error {
@@ -129,6 +145,94 @@ type CreateIdeaCommentInput = {
   parent_comment_id?: string | null;
   attachments?: IdeaCommentAttachment[];
 };
+
+const TOPIC_LIBRARY = [
+  { topic: "AI / ML", keywords: ["ai", "ml", "machine learning", "model", "learning plan", "generator", "personalized"] },
+  { topic: "EdTech", keywords: ["study", "notes", "learning", "coach", "student", "education", "companion"] },
+  { topic: "Accessibility", keywords: ["accessibility", "accessible", "navigation", "campusmap", "routing", "map"] },
+  { topic: "Authentication", keywords: ["auth", "authentication", "session", "supabase", "login"] },
+  { topic: "React / Next.js", keywords: ["react", "next.js", "app router", "react query", "swr", "frontend"] },
+  { topic: "Research", keywords: ["research", "validation", "startup", "scope", "discovery"] },
+] as const;
+
+const OFFLINE_IDEA_POSTS: IdeaPostRecord[] = [
+  {
+    id: "offline-quantum-notes",
+    user_id: "student-quantum",
+    post_mode: "post",
+    post_type: "full_project",
+    title: "Quantum Notes: Smart Study Companion",
+    description: "Building a study assistant with guided note generation, revision prompts, and mentor feedback loops.",
+    tech_stack: ["Next.js", "TypeScript", "Supabase", "Tailwind CSS"],
+    dynamic_content: { module: IDEAS_MODULE, demoMode: true },
+    view_count: 184,
+    created_at: "2026-04-20T09:00:00.000Z",
+    updated_at: "2026-04-22T12:30:00.000Z",
+    author: {
+      id: "student-quantum",
+      name: "Nethmi Perera",
+      avatarUrl: "https://i.pravatar.cc/150?u=offline-quantum",
+      role: "Student",
+    },
+  },
+  {
+    id: "offline-campus-map",
+    user_id: "student-campus",
+    post_mode: "post",
+    post_type: "campus_req",
+    title: "CampusMap: Accessibility-first Navigation",
+    description: "An accessibility-focused campus routing tool with path clarity, obstacle awareness, and mobile-first flows.",
+    tech_stack: ["React", "TypeScript", "Node.js", "UI/UX"],
+    dynamic_content: { module: IDEAS_MODULE, demoMode: true },
+    view_count: 136,
+    created_at: "2026-04-18T07:15:00.000Z",
+    updated_at: "2026-04-21T16:45:00.000Z",
+    author: {
+      id: "student-campus",
+      name: "Akash Silva",
+      avatarUrl: "https://i.pravatar.cc/150?u=offline-campus",
+      role: "Student",
+    },
+  },
+  {
+    id: "offline-ml-coach",
+    user_id: "student-ml",
+    post_mode: "post",
+    post_type: "ai_driven",
+    title: "ML Coach: Personalized Learning Plan Generator",
+    description: "Generating tailored learning plans for students based on skill gaps, progress checkpoints, and mentor review.",
+    tech_stack: ["Python", "Machine Learning", "Databases", "React"],
+    dynamic_content: { module: IDEAS_MODULE, demoMode: true },
+    view_count: 221,
+    created_at: "2026-04-17T11:00:00.000Z",
+    updated_at: "2026-04-23T05:45:00.000Z",
+    author: {
+      id: "student-ml",
+      name: "Raveen De Silva",
+      avatarUrl: "https://i.pravatar.cc/150?u=offline-ml",
+      role: "Student",
+    },
+  },
+  {
+    id: "offline-startup-research",
+    user_id: "student-research",
+    post_mode: "request",
+    post_type: "idea",
+    title: "Need feedback on startup idea validation workflow",
+    description: "Looking for mentor guidance on narrowing scope, validating assumptions, and defining a practical MVP.",
+    tech_stack: ["Research", "Validation", "Next.js"],
+    dynamic_content: { module: IDEAS_MODULE, demoMode: true },
+    view_count: 74,
+    created_at: "2026-04-23T02:00:00.000Z",
+    updated_at: "2026-04-23T02:00:00.000Z",
+    author: {
+      id: "student-research",
+      name: "Sanjana Fernando",
+      avatarUrl: "https://i.pravatar.cc/150?u=offline-research",
+      role: "Student",
+    },
+  },
+];
 
 function normalizeEmail(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -233,6 +337,47 @@ function summarizeMessage(value: string): string {
   return `${compact.slice(0, 217)}...`;
 }
 
+function mapMockCommentNode(node: CommentNode): IdeaThreadNode {
+  return {
+    id: node.id,
+    author: node.author,
+    avatarUrl: node.avatarUrl,
+    role: node.role,
+    content: node.content,
+    upvotes: node.upvotes,
+    timestamp: node.timestamp,
+    isAcceptedAnswer: node.isAcceptedAnswer,
+    replies: Array.isArray(node.replies) ? node.replies.map(mapMockCommentNode) : [],
+  };
+}
+
+function listOfflineIdeaPosts(filters: PostListFilters = {}): IdeaPostRecord[] {
+  const mode = filters.mode ? normalizePostMode(filters.mode) : undefined;
+  const limit = typeof filters.limit === "number" && filters.limit > 0 ? Math.min(filters.limit, 100) : 30;
+  const rows = mode ? OFFLINE_IDEA_POSTS.filter((post) => post.post_mode === mode) : OFFLINE_IDEA_POSTS;
+  return rows.slice(0, limit);
+}
+
+function getOfflineIdeaPost(postId: string): IdeaPostRecord | null {
+  return OFFLINE_IDEA_POSTS.find((post) => post.id === postId) ?? null;
+}
+
+function getOfflineIdeaThread(postId: string): IdeaThreadNode[] {
+  if (!getOfflineIdeaPost(postId)) {
+    throw new IdeaPersistenceError("Post not found.", 404);
+  }
+
+  return mockThreadData.map(mapMockCommentNode);
+}
+
+function compactText(value: string): string {
+  return value
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[`*_#[\]()!>-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function mapPostTypeToCategory(postType: IdeaPostType, dynamicContent: Record<string, unknown>): string {
   const explicitCategory = normalizeString(dynamicContent.category);
   if (explicitCategory) {
@@ -249,6 +394,199 @@ function mapPostTypeToCategory(postType: IdeaPostType, dynamicContent: Record<st
     default:
       return "Project Idea";
   }
+}
+
+function inferProjectCategory(title: string, description: string): string {
+  const text = `${title} ${description}`.toLowerCase();
+  if (text.includes("ml") || text.includes("machine learning") || text.includes("ai")) return "AI / ML";
+  if (text.includes("accessibility") || text.includes("navigation") || text.includes("campus")) return "Accessibility";
+  if (text.includes("study") || text.includes("notes") || text.includes("learning")) return "EdTech";
+  if (text.includes("startup") || text.includes("research") || text.includes("validation")) return "Research";
+  return "Productivity";
+}
+
+function flattenThreadNodes(nodes: CommentNode[]): IdeaAnalyticsThreadNote[] {
+  const items: IdeaAnalyticsThreadNote[] = [];
+
+  function visit(list: CommentNode[]) {
+    list.forEach((node) => {
+      items.push({
+        id: node.id,
+        role: node.role,
+        author: node.author,
+        time: node.timestamp,
+        message: compactText(node.content),
+      });
+
+      if (Array.isArray(node.replies) && node.replies.length > 0) {
+        visit(node.replies);
+      }
+    });
+  }
+
+  visit(nodes);
+  return items;
+}
+
+function isAnsweredAnalyticsRequest(status: string) {
+  return status === "answered" || status === "completed";
+}
+
+function addTopicSignal(
+  signalMap: Map<string, IdeaAnalyticsTopicSignal>,
+  topic: string,
+  weight: number,
+  category?: string,
+  projectTitle?: string
+) {
+  const existing = signalMap.get(topic) ?? {
+    topic,
+    score: 0,
+    mentions: 0,
+    categories: [],
+    projects: [],
+  };
+
+  existing.score += weight;
+  existing.mentions += 1;
+
+  if (category && !existing.categories.includes(category)) {
+    existing.categories.push(category);
+  }
+
+  if (projectTitle && !existing.projects.includes(projectTitle)) {
+    existing.projects.push(projectTitle);
+  }
+
+  signalMap.set(topic, existing);
+}
+
+function buildTopicSignals(
+  projects: IdeaAnalyticsProject[],
+  requests: IdeaAnalyticsRequest[],
+  threadsByProject: Record<string, IdeaAnalyticsThreadNote[]>
+): IdeaAnalyticsTopicSignal[] {
+  const signalMap = new Map<string, IdeaAnalyticsTopicSignal>();
+
+  projects.forEach((project) => {
+    const text = `${project.title} ${project.description} ${project.category}`.toLowerCase();
+    const createdAt = new Date(project.createdDate).getTime();
+    const recencyBoost = Number.isNaN(createdAt)
+      ? 1
+      : Math.max(1, 1.45 - Math.min((Date.now() - createdAt) / (1000 * 60 * 60 * 24 * 45), 0.45));
+    const engagementWeight = 2 + project.responses * 0.8 + project.likes * 0.2 + project.views / 120;
+    let matched = false;
+
+    TOPIC_LIBRARY.forEach((entry) => {
+      if (entry.keywords.some((keyword) => text.includes(keyword))) {
+        matched = true;
+        addTopicSignal(signalMap, entry.topic, engagementWeight * recencyBoost, project.category, project.title);
+      }
+    });
+
+    if (!matched) {
+      addTopicSignal(signalMap, project.category, engagementWeight, project.category, project.title);
+    }
+
+    (threadsByProject[project.id] ?? []).forEach((thread) => {
+      const threadText = `${thread.message} ${thread.author} ${thread.role}`.toLowerCase();
+      TOPIC_LIBRARY.forEach((entry) => {
+        if (entry.keywords.some((keyword) => threadText.includes(keyword))) {
+          addTopicSignal(signalMap, entry.topic, 1.4, project.category, project.title);
+        }
+      });
+    });
+  });
+
+  requests.forEach((request) => {
+    addTopicSignal(signalMap, request.category, isAnsweredAnalyticsRequest(request.status) ? 1.5 : 2.3, request.category);
+  });
+
+  return [...signalMap.values()].sort((left, right) => right.score - left.score);
+}
+
+function createAnalyticsSnapshot(
+  base: Pick<IdeaAnalyticsSnapshot, "projects" | "requests" | "threadsByProject">,
+  dataSource: IdeaAnalyticsDataSource,
+  dataSourceMessage: string
+): IdeaAnalyticsSnapshot {
+  return {
+    ...base,
+    topicSignals: buildTopicSignals(base.projects, base.requests, base.threadsByProject),
+    dataSource,
+    dataSourceMessage,
+  };
+}
+
+function buildHybridIdeaAnalyticsSnapshot(): IdeaAnalyticsSnapshot {
+  const flattenedThreads = flattenThreadNodes(mockThreadData);
+
+  const projects: IdeaAnalyticsProject[] = DUMMY_STUDENT_PROJECTS.map((project, index) => {
+    const category = inferProjectCategory(project.title, project.milestoneNotes);
+    const updatedAt = new Date(project.updatedAt);
+    const createdDate = new Date(updatedAt.getTime() - (index + 2) * 1000 * 60 * 60 * 24 * 6).toISOString();
+    const responses = Math.max((project.mentorId ? 2 : 1) + (index % 3), 1);
+    const likes = Math.max(Math.round(project.progressPercent / 12) + index * 2, 1);
+    const views = 140 + project.progressPercent * 5 + index * 36;
+    const contributions = Math.max(responses + (project.progressPercent >= 60 ? 2 : 1), 1);
+
+    return {
+      id: project.id,
+      title: project.title,
+      category,
+      createdDate,
+      contributions,
+      likes,
+      views,
+      responses,
+      description: project.milestoneNotes,
+    };
+  });
+
+  const requests: IdeaAnalyticsRequest[] = DUMMY_STUDENT_PROJECTS.map((project, index) => ({
+    id: `hybrid-request-${project.id}`,
+    category: inferProjectCategory(project.title, project.milestoneNotes),
+    status:
+      project.status === "Completed"
+        ? "completed"
+        : project.mentorId && project.progressPercent >= 40
+          ? "answered"
+          : "pending",
+    requestedAt: new Date(new Date(project.updatedAt).getTime() - (index + 1) * 1000 * 60 * 60 * 24 * 3).toISOString(),
+  }));
+
+  const threadsByProject: Record<string, IdeaAnalyticsThreadNote[]> = {};
+  projects.forEach((project, index) => {
+    const count = Math.max(2, Math.min(4, project.responses + 1));
+    const rotated = Array.from({ length: count - 1 }, (_, offset) => {
+      const base = flattenedThreads[(index + offset) % flattenedThreads.length];
+      return {
+        ...base,
+        id: `${project.id}-${base.id}-${offset}`,
+      };
+    });
+
+    threadsByProject[project.id] = [
+      {
+        id: `${project.id}-owner-update`,
+        role: "Post Owner",
+        author: "Project Update",
+        time: "Recently",
+        message: compactText(project.description || "Progress update captured from the demo project tracker."),
+      },
+      ...rotated,
+    ];
+  });
+
+  return createAnalyticsSnapshot(
+    {
+      projects,
+      requests,
+      threadsByProject,
+    },
+    "hybrid",
+    "Analytics is running in backend hybrid mode using demo project data and server-side topic scoring."
+  );
 }
 
 function mapAttachmentsToMarkdown(attachments: IdeaCommentAttachment[] | undefined): string {
@@ -426,6 +764,14 @@ function mapPostRow(
 }
 
 async function loadIdeaPost(postId: string): Promise<IdeaPostRecord> {
+  if (!isSupabaseServerConfigured()) {
+    const offlinePost = getOfflineIdeaPost(postId);
+    if (!offlinePost) {
+      throw new IdeaPersistenceError("Post not found.", 404);
+    }
+    return offlinePost;
+  }
+
   const { data, error } = await supabaseServer
     .from("posts")
     .select("id,user_id,post_mode,post_type,title,description,tech_stack,dynamic_content,view_count,created_at,updated_at")
@@ -451,6 +797,10 @@ async function loadIdeaPost(postId: string): Promise<IdeaPostRecord> {
 }
 
 export async function listIdeaPosts(filters: PostListFilters = {}): Promise<IdeaPostRecord[]> {
+  if (!isSupabaseServerConfigured()) {
+    return listOfflineIdeaPosts(filters);
+  }
+
   const mode = filters.mode ? normalizePostMode(filters.mode) : undefined;
   const limit = typeof filters.limit === "number" && filters.limit > 0 ? Math.min(filters.limit, 100) : 30;
 
@@ -479,6 +829,13 @@ export async function listIdeaPosts(filters: PostListFilters = {}): Promise<Idea
 }
 
 export async function createIdeaPost(input: CreateIdeaPostInput): Promise<IdeaPostRecord> {
+  if (!isSupabaseServerConfigured()) {
+    throw new IdeaPersistenceError(
+      getSupabaseServerConfigError()?.message ?? "Supabase is not configured.",
+      503
+    );
+  }
+
   const actor = await findOrCreateAuthUserByEmail({
     email: input.actorEmail,
     name: input.actorName,
@@ -596,6 +953,10 @@ async function loadThreadRowsWithFallback(postId: string): Promise<ThreadRow[]> 
 }
 
 export async function fetchIdeaThread(postId: string): Promise<IdeaThreadNode[]> {
+  if (!isSupabaseServerConfigured()) {
+    return getOfflineIdeaThread(postId);
+  }
+
   const post = await loadIdeaPost(postId);
 
   const rows = await loadThreadRowsWithFallback(postId);
@@ -639,6 +1000,13 @@ export async function fetchIdeaThread(postId: string): Promise<IdeaThreadNode[]>
 }
 
 export async function createIdeaComment(postId: string, input: CreateIdeaCommentInput) {
+  if (!isSupabaseServerConfigured()) {
+    throw new IdeaPersistenceError(
+      getSupabaseServerConfigError()?.message ?? "Supabase is not configured.",
+      503
+    );
+  }
+
   const post = await loadIdeaPost(postId);
 
   const actor = await findOrCreateAuthUserByEmail({
@@ -674,6 +1042,13 @@ export async function createIdeaComment(postId: string, input: CreateIdeaComment
 }
 
 export async function updateIdeaComment(postId: string, commentId: string, actorEmail: string, content: string) {
+  if (!isSupabaseServerConfigured()) {
+    throw new IdeaPersistenceError(
+      getSupabaseServerConfigError()?.message ?? "Supabase is not configured.",
+      503
+    );
+  }
+
   await loadIdeaPost(postId);
 
   const actor = await findOrCreateAuthUserByEmail({ email: actorEmail });
@@ -718,6 +1093,13 @@ export async function updateIdeaComment(postId: string, commentId: string, actor
 }
 
 export async function deleteIdeaComment(postId: string, commentId: string, actorEmail: string) {
+  if (!isSupabaseServerConfigured()) {
+    throw new IdeaPersistenceError(
+      getSupabaseServerConfigError()?.message ?? "Supabase is not configured.",
+      503
+    );
+  }
+
   await loadIdeaPost(postId);
 
   const actor = await findOrCreateAuthUserByEmail({ email: actorEmail });
@@ -754,7 +1136,7 @@ export async function deleteIdeaComment(postId: string, commentId: string, actor
   return { ok: true };
 }
 
-export async function buildIdeaAnalyticsSnapshot(): Promise<IdeaAnalyticsSnapshot> {
+async function buildLiveIdeaAnalyticsSnapshot(): Promise<IdeaAnalyticsSnapshot> {
   const { data: postsRaw, error: postsError } = await supabaseServer
     .from("posts")
     .select("id,user_id,post_mode,post_type,title,description,dynamic_content,view_count,created_at")
@@ -876,9 +1258,29 @@ export async function buildIdeaAnalyticsSnapshot(): Promise<IdeaAnalyticsSnapsho
     };
   });
 
-  return {
-    projects,
-    requests: [...ideaRequests, ...mentorshipRequests],
-    threadsByProject,
-  };
+  return createAnalyticsSnapshot(
+    {
+      projects,
+      requests: [...ideaRequests, ...mentorshipRequests],
+      threadsByProject,
+    },
+    "live",
+    "Showing live analytics data with backend-owned trend scoring."
+  );
+}
+
+export async function buildIdeaAnalyticsSnapshot(): Promise<IdeaAnalyticsSnapshot> {
+  if (!isSupabaseServerConfigured()) {
+    return buildHybridIdeaAnalyticsSnapshot();
+  }
+
+  try {
+    const liveSnapshot = await buildLiveIdeaAnalyticsSnapshot();
+    if (liveSnapshot.projects.length === 0 && liveSnapshot.requests.length === 0) {
+      return buildHybridIdeaAnalyticsSnapshot();
+    }
+    return liveSnapshot;
+  } catch {
+    return buildHybridIdeaAnalyticsSnapshot();
+  }
 }

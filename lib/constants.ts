@@ -5,6 +5,7 @@ export const IDEABRIDGE_STORAGE_KEYS = {
   users: "ideabridge_users_v1",
   auth: "ideabridge_auth_v1",
   projects: "ideabridge_projects_v1",
+  offlineCredentials: "ideabridge_offline_credentials_v1",
 } as const;
 
 const availabilityColorMap: Record<AvailabilityStatus, "green" | "yellow" | "red"> = {

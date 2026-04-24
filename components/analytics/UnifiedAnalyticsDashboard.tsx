@@ -59,6 +59,8 @@ type Filters = {
   dateTo: string;
 };
 
+type FilterFieldErrors = Partial<Record<keyof Filters, string>>;
+
 type SortConfig = {
   key: keyof AnalyticsProject;
   direction: "asc" | "desc";
@@ -76,6 +78,19 @@ type AnalyticsApiPayload = {
   projects?: AnalyticsProject[];
   requests?: AnalyticsRequest[];
   threadsByProject?: Record<string, ThreadNote[]>;
+  topicSignals?: TopicSignal[];
+  dataSource?: AnalyticsDataSource;
+  dataSourceMessage?: string;
+};
+
+type AnalyticsDataSource = "live" | "hybrid";
+
+type TopicSignal = {
+  topic: string;
+  score: number;
+  mentions: number;
+  categories: string[];
+  projects: string[];
 };
 
 type TooltipEntry = {
@@ -197,6 +212,83 @@ function normalizeDate(value?: string): string {
 
 function scoreProject(project: AnalyticsProject) {
   return project.likes * 3 + project.responses * 10 + Math.round(project.views / 20);
+}
+
+function parseDateInput(value: string): number | null {
+  if (!value) return null;
+  const parsed = new Date(`${value}T00:00:00`).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getTodayDateInputValue(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function getMinDateValue(left?: string, right?: string): string | undefined {
+  if (left && right) {
+    return left < right ? left : right;
+  }
+  return left || right || undefined;
+}
+
+function validateFilterDraft(filters: Filters, categories: string[]): {
+  fieldErrors: FilterFieldErrors;
+  formError: string;
+} {
+  const fieldErrors: FilterFieldErrors = {};
+  const hasCategoryFilter = filters.category !== "All";
+  const hasFromDate = Boolean(filters.dateFrom);
+  const hasToDate = Boolean(filters.dateTo);
+  const hasDateFilter = hasFromDate || hasToDate;
+  const fromDate = parseDateInput(filters.dateFrom);
+  const toDate = parseDateInput(filters.dateTo);
+  const today = parseDateInput(getTodayDateInputValue());
+
+  if (!hasCategoryFilter && !hasDateFilter) {
+    return {
+      fieldErrors: {},
+      formError: "Please select at least one filter before applying.",
+    };
+  }
+
+  if (filters.category !== "All" && !categories.includes(filters.category)) {
+    fieldErrors.category = "Please choose a valid category.";
+  }
+
+  if (hasFromDate && fromDate === null) {
+    fieldErrors.dateFrom = "Please enter a valid from date.";
+  }
+
+  if (hasToDate && toDate === null) {
+    fieldErrors.dateTo = "Please enter a valid to date.";
+  }
+
+  if (hasFromDate && !hasToDate) {
+    fieldErrors.dateTo = "Please select a to date.";
+  }
+
+  if (!hasFromDate && hasToDate) {
+    fieldErrors.dateFrom = "Please select a from date.";
+  }
+
+  if (fromDate !== null && today !== null && fromDate > today) {
+    fieldErrors.dateFrom = "From date cannot be in the future.";
+  }
+
+  if (toDate !== null && today !== null && toDate > today) {
+    fieldErrors.dateTo = "To date cannot be in the future.";
+  }
+
+  if (fromDate !== null && toDate !== null && fromDate > toDate) {
+    fieldErrors.dateFrom = "From date must be on or before the to date.";
+    fieldErrors.dateTo = "To date must be on or after the from date.";
+  }
+
+  return {
+    fieldErrors,
+    formError:
+      Object.keys(fieldErrors).length > 0 ? "Fix the highlighted filters before applying them." : "",
+  };
 }
 
 function renderSortIcon(sortConfig: SortConfig, column: keyof AnalyticsProject) {
@@ -327,6 +419,9 @@ function FilterBar({
   onApply: (filters: Filters) => void;
 }) {
   const [draftFilters, setDraftFilters] = React.useState<Filters>({ category, dateFrom, dateTo });
+  const [fieldErrors, setFieldErrors] = React.useState<FilterFieldErrors>({});
+  const [formError, setFormError] = React.useState("");
+  const todayDate = React.useMemo(() => getTodayDateInputValue(), []);
 
   const activeFilterCount = React.useMemo(() => {
     let count = 0;
@@ -335,31 +430,34 @@ function FilterBar({
     return count;
   }, [draftFilters.category, draftFilters.dateFrom, draftFilters.dateTo]);
 
-  const [formError, setFormError] = React.useState("");
+  function updateDraftFilter<Key extends keyof Filters>(key: Key, value: Filters[Key]) {
+    setDraftFilters((prev) => ({ ...prev, [key]: value }));
+    setFormError("");
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      if (key === "dateFrom" || key === "dateTo") {
+        delete next.dateFrom;
+        delete next.dateTo;
+      }
+      return next;
+    });
+  }
 
   function handleApply() {
-    const onlyOneDate = Boolean(draftFilters.dateFrom) !== Boolean(draftFilters.dateTo);
-    const invalidRange =
-      draftFilters.dateFrom &&
-      draftFilters.dateTo &&
-      new Date(draftFilters.dateFrom).getTime() > new Date(draftFilters.dateTo).getTime();
-
-    if (onlyOneDate) {
-      setFormError("Please select both From Date and To Date.");
+    const validation = validateFilterDraft(draftFilters, categories);
+    setFieldErrors(validation.fieldErrors);
+    setFormError(validation.formError);
+    if (validation.formError) {
       return;
     }
 
-    if (invalidRange) {
-      setFormError("From Date must be earlier than To Date.");
-      return;
-    }
-
-    setFormError("");
     onApply(draftFilters);
   }
 
   function handleClear() {
     setFormError("");
+    setFieldErrors({});
     setDraftFilters(DEFAULT_FILTERS);
     onApply(DEFAULT_FILTERS);
   }
@@ -406,8 +504,14 @@ function FilterBar({
             id="analytics-category"
             title="Category"
             value={draftFilters.category}
-            onChange={(e) => setDraftFilters((prev) => ({ ...prev, category: e.target.value }))}
-            className="w-full rounded-2xl border border-[#eedfd2] bg-[#fff8f2] px-4 py-3 text-sm font-medium text-slate-900 transition-colors focus:border-[#f5a97f] focus:bg-white focus:outline-none"
+            onChange={(e) => updateDraftFilter("category", e.target.value)}
+            aria-invalid={Boolean(fieldErrors.category)}
+            aria-describedby={fieldErrors.category ? "analytics-category-error" : undefined}
+            className={`w-full rounded-2xl px-4 py-3 text-sm font-medium text-slate-900 transition-colors focus:bg-white focus:outline-none ${
+              fieldErrors.category
+                ? "border border-red-300 bg-red-50 focus:border-red-400"
+                : "border border-[#eedfd2] bg-[#fff8f2] focus:border-[#f5a97f]"
+            }`}
           >
             <option value="All">All</option>
             {categories.map((cat) => (
@@ -416,6 +520,11 @@ function FilterBar({
               </option>
             ))}
           </select>
+          {fieldErrors.category ? (
+            <p id="analytics-category-error" className="mt-2 text-sm font-medium text-red-600">
+              {fieldErrors.category}
+            </p>
+          ) : null}
         </div>
 
         <div>
@@ -430,11 +539,22 @@ function FilterBar({
               placeholder="From date"
               type="date"
               value={draftFilters.dateFrom}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
-              max={draftFilters.dateTo || undefined}
-              className="w-full rounded-2xl border border-[#eedfd2] bg-[#fff8f2] py-3 pl-11 pr-4 text-sm font-medium text-slate-900 transition-colors focus:border-[#f5a97f] focus:bg-white focus:outline-none"
+              onChange={(e) => updateDraftFilter("dateFrom", e.target.value)}
+              max={getMinDateValue(draftFilters.dateTo, todayDate)}
+              aria-invalid={Boolean(fieldErrors.dateFrom)}
+              aria-describedby={fieldErrors.dateFrom ? "analytics-date-from-error" : undefined}
+              className={`w-full rounded-2xl py-3 pl-11 pr-4 text-sm font-medium text-slate-900 transition-colors focus:bg-white focus:outline-none ${
+                fieldErrors.dateFrom
+                  ? "border border-red-300 bg-red-50 focus:border-red-400"
+                  : "border border-[#eedfd2] bg-[#fff8f2] focus:border-[#f5a97f]"
+              }`}
             />
           </div>
+          {fieldErrors.dateFrom ? (
+            <p id="analytics-date-from-error" className="mt-2 text-sm font-medium text-red-600">
+              {fieldErrors.dateFrom}
+            </p>
+          ) : null}
         </div>
 
         <div>
@@ -449,11 +569,23 @@ function FilterBar({
               placeholder="To date"
               type="date"
               value={draftFilters.dateTo}
-              onChange={(e) => setDraftFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+              onChange={(e) => updateDraftFilter("dateTo", e.target.value)}
               min={draftFilters.dateFrom || undefined}
-              className="w-full rounded-2xl border border-[#eedfd2] bg-[#fff8f2] py-3 pl-11 pr-4 text-sm font-medium text-slate-900 transition-colors focus:border-[#f5a97f] focus:bg-white focus:outline-none"
+              max={todayDate}
+              aria-invalid={Boolean(fieldErrors.dateTo)}
+              aria-describedby={fieldErrors.dateTo ? "analytics-date-to-error" : undefined}
+              className={`w-full rounded-2xl py-3 pl-11 pr-4 text-sm font-medium text-slate-900 transition-colors focus:bg-white focus:outline-none ${
+                fieldErrors.dateTo
+                  ? "border border-red-300 bg-red-50 focus:border-red-400"
+                  : "border border-[#eedfd2] bg-[#fff8f2] focus:border-[#f5a97f]"
+              }`}
             />
           </div>
+          {fieldErrors.dateTo ? (
+            <p id="analytics-date-to-error" className="mt-2 text-sm font-medium text-red-600">
+              {fieldErrors.dateTo}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex items-end">
@@ -477,8 +609,30 @@ function FilterBar({
         </div>
       </div>
 
-      {formError ? <p className="mt-4 text-sm font-medium text-red-600">{formError}</p> : null}
+      {formError ? (
+        <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {formError}
+        </p>
+      ) : null}
     </section>
+  );
+}
+
+function InsightPulseCard({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <article className="rounded-[28px] border border-[#f0dfd1] bg-white/92 p-5 shadow-[0_24px_55px_-42px_rgba(45,28,11,0.38)]">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#c96c2c]">{eyebrow}</p>
+      <h3 className="mt-3 text-xl font-bold tracking-tight text-slate-900">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+    </article>
   );
 }
 
@@ -811,12 +965,14 @@ function AnalyticsSection({
   dateFrom,
   dateTo,
   threadsByProject,
+  topicSignals,
 }: {
   projects: AnalyticsProject[];
   requests: AnalyticsRequest[];
   dateFrom: string;
   dateTo: string;
   threadsByProject: Record<string, ThreadNote[]>;
+  topicSignals: TopicSignal[];
 }) {
   const popularityColor = "#F5A97F";
   const answeredColor = "#10B981";
@@ -889,11 +1045,52 @@ function AnalyticsSection({
     }
     return highest;
   }, null);
+  const leadingTopic = topicSignals[0] ?? null;
+  const risingTopic = topicSignals[1] ?? topicSignals[0] ?? null;
+  const supportGap = React.useMemo(() => {
+    return requestResponseData
+      .map((item) => ({
+        category: item.category,
+        unanswered: item.unanswered,
+        responseRate: item.totalRequests === 0 ? 0 : Math.round((item.answered / item.totalRequests) * 100),
+      }))
+      .sort((left, right) => right.unanswered - left.unanswered || left.responseRate - right.responseRate)[0] ?? null;
+  }, [requestResponseData]);
   const totalContributions = userContribution.reduce((sum, item) => sum + item.value, 0);
   const topProject = topProjects[0];
 
   return (
     <div className="space-y-4">
+      <div className="grid gap-4 xl:grid-cols-3">
+        <InsightPulseCard
+          eyebrow="Hybrid Trend Signal"
+          title={leadingTopic?.topic ?? "Awaiting topic data"}
+          description={
+            leadingTopic
+              ? `${leadingTopic.mentions} weighted signals across ${leadingTopic.categories.join(", ")}. Strongest pull is coming from ${leadingTopic.projects.slice(0, 2).join(" and ")}.`
+              : "Trending topics will appear once the dashboard sees project and request activity."
+          }
+        />
+        <InsightPulseCard
+          eyebrow="Rising Theme"
+          title={risingTopic?.topic ?? "No rising theme yet"}
+          description={
+            risingTopic
+              ? `${risingTopic.projects.slice(0, 2).join(" and ")} are helping this theme gain momentum in the current view.`
+              : "Add more recent uploads or request activity to surface a rising theme."
+          }
+        />
+        <InsightPulseCard
+          eyebrow="Support Gap"
+          title={supportGap ? supportGap.category : "No request gap detected"}
+          description={
+            supportGap
+              ? `${supportGap.unanswered} requests are still waiting here, with a ${supportGap.responseRate}% response rate. This is the clearest area to prioritize next.`
+              : "Once request data exists, the dashboard will highlight the category that needs the fastest response."
+          }
+        />
+      </div>
+
       <div className="grid gap-4 xl:grid-cols-2">
         <ChartCard title="Category Popularity" subtitle="What is popular?" bodyClassName="space-y-4">
           {categoryPopularity.length === 0 ? (
@@ -915,7 +1112,7 @@ function AnalyticsSection({
               </div>
               <InsightNote>
                 {mostPopularCategory
-                  ? `Most active category is ${mostPopularCategory.category} with ${mostPopularCategory.projects} projects.`
+                  ? `Most active category is ${mostPopularCategory.category} with ${mostPopularCategory.projects} projects. Leading topic signal: ${leadingTopic?.topic ?? mostPopularCategory.category}.`
                   : "Projects will start surfacing here once you upload work."}
               </InsightNote>
             </>
@@ -973,7 +1170,7 @@ function AnalyticsSection({
               </div>
               <InsightNote>
                 {peakMonth
-                  ? `Peak activity was in ${peakMonth.label}, with ${peakMonth.total} uploads and requests combined.`
+                  ? `Peak activity was in ${peakMonth.label}, with ${peakMonth.total} uploads and requests combined. Rising theme: ${risingTopic?.topic ?? "current project discussions"}.`
                   : "Your trend line will appear here as you start sharing work."}
               </InsightNote>
             </>
@@ -1043,7 +1240,7 @@ function AnalyticsSection({
             projects={topProjects}
             insight={
               topProject
-                ? `${topProject.title} is leading right now with ${topProject.views} views and ${topProject.likes} likes.`
+                ? `${topProject.title} is leading right now with ${topProject.views} views and ${topProject.likes} likes. It is reinforcing the ${leadingTopic?.topic ?? topProject.category} trend.`
                 : "High-performing projects will surface here once engagement data is available."
             }
           />
@@ -1061,6 +1258,9 @@ export function UnifiedAnalyticsDashboard() {
     projects: [],
     requests: [],
     threadsByProject: {},
+    topicSignals: [],
+    dataSource: "live",
+    dataSourceMessage: "",
   });
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -1084,10 +1284,12 @@ export function UnifiedAnalyticsDashboard() {
           payload?.threadsByProject && typeof payload.threadsByProject === "object"
             ? payload.threadsByProject
             : {},
+        topicSignals: safeArray(payload?.topicSignals),
+        dataSource: payload?.dataSource === "hybrid" ? "hybrid" : "live",
+        dataSourceMessage: typeof payload?.dataSourceMessage === "string" ? payload.dataSourceMessage : "",
       });
-    } catch (error) {
-      setAnalyticsData({ projects: [], requests: [], threadsByProject: {} });
-      setLoadError(error instanceof Error ? error.message : "Failed to load analytics data.");
+    } catch {
+      setLoadError("Failed to load analytics data.");
     } finally {
       setIsLoadingData(false);
     }
@@ -1103,6 +1305,9 @@ export function UnifiedAnalyticsDashboard() {
     () => analyticsData.threadsByProject ?? {},
     [analyticsData.threadsByProject]
   );
+  const topicSignals = React.useMemo(() => safeArray(analyticsData.topicSignals), [analyticsData.topicSignals]);
+  const dataSource = analyticsData.dataSource === "hybrid" ? "hybrid" : "live";
+  const dataSourceMessage = analyticsData.dataSourceMessage;
 
   const filteredProjects = React.useMemo(() => {
     return filterByCategoryAndRange(projects, filters.category, filters.dateFrom, filters.dateTo, "createdDate");
@@ -1198,6 +1403,18 @@ export function UnifiedAnalyticsDashboard() {
       </div>
 
       <div className="mt-6">
+        {dataSourceMessage ? (
+          <div
+            className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${
+              dataSource === "live"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-amber-200 bg-amber-50 text-amber-800"
+            }`}
+          >
+            {dataSourceMessage}
+          </div>
+        ) : null}
+
         {loadError ? (
           <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1230,6 +1447,7 @@ export function UnifiedAnalyticsDashboard() {
             dateFrom={filters.dateFrom}
             dateTo={filters.dateTo}
             threadsByProject={threadsByProject}
+            topicSignals={topicSignals}
           />
         )}
       </div>
