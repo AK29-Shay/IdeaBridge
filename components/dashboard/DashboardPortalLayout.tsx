@@ -37,6 +37,7 @@ export function DashboardPortalLayout({
   const router = useRouter();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [desktopSidebarHidden, setDesktopSidebarHidden] = React.useState(false);
 
   const activeItem =
     navItems.find((item) => isActivePath(pathname, item.href)) ?? navItems[0] ?? null;
@@ -72,7 +73,7 @@ export function DashboardPortalLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFF8F3] via-[#FFF3E8]/60 to-[#FFF8F3]">
+    <div className="min-h-screen bg-[#FAF7F2] app-page-enter">
       {sidebarOpen ? (
         <button
           type="button"
@@ -85,18 +86,19 @@ export function DashboardPortalLayout({
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px]">
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-[#FFD4B1] bg-white shadow-xl transition-transform duration-300 lg:relative lg:translate-x-0 lg:shadow-none",
+            "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-[#E7DED4] bg-white shadow-xl transition-all duration-300 lg:relative lg:translate-x-0 lg:shadow-none",
+            desktopSidebarHidden ? "lg:hidden" : "w-72",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
-          <div className="flex items-center gap-3 border-b border-[#FFD4B1] px-6 py-5">
+          <div className="flex items-center gap-3 border-b border-[#E7DED4] px-6 py-5">
             <Link href="/" className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-black text-sm font-black text-[#FFCBA4] shadow-md">
                 IB
               </div>
               <div>
-                <div className="font-bold text-black">IdeaBridge</div>
-                <div className="flex items-center gap-1 text-xs font-medium text-[#c97a30]">
+                <div className="font-bold text-[#1F2933]">IdeaBridge</div>
+                <div className="flex items-center gap-1 text-xs font-medium text-[#C86B4A]">
                   <Sparkles className="h-3 w-3" />
                   {portalLabel}
                 </div>
@@ -105,28 +107,28 @@ export function DashboardPortalLayout({
             <button
               type="button"
               aria-label="Close sidebar"
-              className="ml-auto rounded-lg p-2 text-slate-400 transition hover:bg-[#FFF0E6] hover:text-slate-700 lg:hidden"
+              className="ml-auto rounded-lg p-2 text-[#6B7280] transition hover:bg-[#FAF7F2] hover:text-[#1F2933] lg:hidden"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="mx-4 mt-4 rounded-2xl bg-gradient-to-br from-black via-[#1C1000] to-[#2A1200] p-4 text-[#FFCBA4] shadow-md">
+          <div className="mx-4 mt-4 siri-border p-4 text-[#1F2933] shadow-md">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sm font-bold">
                 {initials}
               </div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{user?.fullName ?? "Dashboard User"}</div>
-                <div className="truncate text-xs text-[#FFCBA4]/70">{user?.email ?? ""}</div>
+                <div className="truncate text-xs text-[#6B7280]">{user?.email ?? ""}</div>
               </div>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-[#FFCBA4]/70">{portalDescription}</p>
+            <p className="mt-3 text-xs leading-relaxed text-[#6B7280]">{portalDescription}</p>
           </div>
 
           <nav className="flex-1 px-4 py-5">
-            <div className="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.18em] text-black/35">
+            <div className="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#6B7280]">
               Navigation
             </div>
             <div className="space-y-1.5">
@@ -141,14 +143,14 @@ export function DashboardPortalLayout({
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200",
                       isActive
-                        ? "bg-black text-[#FFCBA4] shadow-md"
-                        : "text-slate-600 hover:bg-[#FFF0E6] hover:text-black"
+                        ? "bg-[#C86B4A] text-white shadow-md"
+                        : "text-[#6B7280] hover:bg-[#FAF7F2] hover:text-[#1F2933]"
                     )}
                   >
                     <Icon
                       className={cn(
                         "h-4 w-4 shrink-0",
-                        isActive ? "text-[#FFCBA4]" : "text-[#c97a30]"
+                        isActive ? "text-white" : "text-[#E8B86D]"
                       )}
                     />
                     {label}
@@ -158,11 +160,11 @@ export function DashboardPortalLayout({
             </div>
           </nav>
 
-          <div className="border-t border-[#FFD4B1] p-4">
+          <div className="border-t border-[#E7DED4] p-4">
             <button
               type="button"
               onClick={() => void handleLogout()}
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-500 transition hover:bg-red-50"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-[#C86B4A] transition hover:bg-[#FAF7F2]"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -171,24 +173,32 @@ export function DashboardPortalLayout({
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-[#FFD4B1] bg-white/80 px-4 py-4 backdrop-blur sm:px-6">
+          <header className="premium-glass-header sticky top-0 z-20 border-b px-4 py-4 sm:px-6">
             <div className="mx-auto flex w-full max-w-6xl items-center gap-4">
               <button
                 type="button"
+                aria-label={desktopSidebarHidden ? "Open navigation panel" : "Close navigation panel"}
+                className="hidden rounded-xl border border-[#E7DED4] p-2 text-[#6B7280] transition hover:bg-white hover:text-[#1F2933] lg:inline-flex"
+                onClick={() => setDesktopSidebarHidden((v) => !v)}
+              >
+                {desktopSidebarHidden ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
                 aria-label="Open navigation"
-                className="rounded-xl border border-[#FFD4B1] p-2 text-slate-500 transition hover:bg-[#FFF0E6] hover:text-black lg:hidden"
+                className="rounded-xl border border-[#E7DED4] p-2 text-[#6B7280] transition hover:bg-white hover:text-[#1F2933] lg:hidden"
                 onClick={() => setSidebarOpen(true)}
               >
                 <Menu className="h-5 w-5" />
               </button>
 
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-xs font-medium text-black/45">
+                <div className="flex items-center gap-2 text-xs font-medium text-[#6B7280]">
                   <span>{portalLabel}</span>
                   <span>/</span>
                   <span>{activeItem?.label ?? "Overview"}</span>
                 </div>
-                <div className="truncate text-sm font-semibold text-black sm:text-base">
+                <div className="truncate text-sm font-semibold text-[#1F2933] sm:text-base">
                   {activeItem?.label ?? "Overview"}
                 </div>
               </div>
@@ -196,13 +206,13 @@ export function DashboardPortalLayout({
               <div className="ml-auto flex items-center gap-3">
                 <Link
                   href="/notifications"
-                  className="relative rounded-xl border border-[#FFD4B1] bg-white p-2 text-slate-500 shadow-sm transition hover:bg-[#FFF0E6] hover:text-black"
+                  className="relative rounded-xl border border-[#E7DED4] bg-white p-2 text-[#6B7280] shadow-sm transition hover:bg-[#FAF7F2] hover:text-[#1F2933]"
                 >
                   <Bell className="h-4 w-4" />
                 </Link>
                 <div className="hidden text-right md:block">
-                  <div className="text-xs text-black/40">Signed in</div>
-                  <div className="text-sm font-semibold text-black">{user?.fullName ?? "IdeaBridge User"}</div>
+                  <div className="text-xs text-[#6B7280]">Signed in</div>
+                  <div className="text-sm font-semibold text-[#1F2933]">{user?.fullName ?? "IdeaBridge User"}</div>
                 </div>
                 <Link
                   href={profileHref}

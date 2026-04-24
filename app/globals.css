@@ -24,30 +24,26 @@
 
 @layer base {
   :root {
-    /* ── Black & Peach Theme ── */
-    --background: 30 60% 97%;        /* warm off-white */
-    --foreground: 0 0% 6%;           /* #0F0F0F */
+    --background: 36 33% 97%; /* #FAF7F2 */
+    --foreground: 210 22% 16%; /* #1F2933 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 6%;
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 210 22% 16%;
 
-    --muted: 30 30% 94%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 34 27% 95%;
+    --muted-foreground: 220 9% 43%; /* #6B7280 */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 6%;
+    --popover-foreground: 210 22% 16%;
 
-    /* Primary: Peach #FFCBA4 → HSL(25 100% 82%) */
-    --primary: 25 100% 82%;
-    --primary-foreground: 0 0% 6%;
+    --primary: 16 53% 54%; /* #C86B4A */
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Deep Black #0F0F0F */
-    --secondary: 0 0% 6%;
-    --secondary-foreground: 25 100% 82%;
+    --secondary: 35 64% 67%; /* #E8B86D */
+    --secondary-foreground: 210 22% 16%;
 
-    /* Accent: warm peach-orange */
-    --accent: 20 90% 65%;
-    --accent-foreground: 0 0% 6%;
+    --accent: 35 64% 67%; /* #E8B86D */
+    --accent-foreground: 210 22% 16%;
 
     /* Destructive: kept red */
     --destructive: 0 84% 60%;
@@ -56,9 +52,9 @@
     /* Warning */
     --warning: 48 96% 53%;
 
-    --ring: 25 100% 72%;
-    --border: 25 40% 88%;
-    --input: 25 40% 88%;
+    --ring: 16 53% 54%;
+    --border: 36 26% 88%; /* #E7DED4 */
+    --input: 36 26% 88%;
     --radius: 0.75rem;
   }
 
@@ -98,8 +94,8 @@
   }
 
   body {
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background: #faf7f2;
+    color: #1f2933;
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
       "Apple Color Emoji", "Segoe UI Emoji";
   }
@@ -112,7 +108,7 @@
 /* ── Custom scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #FFCBA4; border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: #c86b4a; border-radius: 99px; }
 
 /* ── Animations ── */
 @keyframes float-y {
@@ -135,5 +131,64 @@
 .animate-fade-up  { animation: fade-up 500ms ease forwards; }
 .will-fade-up     { opacity: 0; }
 
-/* Peach glow utility */
-.peach-glow { box-shadow: 0 0 24px 4px rgba(255, 203, 164, 0.35); }
+.app-page-enter {
+  animation: fade-up 420ms ease both;
+}
+
+.premium-card {
+  background: #ffffff;
+  border: 1px solid #e7ded4;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(31, 41, 51, 0.07);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.premium-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(31, 41, 51, 0.11);
+}
+
+.premium-glass-header {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(231, 222, 212, 0.9);
+}
+
+.premium-btn {
+  background: #c86b4a;
+  color: #ffffff;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.premium-btn:hover {
+  background: #b85f42;
+  transform: translateY(-1px);
+}
+
+/* Siri-like edge glow for cards and forms */
+.siri-border {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid #e7ded4;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(31, 41, 51, 0.08);
+  overflow: hidden;
+}
+
+.siri-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    120deg,
+    rgba(200, 107, 74, 0.45),
+    rgba(232, 184, 109, 0.45),
+    rgba(200, 107, 74, 0.35)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}

@@ -76,31 +76,31 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-10 app-page-enter">
       {/* Gradient background */}
-      <div className="fixed inset-0 bg-[#FFF8F3]" />
+      <div className="fixed inset-0 bg-[#FAF7F2]" />
 
       {/* Decorative blobs */}
-      <div className="fixed top-[-10%] right-[-5%] w-96 h-96 rounded-full bg-[#FFCBA4]/40 blur-3xl pointer-events-none" />
-      <div className="fixed bottom-[-10%] left-[-5%] w-96 h-96 rounded-full bg-[#0F0F0F]/5 blur-3xl pointer-events-none" />
+      <div className="fixed top-[-10%] right-[-5%] w-96 h-96 rounded-full bg-[#E8B86D]/35 blur-3xl pointer-events-none" />
+      <div className="fixed bottom-[-10%] left-[-5%] w-96 h-96 rounded-full bg-[#C86B4A]/10 blur-3xl pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md animate-fade-up">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#FFCBA4] shadow-md mb-4">
-            <span className="text-[#0F0F0F] font-bold text-lg">IB</span>
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#E8B86D] shadow-md mb-4">
+            <span className="text-[#1F2933] font-bold text-lg">IB</span>
           </div>
-          <h1 className="text-3xl font-bold text-[#0F0F0F] tracking-tight">
+          <h1 className="text-3xl font-bold text-[#1F2933] tracking-tight">
             Welcome back
           </h1>
-          <p className="text-[#0F0F0F]/60 mt-1.5 text-sm">
+          <p className="text-[#6B7280] mt-1.5 text-sm">
             Sign in to your IdeaBridge account
           </p>
         </div>
 
 
         {/* Card */}
-        <div className="bg-white border border-[#FFCBA4]/30 rounded-2xl shadow-2xl p-6">
+        <div className="siri-border rounded-2xl p-6">
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4"
@@ -137,7 +137,7 @@ export default function LoginPage() {
                 </Label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-[#C7792F] hover:text-[#0F0F0F] transition-colors"
+                  className="text-xs text-[#C86B4A] hover:text-[#1F2933] transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -187,7 +187,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 rounded-xl bg-[#0F0F0F] text-[#FFCBA4] font-semibold text-sm hover:brightness-125 transition-all duration-200 shadow-lg shadow-black/20 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="premium-btn w-full py-3 rounded-xl font-semibold text-sm shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -201,17 +201,17 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <div className="mt-4 rounded-xl border border-[#FFCBA4]/40 bg-[#FFF4EA] p-3 text-xs text-[#0F0F0F]/70">
-          <p className="font-semibold text-[#8A4E2A]">Demo accounts</p>
+        <div className="mt-4 rounded-xl border border-[#E7DED4] bg-[#FFF9F3] p-3 text-xs text-[#6B7280]">
+          <p className="font-semibold text-[#C86B4A]">Demo accounts</p>
           <p className="mt-1">Student: student.demo@ideabridge.dev / Demo@123</p>
           <p>Mentor: mentor.demo@ideabridge.dev / Demo@123</p>
         </div>
 
-        <p className="mt-5 text-center text-sm text-[#0F0F0F]/50">
+        <p className="mt-5 text-center text-sm text-[#6B7280]">
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="text-[#C7792F] hover:text-[#0F0F0F] font-medium transition-colors"
+            className="text-[#C86B4A] hover:text-[#1F2933] font-medium transition-colors"
           >
             Create one free
           </Link>
