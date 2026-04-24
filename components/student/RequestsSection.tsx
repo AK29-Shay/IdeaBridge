@@ -433,6 +433,14 @@ export function RequestsSection() {
                           Due {new Date(request.deadline).toLocaleDateString()}
                         </span>
                       ) : null}
+                      {isActiveRequest(request.status) || isClosedRequest(request.status) ? (
+                        <Link
+                          href={`/dashboard/student/mentorships?request=${encodeURIComponent(request.id)}`}
+                          className="rounded-full bg-[#0F0F0F] px-3 py-1 font-semibold text-[#FFCBA4] transition hover:brightness-110"
+                        >
+                          Open mentorship space
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
                 </article>

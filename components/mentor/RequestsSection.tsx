@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Check, Clock, Users, X } from "lucide-react";
 
 import { getRequestStatusLabel, getRequestStatusTone, isActiveRequest, isClosedRequest, isPendingRequest } from "@/lib/requestStatus";
@@ -98,6 +99,14 @@ export function RequestsSection({ requests, onUpdateRequest }: RequestsSectionPr
                           <Clock className="h-3.5 w-3.5" />
                           {new Date(request.created_at).toLocaleDateString()}
                         </span>
+                        {isActiveRequest(request.status) || isClosedRequest(request.status) ? (
+                          <Link
+                            href={`/dashboard/mentor/mentorships?request=${encodeURIComponent(request.id)}`}
+                            className="rounded-full bg-[#0F0F0F] px-3 py-1 font-semibold text-[#FFCBA4] transition hover:brightness-110"
+                          >
+                            Open mentorship space
+                          </Link>
+                        ) : null}
                       </div>
                     </div>
                   </div>
