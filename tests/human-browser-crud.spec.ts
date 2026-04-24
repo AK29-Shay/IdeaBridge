@@ -466,7 +466,7 @@ async function updateStudentProjectProgress(page: Page, runId: string) {
 async function updateMentorProfileAndRestore(page: Page, runId: string) {
   await page.goto("/dashboard/mentor/profile");
   await expect(page).toHaveURL(/\/dashboard\/mentor\/profile$/, { timeout: 15_000 });
-  await expect(page.getByText(/My Profile/i).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /(?:My|Mentor) Profile/i })).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /Edit Profile/i }).click();
   const bioField = page.getByPlaceholder(/Describe your expertise, teaching style/i);
