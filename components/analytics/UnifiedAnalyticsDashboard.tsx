@@ -1206,7 +1206,22 @@ export function UnifiedAnalyticsDashboard() {
           iconClassName="bg-[#0f0f0f]"
           valueClassName="text-slate-950"
         />
-                  iconClassName="bg-linear-to-r from-[#34d399] to-[#10b981]"
+        <StatCard
+          label="Open Requests"
+          value={openRequests}
+          icon={<MessageSquare className="h-6 w-6" />}
+          description="Requests awaiting response"
+          cardClassName="bg-white/94"
+          iconClassName="bg-linear-to-r from-[#f5a97f] to-[#d97706]"
+          valueClassName="text-[#9a3412]"
+        />
+        <StatCard
+          label="Resolved Requests"
+          value={resolvedRequests}
+          icon={<CheckCircle2 className="h-6 w-6" />}
+          description="Answered or completed requests"
+          cardClassName="bg-white/94"
+          iconClassName="bg-linear-to-r from-[#34d399] to-[#10b981]"
           valueClassName="text-[#05856b]"
         />
       </div>
