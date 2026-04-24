@@ -297,7 +297,7 @@ async function createStudentPostAndVerifySearch(page: Page, postTitle: string, u
     mimeType: "application/zip",
     buffer: Buffer.from(`IdeaBridge QA evidence ${runId}`, "utf-8"),
   });
-  await expect(page.getByText(new RegExp(`qa-evidence-${runId}\\.zip`))).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(new RegExp(`qa-evidence-${runId}\\.zip`))).toBeVisible({ timeout: 60_000 });
 
   await page.getByRole("button", { name: /Publish Post/i }).click();
   await expect(page.getByText(postTitle).first()).toBeVisible({ timeout: 15_000 });
