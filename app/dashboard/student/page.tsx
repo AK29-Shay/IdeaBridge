@@ -11,6 +11,7 @@ const STUDENT_ROUTE_MAP: Record<string, string> = {
   projects: "/dashboard/student/projects",
   requests: "/dashboard/student/requests",
   mentorships: "/dashboard/student/mentorships",
+  recommendations: "/dashboard/student/recommendations",
   profile: "/dashboard/student/profile",
 };
 

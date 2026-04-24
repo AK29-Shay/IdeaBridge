@@ -154,7 +154,7 @@ async function loadAuthUserFromSession(sessionUser: User): Promise<AuthUser> {
   const existing = await selectProfile(sessionUser.id);
   if (existing) {
     const existingRole = normalizeRole(existing.role);
-    if (existingRole !== fallbackRole) {
+    if (!existingRole) {
       return upsertProfile({
         id: sessionUser.id,
         email,

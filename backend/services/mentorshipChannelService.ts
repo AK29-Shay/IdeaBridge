@@ -282,13 +282,14 @@ async function loadChannelPost(requestId: string) {
     .from("posts")
     .select("id,user_id,title,description,dynamic_content,created_at,updated_at")
     .contains("dynamic_content", { module: MENTORSHIP_MODULE, requestId })
-    .maybeSingle();
+    .order("updated_at", { ascending: false });
 
   if (error) {
     throw new MentorshipChannelError(error.message, 500);
   }
 
-  return data ? (data as ChannelPostRow) : null;
+  const rows = Array.isArray(data) ? (data as ChannelPostRow[]) : [];
+  return rows.find((row) => isChannelPost(row, requestId)) ?? null;
 }
 
 async function createChannelPost(request: RequestRow) {
