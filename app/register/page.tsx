@@ -191,11 +191,11 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-12 app-page-enter"
       style={{ fontFamily: "'Inter', sans-serif" }}
     >
-      <div className="fixed inset-0 bg-gradient-to-br from-[#FFF8F3] to-[#FFEFE6]" />
-      <div className="fixed right-[-8%] top-[-12%] h-[520px] w-[520px] rounded-full bg-[#FFCBA4]/30 blur-3xl pointer-events-none" />
+      <div className="fixed inset-0 bg-[#FAF7F2]" />
+      <div className="fixed right-[-8%] top-[-12%] h-[520px] w-[520px] rounded-full bg-[#E8B86D]/30 blur-3xl pointer-events-none" />
       <div className="fixed bottom-[-12%] left-[-8%] h-[420px] w-[420px] rounded-full bg-[#FFDCC2]/30 blur-3xl pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-xl">
@@ -217,11 +217,11 @@ export default function RegisterPage() {
         </div>
 
         <div
-          className="relative rounded-2xl p-6 md:p-8"
+          className="relative rounded-2xl p-6 md:p-8 siri-border"
           style={{
-            background: "rgba(255,255,255,0.6)",
+            background: "rgba(255,255,255,0.86)",
             backdropFilter: "blur(6px)",
-            border: "1px solid rgba(255,255,255,0.4)",
+            border: "1px solid #E7DED4",
           }}
         >
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
@@ -395,7 +395,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="mt-2 w-full rounded-xl bg-[#0F0F0F] py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-[#1a1a1a] disabled:cursor-not-allowed disabled:opacity-50"
+              className="premium-btn mt-2 w-full rounded-xl py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
               style={{ fontFamily: "'Poppins', sans-serif" }}
             >
               {isSubmitting ? (

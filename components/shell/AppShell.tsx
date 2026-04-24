@@ -53,6 +53,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarHidden, setDesktopSidebarHidden] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
@@ -63,8 +64,12 @@ export function AppShell({ children }: AppShellProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-[#FFF8F3] via-[#FFF4EA] to-[#FFEBDD] text-[#0F0F0F]">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-[#FFD4B1] bg-white/78 backdrop-blur md:flex">
+    <div className="flex min-h-screen bg-[#FAF7F2] text-[#1F2933] app-page-enter">
+      <aside
+        className={`sticky top-0 h-screen w-64 shrink-0 flex-col border-r border-[#E7DED4] bg-white/80 backdrop-blur transition-all duration-300 ${
+          desktopSidebarHidden ? "hidden md:hidden" : "hidden md:flex"
+        }`}
+      >
         <SidebarContent pathname={pathname} user={user} logout={logout} />
       </aside>
 
@@ -112,7 +117,7 @@ export function AppShell({ children }: AppShellProps) {
       </AnimatePresence>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[#FFD4B1] bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+        <header className="premium-glass-header sticky top-0 z-30 flex items-center justify-between border-b px-4 py-3 md:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             title="Open navigation"
@@ -128,6 +133,17 @@ export function AppShell({ children }: AppShellProps) {
           >
             <User size={20} />
           </Link>
+        </header>
+
+        <header className="premium-glass-header sticky top-0 z-20 hidden items-center justify-between border-b px-4 py-3 md:flex">
+          <button
+            onClick={() => setDesktopSidebarHidden((v) => !v)}
+            title={desktopSidebarHidden ? "Open navigation" : "Close navigation"}
+            aria-label={desktopSidebarHidden ? "Open navigation" : "Close navigation"}
+            className="rounded-lg border border-[#E7DED4] bg-white p-2 text-[#6B7280] hover:text-[#1F2933]"
+          >
+            {desktopSidebarHidden ? <Menu size={16} /> : <X size={16} />}
+          </button>
         </header>
 
         <main className="flex-1">{children}</main>
