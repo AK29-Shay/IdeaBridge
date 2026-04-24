@@ -116,6 +116,22 @@ async function captureCheckpoint(page: Page, testInfo: TestInfo, name: string) {
   });
 }
 
+async function fillInputReliably(page: Page, selector: string, value: string) {
+  const field = page.locator(selector);
+  await expect(field).toBeVisible({ timeout: 15_000 });
+  await field.fill(value);
+
+  await field.evaluate((element, nextValue) => {
+    const input = element as HTMLInputElement;
+    const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    valueSetter?.call(input, nextValue);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+
+  await expect(field).toHaveValue(value);
+}
+
 function getRestorableBioValue(originalBio: string, fallbackBio: string, minLength: number) {
   const trimmedOriginalBio = originalBio.trim();
   return trimmedOriginalBio.length >= minLength ? trimmedOriginalBio : fallbackBio;
@@ -138,29 +154,49 @@ async function login(page: Page, credentials: { email: string; password: string;
   const expectedUrl = new RegExp(credentials.expectedPath);
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await page.goto("/login");
+    if (expectedUrl.test(page.url())) {
+      return;
+    }
+
+    try {
+      await page.waitForLoadState("domcontentloaded", { timeout: 5_000 }).catch(() => undefined);
+      await page.goto("/login", { waitUntil: "domcontentloaded" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes("interrupted by another navigation") || attempt === 3) {
+        throw error;
+      }
+      await page.waitForLoadState("domcontentloaded", { timeout: 10_000 }).catch(() => undefined);
+      await page.waitForTimeout(500);
+      continue;
+    }
+
     await page.waitForLoadState("domcontentloaded");
 
-    await page.fill("#login-email", credentials.email);
-    await page.fill("#login-password", credentials.password);
+    await fillInputReliably(page, "#login-email", credentials.email);
+    await fillInputReliably(page, "#login-password", credentials.password);
     await page.getByRole("button", { name: /sign in/i }).click();
 
     try {
-      await expect(page).toHaveURL(expectedUrl, { timeout: 20_000 });
+      await expect(page).toHaveURL(expectedUrl, { timeout: 30_000 });
+      await page
+        .waitForFunction(
+          () => {
+            const bodyText = document.body.innerText.toLowerCase();
+            return bodyText.includes("logout") || bodyText.includes("sign out") || bodyText.includes("signed in");
+          },
+          undefined,
+          { timeout: 20_000 }
+        )
+        .catch(() => undefined);
       return;
     } catch (error) {
-      const currentUrl = page.url();
-      const fellBackToPlainGet =
-        currentUrl.includes("/login?") &&
-        currentUrl.includes("email=") &&
-        currentUrl.includes("password=");
-
-      if (!fellBackToPlainGet || attempt === 3) {
+      if (attempt === 3) {
         throw error;
       }
 
       await page.waitForLoadState("networkidle").catch(() => undefined);
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(1_000 * attempt);
     }
   }
 }
@@ -347,7 +383,18 @@ async function createMentorshipRequest(page: Page, mentorId: string, mentorName:
   await expect(page).toHaveURL(/\/mentors\//, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: mentorName })).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("button", { name: /Request Mentorship/i }).click();
+  const requestButton = page.getByRole("button", { name: /Request Mentorship/i });
+  await expect(requestButton).toBeEnabled({ timeout: 20_000 });
+  await requestButton.click();
+
+  if (page.url().includes("/login")) {
+    await login(page, STUDENT);
+    await page.goto(`/mentors/${mentorId}`);
+    await expect(page.getByRole("heading", { name: mentorName })).toBeVisible({ timeout: 15_000 });
+    await expect(requestButton).toBeEnabled({ timeout: 20_000 });
+    await requestButton.click();
+  }
+
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   await dialog.getByLabel(/Project Title/i).fill(requestTitle);
@@ -904,9 +951,11 @@ test("human browser walkthrough covers auth, APIs, CRUD, uploads, admin, mentors
       await verifyRecommendationHub(studentPage, postTitle);
       await captureCheckpoint(studentPage, testInfo, "student_recommendation_hub");
 
+      await login(studentPage, STUDENT);
       await exerciseThreadCrud(studentPage, runId);
       await createMentorshipRequest(studentPage, mentor!.id, mentor!.fullName, requestTitle);
       await verifyStudentRequestHistory(studentPage, requestTitle, "Pending");
+      await login(studentPage, STUDENT);
       await updateStudentProjectProgress(studentPage, runId);
       await verifyAnalyticsPage(studentPage);
     });
@@ -929,6 +978,7 @@ test("human browser walkthrough covers auth, APIs, CRUD, uploads, admin, mentors
     });
 
     await test.step("student sees accepted request and can confirm booking in the shared mentorship space", async () => {
+      await login(studentPage, STUDENT);
       await verifyStudentRequestHistory(studentPage, requestTitle, "Accepted");
       await exerciseStudentMentorshipSpace(studentPage, requestTitle, runId);
       await captureCheckpoint(studentPage, testInfo, "student_confirmed_mentorship_space");

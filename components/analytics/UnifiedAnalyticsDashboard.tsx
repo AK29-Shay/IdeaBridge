@@ -28,7 +28,6 @@ import {
   LineChart,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -248,6 +247,45 @@ function PieTooltip({ active, payload }: Omit<BaseTooltipProps, "label" | "value
     <div className="rounded-2xl border border-[#f1dfd1] bg-white/95 px-3 py-2 shadow-xl backdrop-blur">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{point.name}</p>
       <p className="mt-1 text-sm font-semibold text-slate-900">{point.value} actions</p>
+    </div>
+  );
+}
+
+function MeasuredChartFrame({
+  children,
+  className = "",
+}: {
+  children: (size: { width: number; height: number }) => React.ReactNode;
+  className?: string;
+}) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [size, setSize] = React.useState({ width: 0, height: 288 });
+
+  React.useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const updateSize = () => {
+      const rect = element.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setSize({ width: Math.floor(rect.width), height: Math.floor(rect.height) });
+      }
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(element);
+    window.addEventListener("resize", updateSize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className={`h-72 min-h-[18rem] w-full min-w-0 ${className}`}>
+      {size.width > 0 && size.height > 0 ? children(size) : null}
     </div>
   );
 }
@@ -902,17 +940,17 @@ function AnalyticsSection({
             </div>
           ) : (
             <>
-              <div className="h-72 w-full min-h-65">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryPopularity} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <MeasuredChartFrame>
+                {({ width, height }) => (
+                  <BarChart width={width} height={height} data={categoryPopularity} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                     <CartesianGrid stroke="#f3e1d1" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="category" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
                     <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
                     <Tooltip content={<BaseTooltip valueSuffix=" projects" />} cursor={{ fill: "rgba(245, 169, 127, 0.12)" }} />
                     <Bar dataKey="projects" name="Projects" radius={[12, 12, 0, 0]} fill={popularityColor} maxBarSize={48} />
                   </BarChart>
-                </ResponsiveContainer>
-              </div>
+                )}
+              </MeasuredChartFrame>
               <InsightNote>
                 {mostPopularCategory
                   ? `Most active category is ${mostPopularCategory.category} with ${mostPopularCategory.projects} projects.`
@@ -929,9 +967,9 @@ function AnalyticsSection({
             </div>
           ) : (
             <>
-              <div className="h-72 w-full min-h-65">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={requestResponseData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <MeasuredChartFrame>
+                {({ width, height }) => (
+                  <BarChart width={width} height={height} data={requestResponseData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                     <CartesianGrid stroke="#f3e1d1" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="category" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
                     <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
@@ -940,8 +978,8 @@ function AnalyticsSection({
                     <Bar dataKey="answered" name="Answered" stackId="requests" fill={answeredColor} radius={[12, 12, 0, 0]} maxBarSize={42} />
                     <Bar dataKey="unanswered" name="Awaiting response" stackId="requests" fill={unansweredColor} radius={[12, 12, 0, 0]} maxBarSize={42} />
                   </BarChart>
-                </ResponsiveContainer>
-              </div>
+                )}
+              </MeasuredChartFrame>
               <InsightNote>
                 {totalRequests > 0
                   ? `Response rate is ${responseRate}%, so ${Math.max(totalRequests - answeredRequests, 0)} requests still need attention.`
@@ -958,9 +996,9 @@ function AnalyticsSection({
             </div>
           ) : (
             <>
-              <div className="h-72 w-full min-h-65">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyTrend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+              <MeasuredChartFrame>
+                {({ width, height }) => (
+                  <LineChart width={width} height={height} data={monthlyTrend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                     <CartesianGrid stroke="#f3e1d1" strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
                     <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
@@ -969,8 +1007,8 @@ function AnalyticsSection({
                     <Line type="monotone" dataKey="uploads" name="Uploads" stroke={uploadColor} strokeWidth={3} dot={{ r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                     <Line type="monotone" dataKey="requests" name="Requests" stroke={requestColor} strokeWidth={3} dot={{ r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
                   </LineChart>
-                </ResponsiveContainer>
-              </div>
+                )}
+              </MeasuredChartFrame>
               <InsightNote>
                 {peakMonth
                   ? `Peak activity was in ${peakMonth.label}, with ${peakMonth.total} uploads and requests combined.`
@@ -987,9 +1025,10 @@ function AnalyticsSection({
             </div>
           ) : (
             <>
-              <div className="relative h-72 w-full min-h-65">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
+              <MeasuredChartFrame className="relative">
+                {({ width, height }) => (
+                  <>
+                    <PieChart width={width} height={height}>
                     <Tooltip content={<PieTooltip />} />
                     <Pie
                       data={userContribution}
@@ -1006,13 +1045,14 @@ function AnalyticsSection({
                       ))}
                     </Pie>
                   </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Your Activity</p>
-                  <p className="mt-1 text-3xl font-semibold text-slate-950">{totalContributions}</p>
-                  <p className="text-xs text-slate-500">actions</p>
-                </div>
-              </div>
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Your Activity</p>
+                      <p className="mt-1 text-3xl font-semibold text-slate-950">{totalContributions}</p>
+                      <p className="text-xs text-slate-500">actions</p>
+                    </div>
+                  </>
+                )}
+              </MeasuredChartFrame>
 
               <div className="grid gap-2 sm:grid-cols-3">
                 {userContribution.map((item, index) => (

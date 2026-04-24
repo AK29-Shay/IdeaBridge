@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+const useExternalServer = Boolean(process.env.PLAYWRIGHT_BASE_URL);
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
@@ -9,17 +12,21 @@ export default defineConfig({
     timeout: 5_000,
   },
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
-    screenshot: "only-on-failure",
+    screenshot: process.env.PLAYWRIGHT_EVIDENCE ? "on" : "only-on-failure",
     video: "retain-on-failure",
   },
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  ...(useExternalServer
+    ? {}
+    : {
+        webServer: {
+          command: "npm run dev",
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
+      }),
   projects: [
     {
       name: "chromium",
