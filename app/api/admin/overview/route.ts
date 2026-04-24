@@ -36,6 +36,29 @@ type ModerationUser = {
   moderationStatus: string;
 };
 
+type PendingRow = {
+  id: string;
+  user_id: string;
+  status: string;
+  expertise: string[] | null;
+  statement: string | null;
+  created_at: string;
+};
+
+type RecentRow = {
+  id: string;
+  user_id: string;
+  status: string;
+  created_at: string;
+};
+
+type ProfileRow = {
+  id: string;
+  full_name: string | null;
+  role: string | null;
+  bio: string | null;
+};
+
 export async function GET(request: Request) {
   const adminCheck = await requireAdmin(request.headers.get("authorization"));
   if ("error" in adminCheck) return adminCheck.error;
@@ -74,10 +97,10 @@ export async function GET(request: Request) {
   const userIds = Array.from(
     new Set(
       [
-        ...(pendingRows ?? []).map((row) => row.user_id),
-        ...(recentRows ?? []).map((row) => row.user_id),
-        ...(profileRows ?? []).map((row) => row.id),
-      ].filter(Boolean)
+        ...((pendingRows ?? []) as PendingRow[]).map((row) => row.user_id),
+        ...((recentRows ?? []) as RecentRow[]).map((row) => row.user_id),
+        ...((profileRows ?? []) as ProfileRow[]).map((row) => row.id),
+      ].filter((value): value is string => typeof value === "string" && value.length > 0)
     )
   );
 
@@ -90,9 +113,9 @@ export async function GET(request: Request) {
   );
 
   const authUserMap = new Map(userLookups.filter(Boolean).map((u) => [u.id, u]));
-  const profileMap = new Map((profileRows ?? []).map((row) => [row.id, row]));
+  const profileMap = new Map(((profileRows ?? []) as ProfileRow[]).map((row) => [row.id, row]));
 
-  const pendingApprovals = (pendingRows ?? []).map((row) => {
+  const pendingApprovals = ((pendingRows ?? []) as PendingRow[]).map((row) => {
     const profile = profileMap.get(row.user_id);
     const authUser = authUserMap.get(row.user_id);
     return {
@@ -106,7 +129,7 @@ export async function GET(request: Request) {
     };
   });
 
-  const recentModerationActivity = (recentRows ?? []).map((row) => {
+  const recentModerationActivity = ((recentRows ?? []) as RecentRow[]).map((row) => {
     const profile = profileMap.get(row.user_id);
     const authUser = authUserMap.get(row.user_id);
     return {
@@ -120,7 +143,7 @@ export async function GET(request: Request) {
     };
   });
 
-  const moderationUsers: ModerationUser[] = (profileRows ?? [])
+  const moderationUsers: ModerationUser[] = ((profileRows ?? []) as ProfileRow[])
     .filter((row) => row.role?.toLowerCase() !== "admin")
     .slice(0, 30)
     .map((row) => {

@@ -23,7 +23,7 @@ export function useStudentProjects(email?: string) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await authFetch("/api/student-projects", {
+      const response = await authFetch("/api/projects", {
         cache: "no-store",
       });
 
@@ -60,7 +60,7 @@ export function useStudentProjects(email?: string) {
 
   const updateProject = React.useCallback(
     async (projectId: string, patch: ProjectPatch) => {
-      const response = await authFetch(`/api/student-projects/${encodeURIComponent(projectId)}`, {
+      const response = await authFetch(`/api/projects/${encodeURIComponent(projectId)}`, {
         method: "PATCH",
         headers: {
           "content-type": "application/json",
