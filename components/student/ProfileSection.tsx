@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import Image from "next/image";
 import {
   User,
   Pencil,
@@ -15,9 +16,15 @@ import {
   BookOpen,
   GraduationCap,
   Upload,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import type { StudentProfile } from "@/types/student";
+import {
+  PROFILE_PHOTO_ACCEPT,
+  uploadProfilePhoto,
+  validateProfilePhotoFile,
+} from "@/lib/supabaseUploads";
 
 const STUDY_YEARS = ["Year 1", "Year 2", "Year 3", "Year 4", "Postgraduate"];
 const FACULTIES = [
@@ -61,12 +68,16 @@ interface ExtendedProfile {
 }
 
 function Avatar({ url, name, size = 20 }: { url: string; name: string; size?: number }) {
+  const dimensions = { width: size * 4, height: size * 4 };
   if (url) {
     return (
-      <img
+      <Image
         src={url}
         alt={name}
-        className={`h-${size} w-${size} rounded-full object-cover ring-4 ring-white shadow-xl`}
+        width={dimensions.width}
+        height={dimensions.height}
+        className="rounded-full object-cover ring-4 ring-white shadow-xl"
+        style={dimensions}
         onError={(e) => {
           (e.target as HTMLImageElement).style.display = "none";
         }}
@@ -75,7 +86,8 @@ function Avatar({ url, name, size = 20 }: { url: string; name: string; size?: nu
   }
   return (
     <div
-      className={`h-${size} w-${size} rounded-full bg-[#0F0F0F] flex items-center justify-center text-[#FFCBA4] font-bold text-3xl ring-4 ring-white shadow-xl`}
+      className="flex items-center justify-center rounded-full bg-[#0F0F0F] text-3xl font-bold text-[#FFCBA4] ring-4 ring-white shadow-xl"
+      style={dimensions}
     >
       {name?.charAt(0)?.toUpperCase() ?? "S"}
     </div>
@@ -87,6 +99,11 @@ export function ProfileSection() {
   const [editing, setEditing] = React.useState(false);
   const [skillInput, setSkillInput] = React.useState("");
   const [showSkillSugg, setShowSkillSugg] = React.useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
+  const displayName =
+    user?.fullName?.trim() ||
+    user?.email?.split("@")[0] ||
+    "Student";
 
   const [form, setForm] = React.useState<ExtendedProfile>({
     fullName: user?.fullName ?? "",
@@ -133,15 +150,26 @@ export function ProfileSection() {
     setForm((prev) => ({ ...prev, skills: prev.skills.filter((s) => s !== skill) }));
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const url = ev.target?.result as string;
-      setForm((prev) => ({ ...prev, avatarUrl: url }));
-    };
-    reader.readAsDataURL(file);
+    const validationError = validateProfilePhotoFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const uploaded = await uploadProfilePhoto(file);
+      setForm((prev) => ({ ...prev, avatarUrl: uploaded.url }));
+      toast.success("Profile photo uploaded.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload profile photo.");
+    } finally {
+      setIsUploadingAvatar(false);
+      e.currentTarget.value = "";
+    }
   }
 
   function handleSave() {
@@ -211,45 +239,46 @@ export function ProfileSection() {
   );
 
   return (
-    <div className="space-y-6 animate-fade-up">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">My Profile</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Manage your academic and professional details</p>
-        </div>
-        {!editing ? (
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-2 rounded-xl bg-[#0F0F0F] px-5 py-2.5 text-sm font-semibold text-[#FFCBA4] shadow-sm hover:brightness-125 hover:-translate-y-0.5 transition-all duration-200"
-          >
-            <Pencil className="h-4 w-4" />
-            Edit Profile
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all duration-200"
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                void handleSaveAndWait();
-              }}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-[#0F0F0F] shadow-sm hover:brightness-110 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <Save className="h-4 w-4" />
-              Save Profile
-            </button>
+    <div className="mx-auto max-w-5xl space-y-6 animate-fade-up">
+      <div className="rounded-2xl border border-[#FFCBA4]/40 bg-gradient-to-r from-[#FFF8F3] via-white to-[#FFF3E8] p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Student Profile</h2>
+            <p className="mt-1 text-sm text-slate-600">Manage your academic and professional details</p>
           </div>
-        )}
+          {!editing ? (
+            <button
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0F0F0F] px-5 py-2.5 text-sm font-semibold text-[#FFCBA4] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:brightness-125"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit Profile
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCancel}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  void handleSaveAndWait();
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+              >
+                <Save className="h-4 w-4" />
+                Save Profile
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Avatar + Basic Info */}
-      <div className="rounded-2xl border border-[#FFCBA4]/30 bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-[#FFCBA4]/30 bg-white shadow-sm">
         <div className="relative h-28 bg-gradient-to-r from-[#0F0F0F] via-[#1c0f00] to-[#2a1200]">
           <div className="pointer-events-none absolute inset-0 opacity-20"
             style={{ backgroundImage: "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)", backgroundSize: "40px 40px" }}
@@ -258,16 +287,28 @@ export function ProfileSection() {
         <div className="px-6 pb-6">
           <div className="flex flex-wrap items-end gap-4 -mt-12 mb-4">
             <div className="relative">
-              <Avatar url={form.avatarUrl} name={form.fullName} size={20} />
+              <Avatar url={form.avatarUrl} name={form.fullName || displayName} size={20} />
               {editing && (
-                <label className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-[#0F0F0F] p-1.5 shadow-md hover:bg-[#1c0f00] transition-colors">
-                  <Upload className="h-3 w-3 text-[#FFCBA4]" />
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                <label className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-[#0F0F0F] p-1.5 shadow-md transition-colors hover:bg-[#1c0f00]">
+                  {isUploadingAvatar ? (
+                    <Loader2 className="h-3 w-3 animate-spin text-[#FFCBA4]" />
+                  ) : (
+                    <Upload className="h-3 w-3 text-[#FFCBA4]" />
+                  )}
+                  <input
+                    type="file"
+                    accept={PROFILE_PHOTO_ACCEPT}
+                    className="hidden"
+                    disabled={isUploadingAvatar}
+                    onChange={(e) => {
+                      void handleImageUpload(e);
+                    }}
+                  />
                 </label>
               )}
             </div>
             <div className="mb-2">
-              <div className="text-xl font-bold text-slate-800">{form.fullName}</div>
+              <div className="text-xl font-bold text-slate-800">{form.fullName || displayName}</div>
               <div className="text-sm text-slate-500">{form.faculty || "Faculty not set"} · {form.studyYear || "Year not set"}</div>
             </div>
           </div>
@@ -323,7 +364,7 @@ export function ProfileSection() {
       </div>
 
       {/* Bio */}
-      <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <label className="block text-sm font-semibold text-slate-700 mb-3">Bio</label>
         {editing ? (
           <textarea
@@ -341,7 +382,7 @@ export function ProfileSection() {
       </div>
 
       {/* Skills */}
-      <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
           <Tag className="h-4 w-4 text-[#F5A97F]" />
           Skills
@@ -408,7 +449,7 @@ export function ProfileSection() {
       </div>
 
       {/* Portfolio Links */}
-      <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <label className="block text-sm font-semibold text-slate-700 mb-4">Portfolio Links</label>
         <div className="space-y-3">
           {[

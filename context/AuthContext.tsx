@@ -20,6 +20,7 @@ import {
   normalizeProfileRow,
   type ProfileRow,
 } from "@/lib/profileMapper";
+import { isAdminEmail } from "@/lib/auth/adminAccess";
 import {
   getSupabaseBrowserClient,
   getSupabaseBrowserConfigError,
@@ -149,11 +150,32 @@ async function loadAuthUserFromSession(sessionUser: User): Promise<AuthUser> {
     typeof sessionUser.user_metadata?.full_name === "string"
       ? sessionUser.user_metadata.full_name
       : email.split("@")[0] ?? "Member";
-  const fallbackRole = normalizeRole(sessionUser.user_metadata?.role);
+  const metadataRole = normalizeRole(sessionUser.user_metadata?.role);
+  const fallbackRole = isAdminEmail(email) ? "admin" : metadataRole;
 
   const existing = await selectProfile(sessionUser.id);
   if (existing) {
-    const existingRole = normalizeRole(existing.role);
+    const profileRole = normalizeRole(existing.role);
+    const existingRole = isAdminEmail(email) ? "admin" : profileRole;
+    // Promoted admins in `profiles` still have student/mentor in JWT metadata from signup.
+    // Never overwrite DB admin with metadata — that broke admin portal access after SQL promotion.
+    if (existingRole === "admin") {
+      if (profileRole !== "admin") {
+        return upsertProfile({
+          id: sessionUser.id,
+          email,
+          fullName: existing.full_name ?? fallbackFullName,
+          role: "admin",
+        });
+      }
+      return mapProfileRowToAuthUser({
+        profile: existing,
+        email,
+        fallbackFullName,
+        fallbackRole: "admin",
+      });
+    }
+
     if (existingRole !== fallbackRole) {
       return upsertProfile({
         id: sessionUser.id,

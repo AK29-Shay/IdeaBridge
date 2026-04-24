@@ -20,7 +20,13 @@ export function RequireRole({
   React.useEffect(() => {
     if (!isReady || !user) return;
     if (user.role !== role) {
-      router.push(role === "student" ? "/dashboard/student" : "/dashboard/mentor");
+      if (user.role === "student") {
+        router.push("/dashboard/student");
+      } else if (user.role === "mentor") {
+        router.push("/dashboard/mentor");
+      } else {
+        router.push("/dashboard/admin");
+      }
     }
   }, [isReady, user, router, role]);
 

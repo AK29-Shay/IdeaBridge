@@ -3,7 +3,7 @@ import supabaseServer from "@/backend/config/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
-const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024;
+const MAX_UPLOAD_SIZE_BYTES = 1024 * 1024 * 1024;
 
 function parseBucketName(value: FormDataEntryValue | null): string {
   if (typeof value !== "string") return "";
@@ -34,6 +34,13 @@ async function ensureBucketExists(bucketName: string) {
 
   const exists = (buckets ?? []).some((bucket) => bucket.name === bucketName);
   if (exists) {
+    const { error: updateError } = await supabaseServer.storage.updateBucket(bucketName, {
+      public: true,
+      fileSizeLimit: MAX_UPLOAD_SIZE_BYTES,
+    });
+    if (updateError) {
+      throw new Error(updateError.message || `Failed to update bucket '${bucketName}'.`);
+    }
     return;
   }
 
