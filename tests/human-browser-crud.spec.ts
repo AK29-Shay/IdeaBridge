@@ -414,12 +414,17 @@ async function verifyStudentRequestHistory(page: Page, requestTitle: string, exp
 
   await page.waitForFunction(
     async ({ title, status, token }) => {
-      const response = await fetch("/api/requests", {
-        cache: "no-store",
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      });
+      let response: Response;
+      try {
+        response = await fetch("/api/requests", {
+          cache: "no-store",
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+        });
+      } catch {
+        return false;
+      }
       if (!response.ok) return false;
 
       const payload = await response.json();
@@ -511,12 +516,17 @@ async function exerciseMentorMentorshipSpace(page: Page, requestTitle: string, r
   await page.getByRole("button", { name: /Send availability/i }).click();
   await page.waitForFunction(
     async ({ title, token }) => {
-      const response = await fetch("/api/mentorships", {
-        cache: "no-store",
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      });
+      let response: Response;
+      try {
+        response = await fetch("/api/mentorships", {
+          cache: "no-store",
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+        });
+      } catch {
+        return false;
+      }
       if (!response.ok) return false;
 
       const payload = await response.json();
