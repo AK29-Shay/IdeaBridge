@@ -66,7 +66,9 @@ export const LEGACY_PROFILE_SELECT = [
 
 export function normalizeRole(value: unknown): UserRole {
   const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
-  return raw === "mentor" ? "mentor" : "student";
+  if (raw === "mentor") return "mentor";
+  if (raw === "admin") return "admin";
+  return "student";
 }
 
 export function normalizeAvailabilityStatus(value: unknown): AvailabilityStatus {
@@ -171,7 +173,8 @@ export function buildProfileUpsertPayload(params: {
   mentorProfile?: MentorProfile;
 }) {
   const isMentor = params.role === "mentor";
-  const activeProfile = isMentor ? params.mentorProfile : params.studentProfile;
+  const isAdmin = params.role === "admin";
+  const activeProfile = isMentor ? params.mentorProfile : isAdmin ? undefined : params.studentProfile;
 
   return {
     id: params.id,
@@ -180,10 +183,10 @@ export function buildProfileUpsertPayload(params: {
     bio: activeProfile?.bio ?? null,
     skills: activeProfile?.skills ?? [],
     availability: isMentor ? params.mentorProfile?.availability ?? null : null,
-    role: isMentor ? "Mentor" : "Student",
-    study_year: !isMentor ? params.studentProfile?.studyYear ?? null : null,
-    faculty: !isMentor ? params.studentProfile?.faculty ?? null : null,
-    specialization: !isMentor ? params.studentProfile?.specialization ?? null : null,
+    role: isAdmin ? "Admin" : isMentor ? "Mentor" : "Student",
+    study_year: !isMentor && !isAdmin ? params.studentProfile?.studyYear ?? null : null,
+    faculty: !isMentor && !isAdmin ? params.studentProfile?.faculty ?? null : null,
+    specialization: !isMentor && !isAdmin ? params.studentProfile?.specialization ?? null : null,
     portfolio_links: activeProfile?.portfolioLinks ?? [],
     availability_status: isMentor ? params.mentorProfile?.availabilityStatus ?? DEFAULT_AVAILABILITY_STATUS : null,
     years_experience: isMentor ? params.mentorProfile?.yearsExperience ?? 0 : null,

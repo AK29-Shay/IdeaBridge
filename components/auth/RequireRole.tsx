@@ -7,6 +7,12 @@ import type { UserRole } from "@/types/auth";
 import { useAuth } from "@/context/AuthContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 
+function defaultDashboardForRole(role: UserRole) {
+  if (role === "mentor") return "/dashboard/mentor";
+  if (role === "admin") return "/dashboard/admin";
+  return "/dashboard/student";
+}
+
 export function RequireRole({
   role,
   children,
@@ -20,7 +26,7 @@ export function RequireRole({
   React.useEffect(() => {
     if (!isReady || !user) return;
     if (user.role !== role) {
-      router.push(role === "student" ? "/dashboard/student" : "/dashboard/mentor");
+      router.push(defaultDashboardForRole(user.role));
     }
   }, [isReady, user, router, role]);
 

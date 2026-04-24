@@ -104,6 +104,47 @@ type ActorRecord = {
   role: IdeaUserRole;
 };
 
+type AuthAdminUser = {
+  id?: string;
+  email?: string | null;
+};
+
+type ProfileRecord = {
+  full_name: string | null;
+  avatar_url: string | null;
+  role: string | null;
+};
+
+type IdeaPostRow = {
+  id: string;
+  user_id: string;
+  post_mode: string;
+  post_type: string;
+  title: string;
+  description: string | null;
+  tech_stack?: unknown;
+  dynamic_content: unknown;
+  view_count: number | null;
+  created_at: string;
+  updated_at?: string;
+};
+
+type IdeaCommentSummaryRow = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  content: string;
+  upvotes: number | null;
+  created_at: string;
+};
+
+type MentorshipRequestRow = {
+  id: string;
+  domain: string | null;
+  status: string | null;
+  created_at: string;
+};
+
 type PostListFilters = {
   mode?: IdeaPostMode;
   limit?: number;
@@ -297,7 +338,7 @@ async function findOrCreateAuthUserByEmail(actor: ActorInput): Promise<ActorReco
       throw new IdeaPersistenceError(error.message, 500);
     }
 
-    const user = data.users.find((entry) => normalizeEmail(entry.email) === email);
+    const user = data.users.find((entry: AuthAdminUser) => normalizeEmail(entry.email) === email);
     if (user?.id) {
       foundUserId = user.id;
       break;
@@ -326,6 +367,10 @@ async function findOrCreateAuthUserByEmail(actor: ActorInput): Promise<ActorReco
     }
 
     foundUserId = data.user.id;
+  }
+
+  if (!foundUserId) {
+    throw new IdeaPersistenceError("Failed to resolve actor account.", 500);
   }
 
   const actorRecord: ActorRecord = {
@@ -357,7 +402,7 @@ async function ensureProfile(actor: ActorRecord) {
 
 async function loadProfiles(userIds: string[]) {
   if (userIds.length === 0) {
-    return new Map<string, { full_name: string | null; avatar_url: string | null; role: string | null }>();
+    return new Map<string, ProfileRecord>();
   }
 
   const { data, error } = await supabaseServer
@@ -369,7 +414,7 @@ async function loadProfiles(userIds: string[]) {
     throw new IdeaPersistenceError(error.message, 500);
   }
 
-  const map = new Map<string, { full_name: string | null; avatar_url: string | null; role: string | null }>();
+  const map = new Map<string, ProfileRecord>();
   for (const profile of data ?? []) {
     map.set(profile.id, {
       full_name: profile.full_name,
@@ -383,7 +428,7 @@ async function loadProfiles(userIds: string[]) {
 
 function toAuthor(
   userId: string,
-  profile: { full_name: string | null; avatar_url: string | null; role: string | null } | undefined
+  profile: ProfileRecord | undefined
 ): IdeaPostAuthor {
   return {
     id: userId,
@@ -393,22 +438,7 @@ function toAuthor(
   };
 }
 
-function mapPostRow(
-  row: {
-    id: string;
-    user_id: string;
-    post_mode: string;
-    post_type: string;
-    title: string;
-    description: string | null;
-    tech_stack: unknown;
-    dynamic_content: unknown;
-    view_count: number | null;
-    created_at: string;
-    updated_at: string;
-  },
-  profileMap: Map<string, { full_name: string | null; avatar_url: string | null; role: string | null }>
-): IdeaPostRecord {
+function mapPostRow(row: IdeaPostRow, profileMap: Map<string, ProfileRecord>): IdeaPostRecord {
   return {
     id: row.id,
     user_id: row.user_id,
@@ -420,7 +450,7 @@ function mapPostRow(
     dynamic_content: toObject(row.dynamic_content),
     view_count: Number(row.view_count) || 0,
     created_at: row.created_at,
-    updated_at: row.updated_at,
+    updated_at: row.updated_at ?? row.created_at,
     author: toAuthor(row.user_id, profileMap.get(row.user_id)),
   };
 }
@@ -471,8 +501,8 @@ export async function listIdeaPosts(filters: PostListFilters = {}): Promise<Idea
     throw new IdeaPersistenceError(error.message, 500);
   }
 
-  const rows = data ?? [];
-  const userIds = Array.from(new Set(rows.map((row) => row.user_id).filter(Boolean)));
+  const rows = (data ?? []) as IdeaPostRow[];
+  const userIds = Array.from(new Set(rows.map((row) => row.user_id)));
   const profileMap = await loadProfiles(userIds);
 
   return rows.map((row) => mapPostRow(row, profileMap));
@@ -765,7 +795,7 @@ export async function buildIdeaAnalyticsSnapshot(): Promise<IdeaAnalyticsSnapsho
     throw new IdeaPersistenceError(postsError.message, 500);
   }
 
-  const posts = postsRaw ?? [];
+  const posts = (postsRaw ?? []) as IdeaPostRow[];
   const postIds = posts.map((post) => post.id);
 
   const commentsByPost = new Map<string, Array<{ id: string; post_id: string; user_id: string; content: string; upvotes: number; created_at: string }>>();
@@ -781,7 +811,7 @@ export async function buildIdeaAnalyticsSnapshot(): Promise<IdeaAnalyticsSnapsho
       throw new IdeaPersistenceError(commentsError.message, 500);
     }
 
-    for (const comment of commentsRaw ?? []) {
+    for (const comment of (commentsRaw ?? []) as IdeaCommentSummaryRow[]) {
       const existing = commentsByPost.get(comment.post_id) ?? [];
       existing.push({
         id: comment.id,
@@ -802,7 +832,7 @@ export async function buildIdeaAnalyticsSnapshot(): Promise<IdeaAnalyticsSnapsho
     ])
   );
 
-  const profileMap = await loadProfiles(allUserIds.filter(Boolean));
+  const profileMap = await loadProfiles(allUserIds);
 
   const projectPosts = posts.filter((post) => normalizePostMode(post.post_mode) === "post");
   const ideaRequestPosts = posts.filter((post) => normalizePostMode(post.post_mode) === "request");
@@ -857,7 +887,7 @@ export async function buildIdeaAnalyticsSnapshot(): Promise<IdeaAnalyticsSnapsho
     throw new IdeaPersistenceError(mentorshipRequestsError.message, 500);
   }
 
-  const mentorshipRequests: IdeaAnalyticsRequest[] = (mentorshipRequestsRaw ?? []).map((request) => ({
+  const mentorshipRequests: IdeaAnalyticsRequest[] = ((mentorshipRequestsRaw ?? []) as MentorshipRequestRow[]).map((request) => ({
     id: request.id,
     category: normalizeString(request.domain) || "Mentorship",
     status: normalizeAnalyticsStatus(request.status),
