@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Bookmark,
   Search,
   SlidersHorizontal,
   X,
@@ -13,6 +15,10 @@ import {
   GraduationCap,
   Tag,
 } from "lucide-react";
+
+import { useAuth } from "@/context/AuthContext";
+import { buildIdeaRecommendations } from "@/lib/ideaRecommendations";
+import { useSavedIdeas } from "@/lib/useSavedIdeas";
 
 type PostType = "full_project" | "idea" | "ai_driven" | "campus_req";
 type PostMode = "post" | "request";
@@ -72,6 +78,8 @@ function mapPost(post: ApiPost): SearchPost {
 }
 
 export default function SearchPage() {
+  const { user } = useAuth();
+  const { savedIdeaIds, isSaved, toggleSaved } = useSavedIdeas(user?.email);
   const [query, setQuery] = React.useState("");
   const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
@@ -144,6 +152,10 @@ export default function SearchPage() {
   const trending = React.useMemo(() => {
     return [...posts].sort((left, right) => right.views - left.views).slice(0, 3);
   }, [posts]);
+
+  const recommended = React.useMemo(() => {
+    return buildIdeaRecommendations(posts, savedIdeaIds, 3);
+  }, [posts, savedIdeaIds]);
 
   React.useEffect(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
@@ -298,6 +310,61 @@ export default function SearchPage() {
           </AnimatePresence>
         </div>
 
+        {user ? (
+          <section className="mt-6 grid gap-4 lg:grid-cols-[1.6fr,1fr]">
+            <div className="rounded-[24px] border border-[#FFD7BC] bg-white/92 p-5 shadow-[0_24px_45px_-38px_rgba(63,31,7,0.35)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-[#0F0F0F]">Recommended for you</h2>
+                  <p className="mt-1 text-sm text-[#5D4739]">
+                    Based on your saved ideas and the strongest matching threads in the community.
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/student/recommendations"
+                  className="rounded-xl border border-[#FFD7BC] bg-[#FFF8F2] px-4 py-2 text-xs font-semibold text-[#8A4E2A] transition hover:bg-[#FFF1E6]"
+                >
+                  Open hub
+                </Link>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                {recommended.length > 0 ? (
+                  recommended.map((post) => (
+                    <article key={post.id} className="rounded-2xl border border-[#FFD7BC] bg-[#FFF8F2] p-4">
+                      <div className="text-sm font-bold text-[#0F0F0F]">{post.title}</div>
+                      <p className="mt-1 line-clamp-3 text-sm leading-6 text-[#5D4739]">
+                        {post.description || "Explore the full thread for details and next steps."}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {post.tags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#8A4E2A]">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[#FFD7BC] bg-[#FFF8F2] px-4 py-5 text-sm text-[#8A4E2A]/75 md:col-span-3">
+                    Save a few ideas and this section will start surfacing better matches.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-[#FFD7BC] bg-white/92 p-5 shadow-[0_24px_45px_-38px_rgba(63,31,7,0.35)]">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-[#0F0F0F]">
+                <Bookmark size={15} className="text-[#B95D35]" />
+                Saved Ideas
+              </h2>
+              <div className="mt-4 text-3xl font-bold text-[#0F0F0F]">{savedIdeaIds.length}</div>
+              <p className="mt-1 text-sm text-[#5D4739]">
+                Bookmark promising threads while you explore so you can revisit them from the student dashboard.
+              </p>
+            </div>
+          </section>
+        ) : null}
+
         <div className="mt-6 grid gap-6 lg:grid-cols-4">
           <div className="space-y-4 lg:col-span-3">
             <p className="text-sm text-[#8A4E2A]">
@@ -351,6 +418,20 @@ export default function SearchPage() {
                     <div className="shrink-0 rounded-2xl border border-[#FFE1CC] bg-[#FFF8F2] px-4 py-3 text-right">
                       <div className="text-2xl font-bold text-[#0F0F0F]">{post.views}</div>
                       <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8A4E2A]/60">Views</div>
+                      {user ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleSaved(post.id)}
+                          className={`mt-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition ${
+                            isSaved(post.id)
+                              ? "bg-[#0F0F0F] text-[#FFCBA4]"
+                              : "border border-[#FFD7BC] bg-white text-[#8A4E2A] hover:bg-[#FFF1E6]"
+                          }`}
+                        >
+                          <Bookmark size={12} />
+                          {isSaved(post.id) ? "Saved" : "Save"}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </motion.article>
