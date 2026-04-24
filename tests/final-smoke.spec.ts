@@ -40,6 +40,13 @@ test("profile route redirects unauthenticated users to login", async ({ page }) 
   await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible({ timeout: 15_000 });
 });
 
+test("recommendations route redirects unauthenticated users to login", async ({ page }) => {
+  await page.goto("/dashboard/student/recommendations");
+
+  await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible({ timeout: 15_000 });
+});
+
 test("core public APIs respond successfully", async ({ request }) => {
   const health = await request.get("/api/health/db");
   expect(health.status()).toBe(200);
