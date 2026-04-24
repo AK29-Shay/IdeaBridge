@@ -4,8 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { Mail, Lock, Eye, EyeOff } from "@/components/ui/icons";
 
@@ -31,21 +29,40 @@ export default function LoginPage() {
   const { login } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [errors, setErrors] = React.useState<Partial<Record<keyof LoginInput, string>>>({});
 
-  const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
-    mode: "onChange",
-    defaultValues: {
-      email: "",
-      password: "",
-      rememberMe: true,
-    },
-  });
+  function clearFieldError(field: keyof LoginInput) {
+    return () => {
+      setErrors((currentErrors) => ({ ...currentErrors, [field]: undefined }));
+    };
+  }
 
-  async function handleSubmit(values: LoginInput) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const parsed = loginSchema.safeParse({
+      email: String(formData.get("email") ?? ""),
+      password: String(formData.get("password") ?? ""),
+      rememberMe: formData.get("rememberMe") === "on",
+    });
+
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors;
+      setErrors({
+        email: fieldErrors.email?.[0],
+        password: fieldErrors.password?.[0],
+        rememberMe: fieldErrors.rememberMe?.[0],
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const signedInUser = await login({ email: values.email, password: values.password });
+      const signedInUser = await login({
+        email: parsed.data.email,
+        password: parsed.data.password,
+      });
 
       const redirectTo =
         typeof window !== "undefined"
@@ -72,8 +89,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   }
-
-
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-10">
@@ -102,7 +117,7 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white border border-[#FFCBA4]/30 rounded-2xl shadow-2xl p-6">
           <form
-            onSubmit={form.handleSubmit(handleSubmit)}
+            onSubmit={handleSubmit}
             className="space-y-4"
           >
             {/* Email */}
@@ -117,13 +132,14 @@ export default function LoginPage() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#0F0F0F]/40" />
                 <Input
                   id="login-email"
+                  name="email"
                   type="email"
                   placeholder="you@university.edu"
-                  {...form.register("email")}
+                  onInput={clearFieldError("email")}
                   className="pl-9 bg-white/10 border-white/20 text-[#0F0F0F] placeholder:text-[#0F0F0F]/30 rounded-lg focus:border-[#FFCBA4] focus:ring-2 focus:ring-[#FFCBA4]/30 h-11"
                 />
               </div>
-              <ErrorMsg msg={form.formState.errors.email?.message} />
+              <ErrorMsg msg={errors.email} />
             </div>
 
             {/* Password */}
@@ -146,9 +162,10 @@ export default function LoginPage() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#0F0F0F]/40" />
                 <Input
                   id="login-password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Your password"
-                  {...form.register("password")}
+                  onInput={clearFieldError("password")}
                   className="pl-9 pr-10 bg-white/10 border-white/20 text-[#0F0F0F] placeholder:text-[#0F0F0F]/30 rounded-lg focus:border-[#FFCBA4] focus:ring-2 focus:ring-[#FFCBA4]/30 h-11"
                 />
                 <button
@@ -164,15 +181,17 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
-              <ErrorMsg msg={form.formState.errors.password?.message} />
+              <ErrorMsg msg={errors.password} />
             </div>
 
             {/* Remember Me */}
             <div className="flex items-center gap-2.5">
               <input
                 id="rememberMe"
+                name="rememberMe"
                 type="checkbox"
-                {...form.register("rememberMe")}
+                defaultChecked
+                onChange={clearFieldError("rememberMe")}
                 className="h-4 w-4 rounded border-white/30 bg-white/10 text-[#0F0F0F] focus:ring-[#0F0F0F]/40 cursor-pointer"
               />
               <Label

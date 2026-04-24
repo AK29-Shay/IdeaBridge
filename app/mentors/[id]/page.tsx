@@ -27,7 +27,7 @@ export default function MentorDetailPage() {
   const params = useParams() as { id?: string };
   const mentorId = params.id ?? "";
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isReady } = useAuth();
   const [mentor, setMentor] = React.useState<Mentor | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [loadError, setLoadError] = React.useState<string | null>(null);
@@ -167,7 +167,11 @@ export default function MentorDetailPage() {
             <Button
               variant="outline"
               className="rounded-xl border-[#FFD4B1] bg-[#FFF8F2] text-[#8A4E2A] hover:bg-[#FFF1E6]"
+              disabled={!isReady}
               onClick={() => {
+                if (!isReady) {
+                  return;
+                }
                 if (!user) {
                   toast.error("Please login as a student to request mentorship.");
                   router.push(`/login?next=${encodeURIComponent(`/mentors/${mentor.id}`)}`);
@@ -180,7 +184,7 @@ export default function MentorDetailPage() {
                 setRequestOpen(true);
               }}
             >
-              Request Mentorship
+              {isReady ? "Request Mentorship" : "Loading account..."}
             </Button>
           </div>
         </div>

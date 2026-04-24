@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { User } from "@supabase/supabase-js";
 
 import supabaseServer from "@/backend/config/supabaseServer";
 import { getUserFromAuthHeader } from "@/backend/middleware/auth";
@@ -36,6 +37,29 @@ type ModerationUser = {
   moderationStatus: string;
 };
 
+type PendingApplicationRow = {
+  id: string;
+  user_id: string;
+  status: string;
+  expertise: string[] | null;
+  statement: string | null;
+  created_at: string;
+};
+
+type RecentApplicationRow = {
+  id: string;
+  user_id: string;
+  status: string;
+  created_at: string;
+};
+
+type AdminProfileRow = {
+  id: string;
+  full_name: string | null;
+  role: string | null;
+  bio: string | null;
+};
+
 export async function GET(request: Request) {
   const adminCheck = await requireAdmin(request.headers.get("authorization"));
   if ("error" in adminCheck) return adminCheck.error;
@@ -71,13 +95,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
+  const pendingApplications = (pendingRows ?? []) as PendingApplicationRow[];
+  const recentApplications = (recentRows ?? []) as RecentApplicationRow[];
+  const profiles = (profileRows ?? []) as AdminProfileRow[];
+
   const userIds = Array.from(
     new Set(
       [
-        ...(pendingRows ?? []).map((row) => row.user_id),
-        ...(recentRows ?? []).map((row) => row.user_id),
-        ...(profileRows ?? []).map((row) => row.id),
-      ].filter(Boolean)
+        ...pendingApplications.map((row) => row.user_id),
+        ...recentApplications.map((row) => row.user_id),
+        ...profiles.map((row) => row.id),
+      ].filter((userId): userId is string => typeof userId === "string" && userId.length > 0)
     )
   );
 
@@ -89,10 +117,11 @@ export async function GET(request: Request) {
     })
   );
 
-  const authUserMap = new Map(userLookups.filter(Boolean).map((u) => [u.id, u]));
-  const profileMap = new Map((profileRows ?? []).map((row) => [row.id, row]));
+  const authUsers = userLookups.filter((user): user is User => Boolean(user));
+  const authUserMap = new Map(authUsers.map((user) => [user.id, user]));
+  const profileMap = new Map(profiles.map((row) => [row.id, row]));
 
-  const pendingApprovals = (pendingRows ?? []).map((row) => {
+  const pendingApprovals = pendingApplications.map((row) => {
     const profile = profileMap.get(row.user_id);
     const authUser = authUserMap.get(row.user_id);
     return {
@@ -106,7 +135,7 @@ export async function GET(request: Request) {
     };
   });
 
-  const recentModerationActivity = (recentRows ?? []).map((row) => {
+  const recentModerationActivity = recentApplications.map((row) => {
     const profile = profileMap.get(row.user_id);
     const authUser = authUserMap.get(row.user_id);
     return {
@@ -120,7 +149,7 @@ export async function GET(request: Request) {
     };
   });
 
-  const moderationUsers: ModerationUser[] = (profileRows ?? [])
+  const moderationUsers: ModerationUser[] = profiles
     .filter((row) => row.role?.toLowerCase() !== "admin")
     .slice(0, 30)
     .map((row) => {
