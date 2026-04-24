@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { DEMO_PROJECTS, SearchPost } from "@/lib/demoData";
-import { ArrowLeft, TrendingUp, Eye, Calendar, BookOpen, BarChart } from "lucide-react";
+import { ArrowLeft, TrendingUp, Eye, Calendar, BookOpen, BarChart, Share2 } from "lucide-react";
 
 const POST_TYPES = [
   { label: "Full Project", value: "full_project" },
@@ -23,6 +23,23 @@ const TYPE_STYLES: Record<string, string> = {
 export default function TrendingPage() {
   const [trending, setTrending] = React.useState<SearchPost[]>([]);
   const [selectedPost, setSelectedPost] = React.useState<SearchPost | null>(null);
+
+  const handleShare = async (post: SearchPost) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: post.title,
+          text: `Check out this project: ${post.title}`,
+          url: window.location.origin,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.origin);
+        alert("Link copied to clipboard!");
+      }
+    } catch (error) {
+      console.log("Error sharing:", error);
+    }
+  };
 
   React.useEffect(() => {
     // In a real app, you'd fetch from an API. Here we use demo data sorted by views.
@@ -101,13 +118,22 @@ export default function TrendingPage() {
                     <div className="text-2xl font-bold text-[#0F0F0F]">{post.views}</div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8A4E2A]/60">Views</div>
                   </div>
-                  <button
-                    onClick={() => setSelectedPost(post)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-[#FFD7BC] bg-white px-3 py-1.5 text-xs font-semibold text-[#8A4E2A] transition hover:border-[#F5A97F] hover:bg-[#FFF8F2]"
-                  >
-                    <Eye size={14} />
-                    Quick View
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleShare(post)}
+                      className="inline-flex items-center justify-center rounded-xl border border-[#FFD7BC] bg-white p-[7px] text-[#8A4E2A] transition hover:border-[#F5A97F] hover:bg-[#FFF8F2]"
+                      title="Share"
+                    >
+                      <Share2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => setSelectedPost(post)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#FFD7BC] bg-white px-3 py-1.5 text-xs font-semibold text-[#8A4E2A] transition hover:border-[#F5A97F] hover:bg-[#FFF8F2]"
+                    >
+                      <Eye size={14} />
+                      Quick View
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.article>
