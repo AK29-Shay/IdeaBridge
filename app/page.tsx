@@ -118,7 +118,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-[#E7DED4] py-8">
         <div className="max-w-5xl mx-auto px-6 text-center text-sm text-[#6B7280]">
-          © {new Date().getFullYear()} IdeaBridge — Connect. Learn. Build. &nbsp;|&nbsp; SLIIT · ITPM · Progress 2
+          © {new Date().getFullYear()} IdeaBridge — Connect. Learn. Build. &nbsp;|&nbsp; SLIIT · ITPM 2024 &nbsp;|&nbsp; Developed by <span className="font-bold text-[#1F2933]">Akshayan, Nethmini, abinayan, Dhayabari</span>
         </div>
       </footer>
     </div>

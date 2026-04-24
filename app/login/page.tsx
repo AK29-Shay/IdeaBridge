@@ -220,11 +220,11 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <div className="mt-4 rounded-xl border border-[#E7DED4] bg-[#FFF9F3] p-3 text-xs text-[#6B7280]">
+        {/* <div className="mt-4 rounded-xl border border-[#E7DED4] bg-[#FFF9F3] p-3 text-xs text-[#6B7280]">
           <p className="font-semibold text-[#C86B4A]">Demo accounts</p>
           <p className="mt-1">Student: student.demo@ideabridge.dev / Demo@123</p>
           <p>Mentor: mentor.demo@ideabridge.dev / Demo@123</p>
-        </div>
+        </div> */}
 
         <p className="mt-5 text-center text-sm text-[#6B7280]">
           Don&apos;t have an account?{" "}
