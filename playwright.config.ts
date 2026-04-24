@@ -5,6 +5,10 @@ const useExternalServer = Boolean(process.env.PLAYWRIGHT_BASE_URL);
 
 export default defineConfig({
   testDir: "./tests",
+  reporter: [
+    ["list"],
+    ["html", { open: process.env.CI ? "never" : "always" }],
+  ],
   fullyParallel: false,
   workers: 1,
   timeout: 30_000,
