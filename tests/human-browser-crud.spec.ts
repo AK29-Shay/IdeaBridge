@@ -886,14 +886,34 @@ async function approveMentorApplication(page: Page, adminUser: TempUser, candida
   await login(page, adminUser);
 
   await page.goto("/dashboard/admin");
-  await expect(page.getByRole("heading", { name: /Admin Portal/i })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /Admin Operations Console/i })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /Mentor Approval Queue/i })).toBeVisible({ timeout: 20_000 });
 
-  const applicationCard = page.locator("article").filter({ hasText: candidate.fullName }).first();
+  const approvalQueue = page.locator("section").filter({
+    has: page.getByRole("heading", { name: /Mentor Approval Queue/i }),
+  });
+  const applicationCard = approvalQueue
+    .locator("div")
+    .filter({ hasText: candidate.fullName })
+    .filter({ has: page.getByRole("button", { name: /^Approve$/ }) })
+    .first();
   await expect(applicationCard).toBeVisible({ timeout: 20_000 });
-  await applicationCard.getByRole("button", { name: /^Approve$/ }).click();
-  await expect(applicationCard.getByText(/Approved/i)).toBeVisible({ timeout: 20_000 });
 
-  await expect(page.getByText(requestTitle).first()).toBeVisible({ timeout: 20_000 });
+  const approvalResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/admin/mentor-applications/") &&
+      response.request().method() === "PATCH"
+  );
+  await applicationCard.getByRole("button", { name: /^Approve$/ }).click();
+  expect((await approvalResponse).ok()).toBeTruthy();
+
+  await expect(
+    approvalQueue
+      .locator("div")
+      .filter({ hasText: candidate.fullName })
+      .filter({ has: page.getByRole("button", { name: /^Approve$/ }) })
+  ).toHaveCount(0, { timeout: 20_000 });
+  await expect(page.getByText(/Recent Moderation Events/i).first()).toBeVisible({ timeout: 20_000 });
 }
 
 async function verifyCandidateMentorAccess(page: Page, candidate: TempUser) {
