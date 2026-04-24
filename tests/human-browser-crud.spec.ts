@@ -907,8 +907,10 @@ async function approveMentorApplication(page: Page, adminUser: TempUser, candida
 }
 
 async function verifyCandidateMentorAccess(page: Page, candidate: TempUser) {
-  await page.goto("/profile");
-  await expect(page.getByText(/Role: Mentor/i)).toBeVisible({ timeout: 20_000 });
+  await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
+  await page.context().clearCookies();
+  await login(page, { ...candidate, expectedPath: "/dashboard/mentor" });
 
   await page.goto("/dashboard/mentor");
   await expect(page).toHaveURL(/\/dashboard\/mentor$/, { timeout: 20_000 });
