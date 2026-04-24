@@ -1134,9 +1134,9 @@ export function UnifiedAnalyticsDashboard() {
             <Sparkles className="h-5 w-5" />
             <span>Analytics Component</span>
           </div>
-          <h2 className="mt-4 text-4xl font-bold tracking-tight text-[#fecdac] sm:text-5xl">Member 4 + New Update Dashboard</h2>
+          <h2 className="mt-4 text-4xl font-bold tracking-tight text-[#fecdac] sm:text-5xl">Analytics Dashboard</h2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-[#fecdac]/72">
-            This view merges the updated analytics design with the member 4 detailed project card and project thread panel.
+            This view merges the updated analytics design with the analytics detailed project card and project thread panel.
           </p>
 
           <div className="mt-7 flex flex-wrap gap-4">

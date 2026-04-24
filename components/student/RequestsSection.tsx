@@ -15,7 +15,11 @@ import {
 
 import { getRequestStatusLabel, getRequestStatusTone, isActiveRequest, isClosedRequest, isPendingRequest } from "@/lib/requestStatus";
 import { useMentorshipRequests } from "@/lib/useMentorshipRequests";
+import { useAuth } from "@/context/AuthContext";
+import { getProjectsForUser, setProjectsForUser } from "@/lib/storage";
 import type { Mentor } from "@/types/mentor";
+import type { StudentProject } from "@/types/project";
+import type { MentorshipRequestRecord } from "@/types/request";
 
 type RequestFormState = {
   title: string;
@@ -37,6 +41,7 @@ const INITIAL_FORM: RequestFormState = {
 
 export function RequestsSection() {
   const { requests, createRequest, isLoading } = useMentorshipRequests();
+  const { user } = useAuth();
   const [mentors, setMentors] = React.useState<Mentor[]>([]);
   const [isLoadingMentors, setIsLoadingMentors] = React.useState(true);
   const [mentorQuery, setMentorQuery] = React.useState("");
@@ -119,6 +124,64 @@ export function RequestsSection() {
     }));
   }
 
+  function syncProjectFromRequest(request: MentorshipRequestRecord) {
+    const email = user?.email?.trim().toLowerCase();
+    if (!email) return;
+
+    const existingProjects = getProjectsForUser(email);
+    const now = new Date().toISOString();
+    const nextProject: StudentProject = {
+      id: request.id,
+      title: request.title,
+      mentorId: request.assigned_mentor ?? undefined,
+      progressPercent: 0,
+      status: "Not Started",
+      milestoneNotes: request.description ?? "",
+      updatedAt: now,
+    };
+
+    const alreadyExists = existingProjects.some((project) => project.id === request.id);
+    const mergedProjects = alreadyExists
+      ? existingProjects.map((project) =>
+          project.id === request.id
+            ? {
+                ...project,
+                title: request.title,
+                mentorId: request.assigned_mentor ?? project.mentorId,
+                milestoneNotes: project.milestoneNotes || request.description || "",
+                updatedAt: now,
+              }
+            : project
+        )
+      : [nextProject, ...existingProjects];
+
+    setProjectsForUser(email, mergedProjects);
+  }
+
+  React.useEffect(() => {
+    const email = user?.email?.trim().toLowerCase();
+    if (!email || requests.length === 0) return;
+
+    const existingProjects = getProjectsForUser(email);
+    const existingIds = new Set(existingProjects.map((project) => project.id));
+    const now = new Date().toISOString();
+
+    const missingProjects: StudentProject[] = requests
+      .filter((request) => !existingIds.has(request.id))
+      .map((request) => ({
+        id: request.id,
+        title: request.title,
+        mentorId: request.assigned_mentor ?? undefined,
+        progressPercent: 0,
+        status: "Not Started",
+        milestoneNotes: request.description ?? "",
+        updatedAt: now,
+      }));
+
+    if (missingProjects.length === 0) return;
+    setProjectsForUser(email, [...missingProjects, ...existingProjects]);
+  }, [requests, user?.email]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -135,7 +198,7 @@ export function RequestsSection() {
     setIsSubmitting(true);
 
     try {
-      await createRequest({
+      const createdRequest = await createRequest({
         title: form.title.trim(),
         description: form.description.trim(),
         domain: form.domain.trim(),
@@ -143,6 +206,7 @@ export function RequestsSection() {
         type: form.type,
         assigned_mentor: form.assignedMentorId,
       });
+      syncProjectFromRequest(createdRequest);
 
       setForm(INITIAL_FORM);
       setMentorQuery("");

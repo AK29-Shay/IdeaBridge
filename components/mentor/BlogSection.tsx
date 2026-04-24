@@ -541,6 +541,16 @@ export function BlogSection() {
               {!blog.imageUrl && (
                 <div className="h-2 w-full bg-linear-to-r from-[#0F0F0F] via-[#1c0f00] to-[#FFCBA4]" />
               )}
+              {!blog.imageUrl && blog.videoUrl && (
+                <div className="h-40 w-full overflow-hidden bg-slate-100">
+                  <video
+                    src={blog.videoUrl}
+                    controls
+                    preload="metadata"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              )}
 
               <div className="p-5 space-y-3">
                 <div className="flex items-start justify-between gap-3">
