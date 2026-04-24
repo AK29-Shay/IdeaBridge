@@ -259,7 +259,7 @@ async function findDemoMentor(request: APIRequestContext) {
 async function updateStudentProfileAndRestore(page: Page, runId: string) {
   await page.goto("/dashboard/student/profile");
   await expect(page).toHaveURL(/\/dashboard\/student\/profile$/, { timeout: 15_000 });
-  await expect(page.getByText(/My Profile/i).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /(?:My|Student) Profile/i })).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /edit profile/i }).click();
   const bioField = page.getByPlaceholder(/Tell mentors about yourself/i);
