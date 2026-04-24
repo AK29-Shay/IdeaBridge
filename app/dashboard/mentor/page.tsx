@@ -12,6 +12,7 @@ import { useMentorshipRequests } from "@/lib/useMentorshipRequests";
 const MENTOR_ROUTE_MAP: Record<string, string> = {
   dashboard: "/dashboard/mentor",
   requests: "/dashboard/mentor/requests",
+  mentorships: "/dashboard/mentor/mentorships",
   projects: "/dashboard/mentor/projects",
   blog: "/dashboard/mentor/blog",
   profile: "/dashboard/mentor/profile",

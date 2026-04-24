@@ -21,18 +21,22 @@ function formatShortDate(d: Date) {
   return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
-function buildDummySlots(status: AvailabilityStatus): string[] {
+function buildSuggestedSlots(status: AvailabilityStatus, selectedDate?: Date): string[] {
+  const dateLabel = selectedDate
+    ? selectedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : "Next available day";
+
   switch (status) {
     case "Available Now":
-      return ["10:00 AM", "12:30 PM", "3:00 PM"];
+      return [`${dateLabel} - 10:00 AM`, `${dateLabel} - 12:30 PM`, `${dateLabel} - 3:00 PM`];
     case "Available in 1-2 days":
-      return ["9:30 AM", "1:00 PM", "4:15 PM"];
+      return [`${dateLabel} - 9:30 AM`, `${dateLabel} - 1:00 PM`, `${dateLabel} - 4:15 PM`];
     case "Busy":
-      return ["6:00 PM", "7:30 PM"];
+      return [`${dateLabel} - 6:00 PM`, `${dateLabel} - 7:30 PM`];
     case "On Leave":
-      return ["Next week (schedule later)"];
+      return ["Scheduling resumes next week"];
     default:
-      return ["—"];
+      return ["No slots available"];
   }
 }
 
@@ -67,7 +71,10 @@ export function CheckAvailabilityModal({
     [availableDates]
   );
 
-  const slots = React.useMemo(() => buildDummySlots(availabilityStatus), [availabilityStatus]);
+  const slots = React.useMemo(
+    () => buildSuggestedSlots(availabilityStatus, selectedDate),
+    [availabilityStatus, selectedDate]
+  );
 
   React.useEffect(() => {
     if (!open) setSelectedDate(undefined);
@@ -92,7 +99,7 @@ export function CheckAvailabilityModal({
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Check Availability</DialogTitle>
-          <DialogDescription>Dummy availability calendar + status message for presentation.</DialogDescription>
+          <DialogDescription>Preview the mentor's current response window and suggested session times.</DialogDescription>
         </DialogHeader>
 
         <div className="mt-4 space-y-4">
@@ -140,7 +147,7 @@ export function CheckAvailabilityModal({
                   type="button"
                   className="rounded-xl bg-primary hover:brightness-110"
                   onClick={() => {
-                    toast.success("Availability checked.");
+                    toast.success("Availability reviewed.");
                     onOpenChange(false);
                   }}
                 >

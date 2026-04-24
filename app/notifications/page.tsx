@@ -143,6 +143,18 @@ function formatNotificationTitle(notification: NotificationRecord) {
   if (notification.type === "mentorship_request") {
     return "New mentorship request";
   }
+  if (notification.type === "request_status_updated") {
+    return "Mentorship request update";
+  }
+  if (notification.type === "mentorship_message") {
+    return "New mentorship message";
+  }
+  if (notification.type === "booking_slots_proposed") {
+    return "Mentorship slots proposed";
+  }
+  if (notification.type === "booking_confirmed") {
+    return "Mentorship slot confirmed";
+  }
 
   return notification.type.replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 }
@@ -151,6 +163,19 @@ function formatNotificationBody(notification: NotificationRecord) {
   const title = typeof notification.payload?.title === "string" ? notification.payload.title : "";
   if (notification.type === "mentorship_request" && title) {
     return `A student submitted a mentorship request for "${title}".`;
+  }
+  if (notification.type === "request_status_updated") {
+    return title || "One of your mentorship requests changed status.";
+  }
+  if (notification.type === "mentorship_message") {
+    const author = typeof notification.payload?.author === "string" ? notification.payload.author : "Your teammate";
+    return `${author} sent a new message in the mentorship space.`;
+  }
+  if (notification.type === "booking_slots_proposed" && title) {
+    return `New booking options are ready for "${title}".`;
+  }
+  if (notification.type === "booking_confirmed" && title) {
+    return `A mentorship session was confirmed for "${title}".`;
   }
 
   return "A new platform update is available for your review.";

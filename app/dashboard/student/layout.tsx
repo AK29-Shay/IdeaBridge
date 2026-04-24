@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderKanban, LayoutDashboard, SendHorizonal, UserCircle2 } from "lucide-react";
+import { FolderKanban, LayoutDashboard, MessageSquareText, SendHorizonal, UserCircle2 } from "lucide-react";
 
 import { RequireRoleAuth } from "@/components/auth/RequireRole";
 import {
@@ -12,6 +12,7 @@ const STUDENT_NAV_ITEMS: DashboardNavItem[] = [
   { href: "/dashboard/student", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/student/projects", label: "Projects", icon: FolderKanban },
   { href: "/dashboard/student/requests", label: "Requests", icon: SendHorizonal },
+  { href: "/dashboard/student/mentorships", label: "Mentorships", icon: MessageSquareText },
   { href: "/dashboard/student/profile", label: "Profile", icon: UserCircle2 },
 ];
 

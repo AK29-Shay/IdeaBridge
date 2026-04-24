@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getUserFromAuthHeader } from '../../../../backend/middleware/auth'
 import { getRequestById, updateRequestStatus } from '@/backend/modules/request'
 import { getProfileByUserId } from '@/backend/modules/profile'
+import { ensureMentorshipChannel } from '@/backend/services/mentorshipChannelService'
 import { createNotification } from '@/backend/services/notificationService'
 import { getErrorMessage } from '@/lib/errorMessage'
 
@@ -24,6 +25,9 @@ export async function PATCH(request: Request) {
     }
 
     const updated = await updateRequestStatus(request_id, status, user.user.id)
+    if (status === 'in_progress') {
+      await ensureMentorshipChannel(request_id)
+    }
     if (typeof reqRecord.student_id === 'string') {
       const statusTitle =
         status === 'in_progress' ? 'Mentorship request accepted' :
