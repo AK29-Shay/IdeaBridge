@@ -3,7 +3,10 @@ import supabaseServer from "@/backend/config/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
-const MAX_UPLOAD_SIZE_BYTES = 100 * 1024 * 1024;
+const MB = 1024 * 1024;
+const configuredMaxMb = Number(process.env.NEXT_PUBLIC_SUPABASE_UPLOAD_MAX_MB ?? "50");
+const MAX_UPLOAD_SIZE_BYTES =
+  Number.isFinite(configuredMaxMb) && configuredMaxMb > 0 ? configuredMaxMb * MB : 50 * MB;
 
 function parseBucketName(value: FormDataEntryValue | null): string {
   if (typeof value !== "string") return "";
@@ -86,16 +89,28 @@ export async function POST(request: Request) {
 
     await ensureBucketExists(bucket);
 
+    const rawBytes = await fileEntry.arrayBuffer();
+    const uploadPayload = new Uint8Array(rawBytes);
+
     const { error: uploadError } = await supabaseServer.storage
       .from(bucket)
-      .upload(uploadPath, fileEntry, {
+      .upload(uploadPath, uploadPayload, {
         cacheControl: "3600",
         upsert: false,
         contentType: fileEntry.type || "application/octet-stream",
       });
 
     if (uploadError) {
-      return NextResponse.json({ error: uploadError.message || "Upload failed." }, { status: 500 });
+      const message = uploadError.message || "Upload failed.";
+      if (message.toLowerCase().includes("maximum allowed size")) {
+        return NextResponse.json(
+          {
+            error: `Upload rejected by storage size policy. Try a smaller file or reconfigure bucket limit. Current file: ${Math.ceil(fileEntry.size / (1024 * 1024))}MB.`,
+          },
+          { status: 413 }
+        );
+      }
+      return NextResponse.json({ error: message }, { status: 500 });
     }
 
     const { data } = supabaseServer.storage.from(bucket).getPublicUrl(uploadPath);
