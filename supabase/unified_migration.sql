@@ -140,6 +140,33 @@ CREATE TRIGGER requests_updated_at
 
 
 -- ============================================================
+-- SECTION 5: STUDENT PROJECT TRACKING
+-- (Member 4 - abinayan03 | Supabase-backed project records)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.student_projects (
+  id                TEXT        PRIMARY KEY,
+  user_id           UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title             TEXT        NOT NULL,
+  mentor_id         TEXT,
+  progress_percent  INTEGER     NOT NULL DEFAULT 0 CHECK (progress_percent BETWEEN 0 AND 100),
+  status            TEXT        NOT NULL DEFAULT 'Not Started' CHECK (status IN ('Not Started', 'In Progress', 'On Track', 'Delayed', 'Completed')),
+  milestone_notes   TEXT        NOT NULL DEFAULT '',
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.student_projects ENABLE ROW LEVEL SECURITY;
+
+DROP TRIGGER IF EXISTS student_projects_updated_at ON public.student_projects;
+CREATE TRIGGER student_projects_updated_at
+  BEFORE UPDATE ON public.student_projects
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE INDEX IF NOT EXISTS student_projects_user_id_idx ON public.student_projects(user_id);
+CREATE INDEX IF NOT EXISTS student_projects_updated_at_idx ON public.student_projects(updated_at DESC);
+
+
+-- ============================================================
 -- SECTION 5: RATINGS
 -- (Member 1 – sneha-dhaya-IT | Rating System)
 -- ============================================================
@@ -272,6 +299,16 @@ DROP POLICY IF EXISTS "Parties view own requests"   ON public.requests;
 CREATE POLICY "Students create requests"    ON public.requests FOR INSERT  TO authenticated WITH CHECK (auth.uid() = student_id);
 CREATE POLICY "Parties view own requests"   ON public.requests FOR SELECT  TO authenticated USING (auth.uid() = student_id OR auth.uid() = assigned_mentor);
 CREATE POLICY "Parties update own requests" ON public.requests FOR UPDATE  TO authenticated USING (auth.uid() = student_id OR auth.uid() = assigned_mentor);
+
+-- STUDENT PROJECTS (owner-only project tracking)
+DROP POLICY IF EXISTS "Users view own student projects"   ON public.student_projects;
+DROP POLICY IF EXISTS "Users create own student projects" ON public.student_projects;
+DROP POLICY IF EXISTS "Users update own student projects" ON public.student_projects;
+DROP POLICY IF EXISTS "Users delete own student projects" ON public.student_projects;
+CREATE POLICY "Users view own student projects"   ON public.student_projects FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Users create own student projects" ON public.student_projects FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users update own student projects" ON public.student_projects FOR UPDATE TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Users delete own student projects" ON public.student_projects FOR DELETE TO authenticated USING (auth.uid() = user_id);
 
 -- NOTIFICATIONS (user sees only their own)
 DROP POLICY IF EXISTS "Users view own notifications"    ON public.notifications;
