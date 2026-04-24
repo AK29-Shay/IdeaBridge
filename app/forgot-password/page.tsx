@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +9,7 @@ import type { z } from "zod";
 import { Mail } from "@/components/ui/icons";
 
 import { forgotPasswordSchema } from "@/lib/zod/authSchemas";
+import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -26,7 +26,7 @@ function ErrorMsg({ msg }: { msg?: string }) {
 }
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
+  const { sendPasswordResetEmail } = useAuth();
   const [sent, setSent] = React.useState(false);
   const [sentEmail, setSentEmail] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -37,15 +37,29 @@ export default function ForgotPasswordPage() {
     defaultValues: { email: "" },
   });
 
-  function onSubmit(values: ForgotInput) {
+  async function onSubmit(values: ForgotInput) {
     setIsLoading(true);
-    // Simulate API delay
-    setTimeout(() => {
+    try {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/reset-password/recovery`
+          : "/reset-password/recovery";
+      await sendPasswordResetEmail({
+        email: values.email,
+        redirectTo,
+      });
       setSentEmail(values.email);
       setSent(true);
-      setIsLoading(false);
       toast.success("Password reset link sent!");
-    }, 1200);
+    } catch (rawError: unknown) {
+      const message =
+        rawError instanceof Error
+          ? rawError.message
+          : "Unable to send password reset email.";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -170,19 +184,6 @@ export default function ForgotPasswordPage() {
                   ))}
                 </ul>
               </div>
-
-              {/* Simulate clicking the link — goes to reset page */}
-              <button
-                type="button"
-                onClick={() =>
-                  router.push(
-                    `/reset-password/demo-reset-token?email=${encodeURIComponent(sentEmail)}`
-                  )
-                }
-                className="w-full py-3 rounded-xl bg-[#0F0F0F] text-[#FFCBA4] font-semibold text-sm hover:brightness-125 transition-all duration-200 shadow-lg shadow-black/20"
-              >
-                Open Reset Link (Demo)
-              </button>
 
               <button
                 type="button"
