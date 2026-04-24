@@ -19,6 +19,7 @@ export const SUPABASE_MAX_UPLOAD_BYTES =
 export const THREAD_MEDIA_ACCEPT =
   "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime";
 export const DYNAMIC_FORM_ACCEPT = "*/*,.zip,.tar,.gz,.tgz,.bz2,.xz,.rar,.7z";
+export const PROFILE_PHOTO_ACCEPT = "image/png,image/jpeg,image/webp";
 
 const THREAD_MEDIA_TYPES = new Set([
   "image/png",
@@ -78,6 +79,61 @@ export function validateThreadMediaFile(file: File) {
 
 export function validateDynamicFormFile(file: File) {
   return validateSupabaseFileSize(file);
+}
+
+export function validateProfilePhotoFile(file: File) {
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    return `${file.name} is not supported. Use PNG, JPG, or WEBP.`;
+  }
+  return null;
+}
+
+async function optimizeProfilePhoto(file: File): Promise<File> {
+  if (typeof window === "undefined") {
+    return file;
+  }
+
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Failed to load image."));
+      img.src = imageUrl;
+    });
+
+    const MAX_DIMENSION = 2048;
+    const scale = Math.min(1, MAX_DIMENSION / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return file;
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.9)
+    );
+    if (!blob) {
+      return file;
+    }
+
+    const safeName = file.name.replace(/\.[^/.]+$/, "") || "profile-photo";
+    return new File([blob], `${safeName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
 }
 
 function getUploadedField<T extends keyof UploadedSupabaseFile>(
@@ -158,4 +214,10 @@ export async function uploadThreadMediaFile(file: File) {
 export async function uploadDynamicFormFile(file: File) {
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_DYNAMIC_FORM_BUCKET ?? "dynamic-form-files";
   return uploadFileToBucket({ bucket, folder: "dynamic-form", file });
+}
+
+export async function uploadProfilePhoto(file: File) {
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_PROFILE_PHOTO_BUCKET ?? "profile-photos";
+  const optimized = await optimizeProfilePhoto(file);
+  return uploadFileToBucket({ bucket, folder: "avatars", file: optimized });
 }

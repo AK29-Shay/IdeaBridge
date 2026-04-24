@@ -1,13 +1,19 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Pencil, Save, X, Plus, Tag, Upload, Link2, ExternalLink, Globe, User } from "lucide-react";
+import { Pencil, Save, X, Plus, Tag, Upload, Link2, ExternalLink, User, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import type { MentorProfile } from "@/types/mentor";
+import {
+  PROFILE_PHOTO_ACCEPT,
+  uploadProfilePhoto,
+  validateProfilePhotoFile,
+} from "@/lib/supabaseUploads";
 
 /* ───── Schema ───── */
 const profileSchema = z.object({
@@ -40,6 +46,11 @@ export function ProfileSection() {
   const [editing, setEditing] = React.useState(false);
   const [skillInput, setSkillInput] = React.useState("");
   const [showSkillSugg, setShowSkillSugg] = React.useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
+  const displayName =
+    user?.fullName?.trim() ||
+    user?.email?.split("@")[0] ||
+    "Mentor";
 
   const defaultProfile = user?.mentorProfile;
 
@@ -75,12 +86,26 @@ export function ProfileSection() {
     setValue("skills", skills.filter(k => k !== s), { shouldValidate: true });
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => setValue("avatarUrl", ev.target?.result as string);
-    reader.readAsDataURL(file);
+    const validationError = validateProfilePhotoFile(file);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const uploaded = await uploadProfilePhoto(file);
+      setValue("avatarUrl", uploaded.url, { shouldValidate: true });
+      toast.success("Profile photo uploaded.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload profile photo.");
+    } finally {
+      setIsUploadingAvatar(false);
+      e.currentTarget.value = "";
+    }
   }
 
   function onSubmit(data: ProfileInput) {
@@ -137,43 +162,44 @@ export function ProfileSection() {
   }[avStatus ?? "Available Now"];
 
   return (
-    <div className="space-y-6 animate-fade-up">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">My Profile</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Manage your mentor information</p>
-        </div>
-        {!editing ? (
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-2 rounded-xl bg-[#0F0F0F] px-5 py-2.5 text-sm font-semibold text-[#FFCBA4] shadow-sm hover:brightness-125 hover:-translate-y-0.5 transition-all duration-200"
-          >
-            <Pencil className="h-4 w-4" />
-            Edit Profile
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              onClick={handleCancel}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              <X className="h-4 w-4" /> Cancel
-            </button>
-            <button
-              form="profile-form"
-              type="submit"
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-[#0F0F0F] shadow-sm hover:brightness-110 hover:-translate-y-0.5 transition-all duration-200"
-            >
-              <Save className="h-4 w-4" /> Save Profile
-            </button>
+    <div className="mx-auto max-w-5xl space-y-6 animate-fade-up">
+      <div className="rounded-2xl border border-[#FFCBA4]/40 bg-gradient-to-r from-[#FFF8F3] via-white to-[#FFF3E8] p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Mentor Profile</h2>
+            <p className="mt-1 text-sm text-slate-600">Manage your mentor information</p>
           </div>
-        )}
+          {!editing ? (
+            <button
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0F0F0F] px-5 py-2.5 text-sm font-semibold text-[#FFCBA4] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:brightness-125"
+            >
+              <Pencil className="h-4 w-4" />
+              Edit Profile
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleCancel}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <X className="h-4 w-4" /> Cancel
+              </button>
+              <button
+                form="profile-form"
+                type="submit"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-110"
+              >
+                <Save className="h-4 w-4" /> Save Profile
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <form id="profile-form" onSubmit={handleSubmit(onSubmitAndWait)} className="space-y-5">
         {/* Avatar + banner */}
-        <div className="rounded-2xl border border-[#FFCBA4]/30 bg-white shadow-sm overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-[#FFCBA4]/30 bg-white shadow-sm">
           <div className="relative h-28 bg-gradient-to-r from-[#0F0F0F] via-[#1c0f00] to-[#2a1200]">
             <div className="pointer-events-none absolute inset-0 opacity-20"
               style={{ backgroundImage: "radial-gradient(circle at 30% 60%, white 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
@@ -182,21 +208,39 @@ export function ProfileSection() {
             <div className="flex flex-wrap items-end gap-4 -mt-12 mb-4">
               <div className="relative">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="avatar" className="h-20 w-20 rounded-full object-cover ring-4 ring-white shadow-xl" />
+                  <Image
+                    src={avatarUrl}
+                    alt="avatar"
+                    width={80}
+                    height={80}
+                    className="h-20 w-20 rounded-full object-cover ring-4 ring-white shadow-xl"
+                  />
                 ) : (
                   <div className="h-20 w-20 rounded-full bg-[#0F0F0F] flex items-center justify-center text-[#FFCBA4] font-black text-3xl ring-4 ring-white shadow-xl">
-                    {user?.fullName?.charAt(0)?.toUpperCase() ?? "M"}
+                    {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
                 {editing && (
                   <label className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-[#0F0F0F] p-1.5 shadow-md hover:bg-[#1c0f00] transition-colors">
-                    <Upload className="h-3 w-3 text-[#FFCBA4]" />
-                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-[#FFCBA4]" />
+                    ) : (
+                      <Upload className="h-3 w-3 text-[#FFCBA4]" />
+                    )}
+                    <input
+                      type="file"
+                      accept={PROFILE_PHOTO_ACCEPT}
+                      className="hidden"
+                      disabled={isUploadingAvatar}
+                      onChange={(e) => {
+                        void handleImageUpload(e);
+                      }}
+                    />
                   </label>
                 )}
               </div>
               <div className="mb-2">
-                <div className="text-xl font-bold text-slate-800">{user?.fullName}</div>
+                <div className="text-xl font-bold text-slate-800">{displayName}</div>
                 <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${avStatusColor}`}>
                   {avStatus}
                 </span>
@@ -214,14 +258,14 @@ export function ProfileSection() {
                   <FieldError msg={errors.fullName?.message} />
                 </>
               ) : (
-                <p className="text-sm text-slate-700">{user?.fullName}</p>
+                <p className="text-sm text-slate-700">{displayName}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Bio */}
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6 space-y-1.5">
+        <div className="space-y-1.5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700">Bio <span className="text-red-500">*</span></label>
           {editing ? (
             <>
@@ -241,7 +285,7 @@ export function ProfileSection() {
         </div>
 
         {/* Skills */}
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
             <Tag className="h-4 w-4 text-[#F5A97F]" />
             Skills <span className="text-red-500">*</span>
@@ -293,7 +337,7 @@ export function ProfileSection() {
         </div>
 
         {/* Availability + experience */}
-        <div className="grid gap-5 sm:grid-cols-3 rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+        <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:grid-cols-3">
           {/* Availability type */}
           <div className="space-y-1.5">
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Availability</label>
@@ -353,7 +397,7 @@ export function ProfileSection() {
         </div>
 
         {/* Portfolio Links */}
-        <div className="rounded-2xl border border-slate-100 bg-white shadow-sm p-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <label className="block text-sm font-semibold text-slate-700 mb-4">Portfolio Links</label>
           <div className="space-y-3">
             {([

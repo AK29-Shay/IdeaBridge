@@ -40,6 +40,14 @@ export function DashboardPortalLayout({
 
   const activeItem =
     navItems.find((item) => isActivePath(pathname, item.href)) ?? navItems[0] ?? null;
+  const profileHref =
+    user?.role === "mentor"
+      ? "/dashboard/mentor/profile"
+      : user?.role === "student"
+      ? "/dashboard/student/profile"
+      : user?.role === "admin"
+      ? "/dashboard/admin"
+      : "/profile";
 
   const initials = React.useMemo(() => {
     const fullName = user?.fullName?.trim() ?? "";
@@ -196,9 +204,14 @@ export function DashboardPortalLayout({
                   <div className="text-xs text-black/40">Signed in</div>
                   <div className="text-sm font-semibold text-black">{user?.fullName ?? "IdeaBridge User"}</div>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm font-bold text-[#FFCBA4] shadow-md">
+                <Link
+                  href={profileHref}
+                  title="Open profile"
+                  aria-label="Open profile"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm font-bold text-[#FFCBA4] shadow-md transition hover:scale-[1.03] hover:brightness-110"
+                >
                   {initials}
-                </div>
+                </Link>
               </div>
             </div>
           </header>

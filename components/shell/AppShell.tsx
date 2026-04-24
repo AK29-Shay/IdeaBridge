@@ -16,6 +16,7 @@ import {
   X,
   Bell,
   Users,
+  ShieldCheck,
   ChevronRight,
   Sparkles,
 } from "lucide-react";
@@ -98,7 +99,11 @@ export function AppShell({ children }: AppShellProps) {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <NavLinks pathname={pathname} onNavigate={() => setSidebarOpen(false)} />
+                <NavLinks
+                  pathname={pathname}
+                  userRole={user?.role}
+                  onNavigate={() => setSidebarOpen(false)}
+                />
               </div>
               <UserFooter user={user} logout={logout} />
             </motion.aside>
@@ -144,14 +149,27 @@ function Brand() {
 
 function NavLinks({
   pathname,
+  userRole,
   onNavigate,
 }: {
   pathname: string;
+  userRole?: string;
   onNavigate?: () => void;
 }) {
+  const sections = NAV_ITEMS.map((section) => {
+    if (section.section !== "Modules" || userRole !== "admin") {
+      return section;
+    }
+
+    return {
+      ...section,
+      items: [...section.items, { label: "Admin Portal", href: "/dashboard/admin", icon: ShieldCheck }],
+    };
+  });
+
   return (
     <nav className="space-y-5 p-3">
-      {NAV_ITEMS.map((section) => (
+      {sections.map((section) => (
         <div key={section.section}>
           <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-widest text-[#8A4E2A]/55">
             {section.section}
@@ -245,7 +263,7 @@ function SidebarContent({
       </div>
 
       <div className="flex-1 overflow-y-auto py-2">
-        <NavLinks pathname={pathname} />
+        <NavLinks pathname={pathname} userRole={user?.role} />
       </div>
 
       <UserFooter user={user} logout={logout} />
