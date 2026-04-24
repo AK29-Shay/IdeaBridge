@@ -12,6 +12,7 @@ import type { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import { ALL_SKILLS } from "@/lib/constants";
+import type { UserRole } from "@/types/auth";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SkillMultiSelect } from "@/components/forms/SkillMultiSelect";
+import { MentorApplicationCard } from "@/components/student/MentorApplicationCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type StudentProfileInput = z.infer<typeof studentProfileFormSchema>;
@@ -288,6 +290,31 @@ function MentorProfileForm() {
   );
 }
 
+function AdminProfileSummary() {
+  const { user } = useAuth();
+  if (!user) return null;
+
+  return (
+    <div className="space-y-4 rounded-2xl border border-[#D8EAFE] bg-[#F7FBFF] p-5">
+      <div>
+        <div className="text-sm font-semibold text-slate-800">Admin access is active</div>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          This account can open the admin portal to approve mentor applications and moderate mentorship requests.
+        </p>
+      </div>
+      <div className="rounded-xl border border-[#D8EAFE] bg-white px-4 py-3 text-sm text-slate-600">
+        Signed in as <span className="font-semibold text-slate-800">{user.fullName}</span> ({user.email})
+      </div>
+    </div>
+  );
+}
+
+function roleLabel(role: UserRole) {
+  if (role === "mentor") return "Mentor";
+  if (role === "admin") return "Admin";
+  return "Student";
+}
+
 export default function ProfilePage() {
   return (
     <RequireAuth>
@@ -309,20 +336,34 @@ function Profile() {
         </div>
         <div>
           <Badge variant="secondary" className="rounded-full">
-            Role: {user.role === "student" ? "Student" : "Mentor"}
+            Role: {roleLabel(user.role)}
           </Badge>
         </div>
       </div>
 
       <Card className="mt-6 border-border/70 bg-background/70">
         <CardHeader>
-          <CardTitle className="text-lg">{user.role === "student" ? "Student Details" : "Mentor Details"}</CardTitle>
+          <CardTitle className="text-lg">
+            {user.role === "student" ? "Student Details" : user.role === "mentor" ? "Mentor Details" : "Admin Details"}
+          </CardTitle>
           <CardDescription>Update your bio, skills, and portfolio links with validated inputs.</CardDescription>
         </CardHeader>
         <CardContent>
-          {user.role === "student" ? <StudentProfileForm /> : <MentorProfileForm />}
+          {user.role === "student" ? (
+            <StudentProfileForm />
+          ) : user.role === "mentor" ? (
+            <MentorProfileForm />
+          ) : (
+            <AdminProfileSummary />
+          )}
         </CardContent>
       </Card>
+
+      {user.role === "student" ? (
+        <div className="mt-6">
+          <MentorApplicationCard />
+        </div>
+      ) : null}
     </div>
   );
 }

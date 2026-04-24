@@ -32,7 +32,7 @@ async function ensureBucketExists(bucketName: string) {
     throw new Error(listError.message || "Failed to list storage buckets.");
   }
 
-  const exists = (buckets ?? []).some((bucket) => bucket.name === bucketName);
+  const exists = (buckets ?? []).some((bucket: { name?: string }) => bucket.name === bucketName);
   if (exists) {
     const { error: updateError } = await supabaseServer.storage.updateBucket(bucketName, {
       public: true,

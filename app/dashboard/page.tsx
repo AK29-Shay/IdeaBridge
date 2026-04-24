@@ -12,11 +12,12 @@ import {
   UserRound,
 } from "lucide-react";
 
+import type { UserRole } from "@/types/auth";
 import { useAuth } from "@/context/AuthContext";
 
 type RoleCard = {
+  roleMatch?: UserRole;
   id: "student" | "mentor" | "analytics" | "admin";
-  roleMatch?: "student" | "mentor" | "admin";
   label: string;
   description: string;
   href: string;
