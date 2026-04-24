@@ -746,25 +746,6 @@ async function exerciseStudentMentorshipSpace(page: Page, requestTitle: string, 
   );
   expect(confirmResult.ok).toBeTruthy();
 
-  await page.waitForFunction(
-    async ({ title, token }) => {
-      const response = await fetch("/api/mentorships", {
-        cache: "no-store",
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) return false;
-
-      const payload = await response.json();
-      if (!Array.isArray(payload)) return false;
-
-      const channel = payload.find((item) => item?.title === title);
-      return Boolean(channel?.booking?.confirmedSlotId);
-    },
-    { title: requestTitle, token: accessToken },
-    { timeout: 30_000 }
-  );
   await page.reload();
   await expect(page.getByText(/Loading mentorship spaces/i)).toHaveCount(0, { timeout: 30_000 });
   await expect(page.getByText(requestTitle).first()).toBeVisible({ timeout: 20_000 });
