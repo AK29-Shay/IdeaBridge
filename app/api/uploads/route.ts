@@ -3,7 +3,10 @@ import supabaseServer from "@/backend/config/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
-const MAX_UPLOAD_SIZE_BYTES = 1024 * 1024 * 1024;
+const MB = 1024 * 1024;
+const configuredMaxMb = Number(process.env.NEXT_PUBLIC_SUPABASE_UPLOAD_MAX_MB ?? "50");
+const MAX_UPLOAD_SIZE_BYTES =
+  Number.isFinite(configuredMaxMb) && configuredMaxMb > 0 ? configuredMaxMb * MB : 50 * MB;
 
 function parseBucketName(value: FormDataEntryValue | null): string {
   if (typeof value !== "string") return "";
@@ -32,11 +35,15 @@ async function ensureBucketExists(bucketName: string) {
     throw new Error(listError.message || "Failed to list storage buckets.");
   }
 
-  const exists = (buckets ?? []).some((bucket: { name?: string }) => bucket.name === bucketName);
+  const existingBucket = (buckets ?? []).find((bucket: { name?: string }) => bucket.name === bucketName);
+  const exists = Boolean(existingBucket);
   if (exists) {
+    if ((existingBucket as { public?: boolean } | undefined)?.public) {
+      return;
+    }
+
     const { error: updateError } = await supabaseServer.storage.updateBucket(bucketName, {
       public: true,
-      fileSizeLimit: MAX_UPLOAD_SIZE_BYTES,
     });
     if (updateError) {
       throw new Error(updateError.message || `Failed to update bucket '${bucketName}'.`);
@@ -93,9 +100,11 @@ export async function POST(request: Request) {
 
     await ensureBucketExists(bucket);
 
+    const fileBuffer = Buffer.from(await fileEntry.arrayBuffer());
+
     const { error: uploadError } = await supabaseServer.storage
       .from(bucket)
-      .upload(uploadPath, fileEntry, {
+      .upload(uploadPath, fileBuffer, {
         cacheControl: "3600",
         upsert: false,
         contentType: fileEntry.type || "application/octet-stream",
