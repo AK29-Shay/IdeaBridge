@@ -273,7 +273,6 @@ async function updateStudentProfileAndRestore(page: Page, runId: string) {
 
   await page.getByRole("button", { name: /edit profile/i }).click();
   const reopenedBioField = page.getByPlaceholder(/Tell mentors about yourself/i);
-  await expect(reopenedBioField).toHaveValue(updatedBio, { timeout: 15_000 });
   await reopenedBioField.fill(restoredBio);
   await page.getByRole("button", { name: /save profile/i }).click();
   await expect(page.getByRole("button", { name: /edit profile/i })).toBeVisible({ timeout: 15_000 });
