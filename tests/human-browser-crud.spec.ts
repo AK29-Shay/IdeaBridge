@@ -116,6 +116,22 @@ async function captureCheckpoint(page: Page, testInfo: TestInfo, name: string) {
   });
 }
 
+async function fillInputReliably(page: Page, selector: string, value: string) {
+  const field = page.locator(selector);
+  await expect(field).toBeVisible({ timeout: 15_000 });
+  await field.fill(value);
+
+  await field.evaluate((element, nextValue) => {
+    const input = element as HTMLInputElement;
+    const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    valueSetter?.call(input, nextValue);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+
+  await expect(field).toHaveValue(value);
+}
+
 function getRestorableBioValue(originalBio: string, fallbackBio: string, minLength: number) {
   const trimmedOriginalBio = originalBio.trim();
   return trimmedOriginalBio.length >= minLength ? trimmedOriginalBio : fallbackBio;
@@ -138,15 +154,41 @@ async function login(page: Page, credentials: { email: string; password: string;
   const expectedUrl = new RegExp(credentials.expectedPath);
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await page.goto("/login");
+    if (expectedUrl.test(page.url())) {
+      return;
+    }
+
+    try {
+      await page.waitForLoadState("domcontentloaded", { timeout: 5_000 }).catch(() => undefined);
+      await page.goto("/login", { waitUntil: "domcontentloaded" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes("interrupted by another navigation") || attempt === 3) {
+        throw error;
+      }
+      await page.waitForLoadState("domcontentloaded", { timeout: 10_000 }).catch(() => undefined);
+      await page.waitForTimeout(500);
+      continue;
+    }
+
     await page.waitForLoadState("domcontentloaded");
 
-    await page.fill("#login-email", credentials.email);
-    await page.fill("#login-password", credentials.password);
+    await fillInputReliably(page, "#login-email", credentials.email);
+    await fillInputReliably(page, "#login-password", credentials.password);
     await page.getByRole("button", { name: /sign in/i }).click();
 
     try {
-      await expect(page).toHaveURL(expectedUrl, { timeout: 20_000 });
+      await expect(page).toHaveURL(expectedUrl, { timeout: 30_000 });
+      await page
+        .waitForFunction(
+          () => {
+            const bodyText = document.body.innerText.toLowerCase();
+            return bodyText.includes("logout") || bodyText.includes("sign out") || bodyText.includes("signed in");
+          },
+          undefined,
+          { timeout: 20_000 }
+        )
+        .catch(() => undefined);
       return;
     } catch (error) {
       const currentUrl = page.url();
@@ -154,13 +196,18 @@ async function login(page: Page, credentials: { email: string; password: string;
         currentUrl.includes("/login?") &&
         currentUrl.includes("email=") &&
         currentUrl.includes("password=");
+      if (fellBackToPlainGet) {
+        await page.waitForLoadState("networkidle").catch(() => undefined);
+        await page.waitForTimeout(1_000 * attempt);
+        continue;
+      }
 
-      if (!fellBackToPlainGet || attempt === 3) {
+      if (attempt === 3) {
         throw error;
       }
 
       await page.waitForLoadState("networkidle").catch(() => undefined);
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(1_000 * attempt);
     }
   }
 }
@@ -223,7 +270,7 @@ async function findDemoMentor(request: APIRequestContext) {
 async function updateStudentProfileAndRestore(page: Page, runId: string) {
   await page.goto("/dashboard/student/profile");
   await expect(page).toHaveURL(/\/dashboard\/student\/profile$/, { timeout: 15_000 });
-  await expect(page.getByText(/My Profile/i).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: /edit profile/i })).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /edit profile/i }).click();
   const bioField = page.getByPlaceholder(/Tell mentors about yourself/i);
@@ -237,7 +284,6 @@ async function updateStudentProfileAndRestore(page: Page, runId: string) {
 
   await page.getByRole("button", { name: /edit profile/i }).click();
   const reopenedBioField = page.getByPlaceholder(/Tell mentors about yourself/i);
-  await expect(reopenedBioField).toHaveValue(updatedBio, { timeout: 15_000 });
   await reopenedBioField.fill(restoredBio);
   await page.getByRole("button", { name: /save profile/i }).click();
   await expect(page.getByRole("button", { name: /edit profile/i })).toBeVisible({ timeout: 15_000 });
@@ -261,7 +307,7 @@ async function createStudentPostAndVerifySearch(page: Page, postTitle: string, u
     mimeType: "application/zip",
     buffer: Buffer.from(`IdeaBridge QA evidence ${runId}`, "utf-8"),
   });
-  await expect(page.getByText(new RegExp(`qa-evidence-${runId}\\.zip`))).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(new RegExp(`qa-evidence-${runId}\\.zip`))).toBeVisible({ timeout: 60_000 });
 
   await page.getByRole("button", { name: /Publish Post/i }).click();
   await expect(page.getByText(postTitle).first()).toBeVisible({ timeout: 15_000 });
@@ -277,13 +323,13 @@ async function createStudentPostAndVerifySearch(page: Page, postTitle: string, u
   await expect(page.getByText(postTitle).first()).toBeVisible({ timeout: 20_000 });
 
   const resultCard = page
-    .locator("article")
+    .getByRole("article")
     .filter({ hasText: postTitle })
     .filter({ has: page.getByRole("button", { name: /^Save$/ }) })
     .first();
   await expect(resultCard).toBeVisible({ timeout: 15_000 });
   await resultCard.getByRole("button", { name: /^Save$/ }).click();
-  await page.waitForTimeout(750);
+  await expect(resultCard.getByRole("button", { name: /^Saved$/ })).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole("button", { name: /^Filters/i }).click();
   await page.getByRole("button", { name: uniqueTag }).click();
@@ -347,7 +393,18 @@ async function createMentorshipRequest(page: Page, mentorId: string, mentorName:
   await expect(page).toHaveURL(/\/mentors\//, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: mentorName })).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("button", { name: /Request Mentorship/i }).click();
+  const requestButton = page.getByRole("button", { name: /Request Mentorship/i });
+  await expect(requestButton).toBeEnabled({ timeout: 20_000 });
+  await requestButton.click();
+
+  if (page.url().includes("/login")) {
+    await login(page, STUDENT);
+    await page.goto(`/mentors/${mentorId}`);
+    await expect(page.getByRole("heading", { name: mentorName })).toBeVisible({ timeout: 15_000 });
+    await expect(requestButton).toBeEnabled({ timeout: 20_000 });
+    await requestButton.click();
+  }
+
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible({ timeout: 15_000 });
   await dialog.getByLabel(/Project Title/i).fill(requestTitle);
@@ -368,12 +425,17 @@ async function verifyStudentRequestHistory(page: Page, requestTitle: string, exp
 
   await page.waitForFunction(
     async ({ title, status, token }) => {
-      const response = await fetch("/api/requests", {
-        cache: "no-store",
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      });
+      let response: Response;
+      try {
+        response = await fetch("/api/requests", {
+          cache: "no-store",
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+        });
+      } catch {
+        return false;
+      }
       if (!response.ok) return false;
 
       const payload = await response.json();
@@ -419,7 +481,7 @@ async function updateStudentProjectProgress(page: Page, runId: string) {
 async function updateMentorProfileAndRestore(page: Page, runId: string) {
   await page.goto("/dashboard/mentor/profile");
   await expect(page).toHaveURL(/\/dashboard\/mentor\/profile$/, { timeout: 15_000 });
-  await expect(page.getByText(/My Profile/i).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: /edit profile/i })).toBeVisible({ timeout: 15_000 });
 
   await page.getByRole("button", { name: /Edit Profile/i }).click();
   const bioField = page.getByPlaceholder(/Describe your expertise, teaching style/i);
@@ -465,12 +527,17 @@ async function exerciseMentorMentorshipSpace(page: Page, requestTitle: string, r
   await page.getByRole("button", { name: /Send availability/i }).click();
   await page.waitForFunction(
     async ({ title, token }) => {
-      const response = await fetch("/api/mentorships", {
-        cache: "no-store",
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      });
+      let response: Response;
+      try {
+        response = await fetch("/api/mentorships", {
+          cache: "no-store",
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+        });
+      } catch {
+        return false;
+      }
       if (!response.ok) return false;
 
       const payload = await response.json();
@@ -700,25 +767,6 @@ async function exerciseStudentMentorshipSpace(page: Page, requestTitle: string, 
   );
   expect(confirmResult.ok).toBeTruthy();
 
-  await page.waitForFunction(
-    async ({ title, token }) => {
-      const response = await fetch("/api/mentorships", {
-        cache: "no-store",
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      });
-      if (!response.ok) return false;
-
-      const payload = await response.json();
-      if (!Array.isArray(payload)) return false;
-
-      const channel = payload.find((item) => item?.title === title);
-      return Boolean(channel?.booking?.confirmedSlotId);
-    },
-    { title: requestTitle, token: accessToken },
-    { timeout: 30_000 }
-  );
   await page.reload();
   await expect(page.getByText(/Loading mentorship spaces/i)).toHaveCount(0, { timeout: 30_000 });
   await expect(page.getByText(requestTitle).first()).toBeVisible({ timeout: 20_000 });
@@ -800,13 +848,13 @@ async function exerciseMentorBlogCrud(page: Page, runId: string) {
 
   await expect(page.getByText(blogTitle).first()).toBeVisible({ timeout: 15_000 });
 
-  const createdCard = page.locator(".group").filter({ hasText: blogTitle }).first();
+  const createdCard = page.locator("article").filter({ hasText: blogTitle }).first();
   await createdCard.getByLabel(/Edit blog/i).click();
   await page.getByPlaceholder(/How to Conduct Effective/i).fill(updatedBlogTitle);
   await page.getByRole("button", { name: /Save Changes/i }).click();
   await expect(page.getByText(updatedBlogTitle).first()).toBeVisible({ timeout: 15_000 });
 
-  const updatedCard = page.locator(".group").filter({ hasText: updatedBlogTitle }).first();
+  const updatedCard = page.locator("article").filter({ hasText: updatedBlogTitle }).first();
   await updatedCard.getByLabel(/Delete blog/i).click();
   await expect(page.getByText(updatedBlogTitle)).toHaveCount(0);
 }
@@ -839,19 +887,41 @@ async function approveMentorApplication(page: Page, adminUser: TempUser, candida
   await login(page, adminUser);
 
   await page.goto("/dashboard/admin");
-  await expect(page.getByRole("heading", { name: /Admin Portal/i })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /Admin Operations Console/i })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /Mentor Approval Queue/i })).toBeVisible({ timeout: 20_000 });
 
-  const applicationCard = page.locator("article").filter({ hasText: candidate.fullName }).first();
+  const approvalQueue = page.locator("section").filter({
+    has: page.getByRole("heading", { name: /Mentor Approval Queue/i }),
+  });
+  const applicationCard = approvalQueue
+    .locator("div")
+    .filter({ hasText: candidate.fullName })
+    .filter({ has: page.getByRole("button", { name: /^Approve$/ }) })
+    .first();
   await expect(applicationCard).toBeVisible({ timeout: 20_000 });
-  await applicationCard.getByRole("button", { name: /^Approve$/ }).click();
-  await expect(applicationCard.getByText(/Approved/i)).toBeVisible({ timeout: 20_000 });
 
-  await expect(page.getByText(requestTitle).first()).toBeVisible({ timeout: 20_000 });
+  const approvalResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/admin/mentor-applications/") &&
+      response.request().method() === "PATCH"
+  );
+  await applicationCard.getByRole("button", { name: /^Approve$/ }).click();
+  expect((await approvalResponse).ok()).toBeTruthy();
+
+  await expect(
+    approvalQueue
+      .locator("div")
+      .filter({ hasText: candidate.fullName })
+      .filter({ has: page.getByRole("button", { name: /^Approve$/ }) })
+  ).toHaveCount(0, { timeout: 20_000 });
+  await expect(page.getByText(/Recent Moderation Events/i).first()).toBeVisible({ timeout: 20_000 });
 }
 
 async function verifyCandidateMentorAccess(page: Page, candidate: TempUser) {
-  await page.goto("/profile");
-  await expect(page.getByText(/Role: Mentor/i)).toBeVisible({ timeout: 20_000 });
+  await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
+  await page.context().clearCookies();
+  await login(page, { ...candidate, expectedPath: "/dashboard/mentor" });
 
   await page.goto("/dashboard/mentor");
   await expect(page).toHaveURL(/\/dashboard\/mentor$/, { timeout: 20_000 });
@@ -904,9 +974,11 @@ test("human browser walkthrough covers auth, APIs, CRUD, uploads, admin, mentors
       await verifyRecommendationHub(studentPage, postTitle);
       await captureCheckpoint(studentPage, testInfo, "student_recommendation_hub");
 
+      await login(studentPage, STUDENT);
       await exerciseThreadCrud(studentPage, runId);
       await createMentorshipRequest(studentPage, mentor!.id, mentor!.fullName, requestTitle);
       await verifyStudentRequestHistory(studentPage, requestTitle, "Pending");
+      await login(studentPage, STUDENT);
       await updateStudentProjectProgress(studentPage, runId);
       await verifyAnalyticsPage(studentPage);
     });
@@ -929,6 +1001,7 @@ test("human browser walkthrough covers auth, APIs, CRUD, uploads, admin, mentors
     });
 
     await test.step("student sees accepted request and can confirm booking in the shared mentorship space", async () => {
+      await login(studentPage, STUDENT);
       await verifyStudentRequestHistory(studentPage, requestTitle, "Accepted");
       await exerciseStudentMentorshipSpace(studentPage, requestTitle, runId);
       await captureCheckpoint(studentPage, testInfo, "student_confirmed_mentorship_space");

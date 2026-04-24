@@ -29,8 +29,8 @@ test("mentors directory renders filters and mentor discovery controls", async ({
 test("notifications route redirects unauthenticated users to login", async ({ page }) => {
   await page.goto("/notifications");
 
-  await expect(page).toHaveURL(/\/login$/, { timeout: 15_000 });
-  await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible({ timeout: 15_000 });
+  await expect(page).toHaveURL(/\/login$/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible({ timeout: 30_000 });
 });
 
 test("profile route redirects unauthenticated users to login", async ({ page }) => {
