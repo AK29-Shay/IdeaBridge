@@ -80,19 +80,21 @@ export function UpdateProgressModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-[#0F0F0F] text-white border border-[#FFCBA4]/20 shadow-xl rounded-xl p-6">
+      <DialogContent className="max-w-2xl rounded-2xl border border-[#FFCBA4]/40 bg-[#FFFDFB] p-6 text-[#1A1A1A] shadow-2xl">
         <DialogHeader>
-          <DialogTitle>Update Progress</DialogTitle>
-          <DialogDescription>Update the project progress percentage, status, and add short milestone notes.</DialogDescription>
+          <DialogTitle className="text-xl font-semibold text-[#111111]">Update Progress</DialogTitle>
+          <DialogDescription className="text-sm text-[#5C5C5C]">
+            Update progress percentage, status, and short milestone notes.
+          </DialogDescription>
         </DialogHeader>
 
         {!project ? (
-          <div className="py-10 text-sm text-gray-400">No project selected.</div>
+          <div className="py-10 text-sm text-[#666666]">No project selected.</div>
         ) : (
           <form onSubmit={form.handleSubmit(submit)} className="mt-5 space-y-5">
             {Object.keys(form.formState.errors).length > 0 ? (
-              <div className="rounded-md border border-red-600/20 bg-red-50/10 p-3 text-sm text-red-600">
-                <div className="font-semibold">Please fix the following:</div>
+              <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+                <div className="font-semibold text-red-800">Please fix the following:</div>
                 <ul className="mt-1 list-disc list-inside">
                   {Object.entries(form.formState.errors).map(([k, v]) => (
                     <li key={k}>{getFieldErrorMessage(v?.message)}</li>
@@ -102,7 +104,7 @@ export function UpdateProgressModal({
             ) : null}
 
             <div className="space-y-2">
-              <Label className="text-gray-300">Progress %</Label>
+              <Label className="text-sm font-medium text-[#1F1F1F]">Progress %</Label>
               <div className="flex items-center gap-4">
                 <input
                   type="range"
@@ -110,18 +112,18 @@ export function UpdateProgressModal({
                   max={100}
                   value={Number(form.watch("progressPercent") ?? 0)}
                   onChange={(e) => form.setValue("progressPercent", Number(e.target.value))}
-                  className="w-full accent-orange-200"
+                  className="w-full accent-[#C7792F]"
                 />
                 <Input
                   type="number"
                   min={0}
                   max={100}
-                  className="w-28 bg-gray-800 text-white border border-gray-700 focus:ring-2 focus:ring-orange-200"
+                  className="h-11 w-28 border border-[#E2D5C7] bg-white text-[#1A1A1A] focus-visible:ring-2 focus-visible:ring-[#F5A97F]"
                   value={Number(form.watch("progressPercent") ?? 0)}
                   onChange={(e) => form.setValue("progressPercent", Number(e.target.value))}
                 />
               </div>
-              <div className="text-sm text-gray-400">Current: {Number(form.watch("progressPercent") ?? 0)}%</div>
+              <div className="text-sm text-[#5F5F5F]">Current: {Number(form.watch("progressPercent") ?? 0)}%</div>
               {form.formState.errors.progressPercent ? (
                 <div className="text-sm text-destructive">{form.formState.errors.progressPercent.message}</div>
               ) : null}
@@ -129,7 +131,7 @@ export function UpdateProgressModal({
 
             <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-gray-300">Status</Label>
+                <Label className="text-sm font-medium text-[#1F1F1F]">Status</Label>
                 <ControllerSelect
                   form={form}
                   name="status"
@@ -141,8 +143,12 @@ export function UpdateProgressModal({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-gray-300">Date updated</Label>
-                <Input type="date" className="bg-gray-800 text-white border border-gray-700 focus:ring-2 focus:ring-orange-200" {...form.register("dateUpdated")} />
+                <Label className="text-sm font-medium text-[#1F1F1F]">Date updated</Label>
+                <Input
+                  type="date"
+                  className="h-11 border border-[#E2D5C7] bg-white text-[#1A1A1A] focus-visible:ring-2 focus-visible:ring-[#F5A97F]"
+                  {...form.register("dateUpdated")}
+                />
                 {form.formState.errors.dateUpdated ? (
                   <div className="text-sm text-destructive">{form.formState.errors.dateUpdated.message}</div>
                 ) : null}
@@ -150,19 +156,35 @@ export function UpdateProgressModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="milestoneNotes" className="text-gray-300">Milestone notes</Label>
-              <Textarea id="milestoneNotes" placeholder="One or two short sentences describing progress, blockers, and next step" className="w-full bg-gray-800 text-white border border-gray-700 focus:ring-2 focus:ring-orange-200 rounded-lg px-3 py-2.5" {...form.register("milestoneNotes")} />
-              <div className="text-sm text-gray-400">Keep notes concise — mentors review these quickly.</div>
+              <Label htmlFor="milestoneNotes" className="text-sm font-medium text-[#1F1F1F]">
+                Milestone notes
+              </Label>
+              <Textarea
+                id="milestoneNotes"
+                placeholder="Summarize your latest progress, blockers, and next step."
+                className="min-h-[110px] w-full rounded-lg border border-[#E2D5C7] bg-white px-3 py-2.5 text-[#1A1A1A] placeholder:text-[#8A8A8A] focus-visible:ring-2 focus-visible:ring-[#F5A97F]"
+                {...form.register("milestoneNotes")}
+              />
+              <div className="text-sm text-[#5F5F5F]">Keep notes concise so mentors can review quickly.</div>
               {form.formState.errors.milestoneNotes ? (
                 <div className="text-sm text-destructive">{form.formState.errors.milestoneNotes.message}</div>
               ) : null}
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Button type="button" className="rounded-xl border border-gray-600 text-white" onClick={quickFill}>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl border-[#D9C6B4] bg-white text-[#2B2B2B] hover:bg-[#FFF3E8]"
+                onClick={quickFill}
+              >
                 Quick fill
               </Button>
-              <Button type="submit" disabled={!form.formState.isValid || form.formState.isSubmitting} className="rounded-xl bg-orange-200 text-black hover:bg-orange-300">
+              <Button
+                type="submit"
+                disabled={!form.formState.isValid || form.formState.isSubmitting}
+                className="rounded-xl bg-[#1A1A1A] text-[#FFCBA4] hover:bg-[#2A2A2A]"
+              >
                 Save Update
               </Button>
             </div>
@@ -189,12 +211,16 @@ function ControllerSelect({
       value={form.watch(name) ?? ""}
       onValueChange={(v) => form.setValue(name, v as UpdateProgressInput["status"])}
     >
-      <SelectTrigger>
+      <SelectTrigger className="h-11 border border-[#E2D5C7] bg-white text-[#1A1A1A] focus:ring-2 focus:ring-[#F5A97F]">
         <SelectValue placeholder="Select status" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="border border-[#E2D5C7] bg-white text-[#1A1A1A]">
         {options.map((opt) => (
-          <SelectItem key={opt} value={opt}>
+          <SelectItem
+            key={opt}
+            value={opt}
+            className="text-[#1A1A1A] focus:bg-[#FFF3E8] focus:text-[#1A1A1A]"
+          >
             {opt}
           </SelectItem>
         ))}

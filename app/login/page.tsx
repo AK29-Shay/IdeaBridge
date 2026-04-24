@@ -58,11 +58,11 @@ export default function LoginPage() {
       toast.success("Welcome back to IdeaBridge! 🚀");
       router.push(
         redirectTo ||
-          (nextRole === "mentor"
+          (nextRole === "student"
+            ? "/dashboard/student"
+            : nextRole === "mentor"
             ? "/dashboard/mentor"
-            : nextRole === "admin"
-              ? "/dashboard/admin"
-              : "/dashboard/student")
+            : "/dashboard/admin")
       );
     } catch (rawError: unknown) {
       const message =

@@ -66,9 +66,8 @@ export const LEGACY_PROFILE_SELECT = [
 
 export function normalizeRole(value: unknown): UserRole {
   const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (raw === "mentor") return "mentor";
   if (raw === "admin") return "admin";
-  return "student";
+  return raw === "mentor" ? "mentor" : "student";
 }
 
 export function normalizeAvailabilityStatus(value: unknown): AvailabilityStatus {
@@ -150,7 +149,10 @@ export function mapProfileRowToAuthUser(params: {
   fallbackFullName?: string | null;
   fallbackRole?: string | null;
 }): AuthUser {
-  const role = normalizeRole(params.profile.role ?? params.fallbackRole);
+  const role =
+    params.fallbackRole === "admin"
+      ? "admin"
+      : normalizeRole(params.profile.role ?? params.fallbackRole);
   const fullName = params.profile.full_name ?? params.fallbackFullName ?? params.email.split("@")[0] ?? "Member";
 
   return {
@@ -174,7 +176,11 @@ export function buildProfileUpsertPayload(params: {
 }) {
   const isMentor = params.role === "mentor";
   const isAdmin = params.role === "admin";
-  const activeProfile = isMentor ? params.mentorProfile : isAdmin ? undefined : params.studentProfile;
+  const activeProfile = isMentor
+    ? params.mentorProfile
+    : isAdmin
+    ? undefined
+    : params.studentProfile;
 
   return {
     id: params.id,
