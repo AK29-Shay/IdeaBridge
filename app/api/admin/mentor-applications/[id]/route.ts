@@ -67,6 +67,21 @@ export async function PATCH(
     if (profileUpdateError) {
       return NextResponse.json({ error: profileUpdateError.message }, { status: 500 });
     }
+
+    const { data: authUser, error: authLookupError } = await supabaseServer.auth.admin.getUserById(application.user_id);
+    if (authLookupError) {
+      return NextResponse.json({ error: authLookupError.message }, { status: 500 });
+    }
+
+    const { error: metadataUpdateError } = await supabaseServer.auth.admin.updateUserById(application.user_id, {
+      user_metadata: {
+        ...(authUser.user?.user_metadata ?? {}),
+        role: "mentor",
+      },
+    });
+    if (metadataUpdateError) {
+      return NextResponse.json({ error: metadataUpdateError.message }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ application });
