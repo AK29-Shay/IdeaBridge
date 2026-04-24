@@ -63,11 +63,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4 py-10 app-page-enter">
       {/* Gradient background */}
-      <div className="fixed inset-0 bg-[#FFF8F3]" />
-      <div className="fixed top-[-10%] right-[-5%] w-96 h-96 rounded-full bg-[#FFCBA4]/40 blur-3xl pointer-events-none" />
-      <div className="fixed bottom-[-10%] left-[-5%] w-96 h-96 rounded-full bg-[#0F0F0F]/5 blur-3xl pointer-events-none" />
+      <div className="fixed inset-0 bg-[#FAF7F2]" />
+      <div className="fixed top-[-10%] right-[-5%] w-96 h-96 rounded-full bg-[#E8B86D]/35 blur-3xl pointer-events-none" />
+      <div className="fixed bottom-[-10%] left-[-5%] w-96 h-96 rounded-full bg-[#C86B4A]/10 blur-3xl pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md animate-fade-up">
         {/* Brand */}
@@ -83,7 +83,7 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
-        <div className="bg-white border border-[#FFCBA4]/30 rounded-2xl shadow-2xl p-6 md:p-8">
+        <div className="siri-border rounded-2xl p-6 md:p-8">
           {!sent ? (
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
               <div>
@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
                 type="submit"
                 id="forgot-password-submit"
                 disabled={isLoading}
-                className="w-full py-3 rounded-xl bg-[#0F0F0F] text-[#FFCBA4] font-semibold text-sm hover:brightness-125 transition-all duration-200 shadow-lg shadow-black/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="premium-btn w-full py-3 rounded-xl font-semibold text-sm shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center gap-2">
