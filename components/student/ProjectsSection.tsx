@@ -3,33 +3,35 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { FolderOpen } from "lucide-react";
-import type { StudentProject } from "@/types/project";
-import type { ProjectProgressStatus } from "@/types/auth";
-import { ProjectCard } from "@/components/cards/ProjectCard";
-import { UpdateProgressModal } from "@/components/modals/UpdateProgressModal";
-import { getStoredMentors, setProjectsForUser } from "@/lib/storage";
-import ProjectThread from "@/components/ideas/ProjectThread";
-import { mockThreadData } from "@/lib/ideas/mockThread";
 
+import type { ProjectProgressStatus } from "@/types/auth";
+import type { StudentProject } from "@/types/project";
+import { ProjectCard } from "@/components/cards/ProjectCard";
+import ProjectThread from "@/components/ideas/ProjectThread";
+import { UpdateProgressModal } from "@/components/modals/UpdateProgressModal";
+import { getStoredMentors } from "@/lib/storage";
+import { mockThreadData } from "@/lib/ideas/mockThread";
 
 interface ProjectsSectionProps {
   projects: StudentProject[];
-  setProjects: (p: StudentProject[]) => void;
-  userEmail: string;
+  updateProject: (
+    projectId: string,
+    patch: Partial<Pick<StudentProject, "progressPercent" | "status" | "milestoneNotes" | "updatedAt">>
+  ) => Promise<StudentProject>;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
-export function ProjectsSection({ projects, setProjects, userEmail }: ProjectsSectionProps) {
+export function ProjectsSection({ projects, updateProject, isLoading = false, error = null }: ProjectsSectionProps) {
   const [selectedProject, setSelectedProject] = React.useState<StudentProject | null>(null);
   const [detailProjectId, setDetailProjectId] = React.useState<string | null>(null);
   const [modalOpen, setModalOpen] = React.useState(false);
 
   const mentorById = React.useMemo(() => {
     const map = new Map<string, ReturnType<typeof getStoredMentors>[number]>();
-    getStoredMentors().forEach((m) => map.set(m.id, m));
+    getStoredMentors().forEach((mentor) => map.set(mentor.id, mentor));
     return map;
   }, []);
-
-  // Sample projects loader removed — production data only.
 
   type ProgressValues = {
     progressPercent: number;
@@ -38,19 +40,18 @@ export function ProjectsSection({ projects, setProjects, userEmail }: ProjectsSe
     dateUpdated: string;
   };
 
-  function saveProgress(values: ProgressValues) {
+  async function saveProgress(values: ProgressValues) {
     if (!selectedProject) return;
-    const next: StudentProject = {
-      ...selectedProject,
+
+    const next = await updateProject(selectedProject.id, {
       progressPercent: values.progressPercent,
       status: values.status,
       milestoneNotes: values.milestoneNotes,
       updatedAt: new Date(values.dateUpdated).toISOString(),
-    };
-    const nextProjects = projects.map((p) => (p.id === selectedProject.id ? next : p));
-    setProjects(nextProjects);
-    setProjectsForUser(userEmail, nextProjects);
-    toast.success("Progress updated successfully! 🎉");
+    });
+
+    setSelectedProject(next);
+    toast.success("Progress updated successfully!");
   }
 
   React.useEffect(() => {
@@ -73,7 +74,6 @@ export function ProjectsSection({ projects, setProjects, userEmail }: ProjectsSe
 
   return (
     <div className="space-y-6 animate-fade-up">
-      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">My Projects</h2>
@@ -81,8 +81,19 @@ export function ProjectsSection({ projects, setProjects, userEmail }: ProjectsSe
         </div>
       </div>
 
-      {/* Projects Grid */}
-      {projects.length === 0 ? (
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      {isLoading ? (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="h-48 animate-pulse rounded-2xl border border-[#FFCBA4]/30 bg-white/80" />
+          ))}
+        </div>
+      ) : projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#FFCBA4]/30 bg-gradient-to-br from-white to-white py-20 text-center">
           <div className="rounded-2xl bg-[#0F0F0F] p-4 shadow-lg mb-4">
             <FolderOpen className="h-8 w-8 text-[#FFCBA4]" />

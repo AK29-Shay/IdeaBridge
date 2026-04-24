@@ -103,6 +103,31 @@ CREATE INDEX IF NOT EXISTS comments_parent_id_idx ON public.comments(parent_comm
 
 
 -- ============================================================
+-- Step 4A: Student Project Tracking Table
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.student_projects (
+  id                TEXT        PRIMARY KEY,
+  user_id           UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title             TEXT        NOT NULL,
+  mentor_id         TEXT,
+  progress_percent  INTEGER     NOT NULL DEFAULT 0 CHECK (progress_percent BETWEEN 0 AND 100),
+  status            TEXT        NOT NULL DEFAULT 'Not Started' CHECK (status IN ('Not Started', 'In Progress', 'On Track', 'Delayed', 'Completed')),
+  milestone_notes   TEXT        NOT NULL DEFAULT '',
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TRIGGER student_projects_updated_at
+  BEFORE UPDATE ON public.student_projects
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+ALTER TABLE public.student_projects ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS student_projects_user_id_idx ON public.student_projects(user_id);
+CREATE INDEX IF NOT EXISTS student_projects_updated_at_idx ON public.student_projects(updated_at DESC);
+
+
+-- ============================================================
 -- Step 5: Row Level Security (RLS) Policies
 -- ============================================================
 
@@ -168,6 +193,27 @@ CREATE POLICY "Post owner can accept a comment answer"
 -- COMMENTS: Comment author can delete their own comment
 CREATE POLICY "Comment authors can delete own comments"
   ON public.comments FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- STUDENT PROJECTS: Users can manage only their own tracking records
+CREATE POLICY "Users view own student projects"
+  ON public.student_projects FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users create own student projects"
+  ON public.student_projects FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users update own student projects"
+  ON public.student_projects FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users delete own student projects"
+  ON public.student_projects FOR DELETE
   TO authenticated
   USING (auth.uid() = user_id);
 
