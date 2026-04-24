@@ -11,6 +11,7 @@
     "clickup:final-features": "node scripts/create-final-feature-clickup-tasks.mjs",
     "clickup:link-history": "node scripts/link-clickup-history-evidence.mjs",
     "evidence:pm": "node scripts/generate-project-management-evidence.mjs",
+    "seed:dummy-projects": "node --env-file=.env.local scripts/seed-dummy-projects.mjs",
     "smoke:api": "node scripts/run-local-api-smoke.mjs",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test tests/final-smoke.spec.ts",

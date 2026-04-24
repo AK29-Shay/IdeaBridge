@@ -1337,11 +1337,11 @@ export function UnifiedAnalyticsDashboard() {
         <div className="relative max-w-3xl">
           <div className="inline-flex items-center gap-2 text-base font-semibold text-[#fecdac]">
             <Sparkles className="h-5 w-5" />
-            <span>Analytics Component</span>
+            <span>Analytics Overview</span>
           </div>
-          <h2 className="mt-4 text-4xl font-bold tracking-tight text-[#fecdac] sm:text-5xl">Member 4 + New Update Dashboard</h2>
+          <h2 className="mt-4 text-4xl font-bold tracking-tight text-[#fecdac] sm:text-5xl"> Analytics Dashboard</h2>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-[#fecdac]/72">
-            This view merges the updated analytics design with the member 4 detailed project card and project thread panel.
+            Explore project performance, request activity, and discussion trends in one analytics workspace.
           </p>
 
           <div className="mt-7 flex flex-wrap gap-4">
