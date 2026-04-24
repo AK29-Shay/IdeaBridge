@@ -37,6 +37,7 @@ export function DashboardPortalLayout({
   const router = useRouter();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [desktopSidebarHidden, setDesktopSidebarHidden] = React.useState(false);
 
   const activeItem =
     navItems.find((item) => isActivePath(pathname, item.href)) ?? navItems[0] ?? null;
@@ -86,6 +87,7 @@ export function DashboardPortalLayout({
         <aside
           className={cn(
             "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-[#FFD4B1] bg-white shadow-xl transition-transform duration-300 lg:relative lg:translate-x-0 lg:shadow-none",
+            desktopSidebarHidden ? "lg:hidden" : "lg:flex",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -105,8 +107,14 @@ export function DashboardPortalLayout({
             <button
               type="button"
               aria-label="Close sidebar"
-              className="ml-auto rounded-lg p-2 text-slate-400 transition hover:bg-[#FFF0E6] hover:text-slate-700 lg:hidden"
-              onClick={() => setSidebarOpen(false)}
+              className="ml-auto rounded-lg p-2 text-slate-400 transition hover:bg-[#FFF0E6] hover:text-slate-700"
+              onClick={() => {
+                if (window.matchMedia("(min-width: 1024px)").matches) {
+                  setDesktopSidebarHidden(true);
+                } else {
+                  setSidebarOpen(false);
+                }
+              }}
             >
               <X className="h-4 w-4" />
             </button>
@@ -180,6 +188,14 @@ export function DashboardPortalLayout({
                 onClick={() => setSidebarOpen(true)}
               >
                 <Menu className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                aria-label={desktopSidebarHidden ? "Open navigation" : "Close navigation"}
+                className="hidden rounded-xl border border-[#FFD4B1] p-2 text-slate-500 transition hover:bg-[#FFF0E6] hover:text-black lg:inline-flex"
+                onClick={() => setDesktopSidebarHidden((prev) => !prev)}
+              >
+                {desktopSidebarHidden ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </button>
 
               <div className="min-w-0">
